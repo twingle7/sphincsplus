@@ -1,120 +1,147 @@
-# Poseidon2 Draft Profile (Goldilocks + Sponge-First)
+# Poseidon2 草案规范（Goldilocks + Sponge-First）
 
-## Scope
+## 1. 目标与边界
 
-This document defines a draft interface and parameter profile for replacing the
-placeholder backend in `ref/poseidon2.c` with a real Poseidon2 implementation.
-It is intentionally conservative and engineering-oriented:
+本文档定义本仓库 `ref/poseidon2.c` 的下一阶段接口规范与参数草案，目标是：
 
-- keep SPHINCS+ call sites stable;
-- use a single sponge model first;
-- defer compression-mode optimization until after correctness is validated.
+- 保持 SPHINCS+ 上层调用稳定；
+- 先交付统一且可审计的 sponge 版本；
+- 在正确性固化前，不提前做 compression 特化优化。
 
-## Intended Use In This Repository
+当前状态说明：
 
-- `prf_addr` uses domain `SPX_P2_DOMAIN_PRF_ADDR`.
-- `gen_message_random` uses domain `SPX_P2_DOMAIN_GEN_MESSAGE_RANDOM`.
-- `hash_message` uses domain `SPX_P2_DOMAIN_HASH_MESSAGE`.
-- `thash` (simple) uses domain `SPX_P2_DOMAIN_THASH_SIMPLE`.
+- 代码接口已按本规范演进；
+- 置换内核 `poseidon2_permute()` 仍为占位；
+- 暂不宣称“已完成密码学标准一致实现”。
 
-Additional `THASH_F/H/TL` domain IDs are reserved in the API for later
-fine-grained separation if we choose to split by semantic role.
+## 2. 有限域选择（STARK 背景）
 
-## Draft Field Choice
+首选域：Goldilocks 素域
 
-Primary target field: Goldilocks prime field
+- 素数：`p = 2^64 - 2^32 + 1`
+- 元素存储：`uint64_t`
+- 规范要求：任何进入域运算的 lane 都必须是**规范表示**（canonical form）`[0, p-1]`
+- 选择理由：
+  - 64-bit CPU 软件性能高；
+  - 对 STARK 友好，约束和实现成本较低；
+  - 工程生态成熟，便于后续证明系统对接。
 
-- prime: `p = 2^64 - 2^32 + 1`
-- element representation: one `uint64_t` in canonical range `[0, p-1]`
-- rationale:
-  - good software performance on 64-bit CPUs;
-  - good fit for STARK-friendly arithmetization and low-overhead field ops;
-  - broad adoption in modern STARK systems.
+## 3. 参数草案与安全解释
 
-## Draft Sponge Profile
+当前草案参数（`poseidon2.h`）：
 
-The current draft API in `poseidon2.h` uses:
+- `t = 12`（状态总字数）
+- `capacity = 6`（容量字数）
+- `rate = 6`（吸收/挤出字数）
+- `rate_bytes = 48`
 
-- `t = 12` words
-- `capacity = 6` words
-- `rate = 6` words = `48` bytes
+安全直觉与解释（针对 `SPX_N = 24`，即 192-bit 级别）：
 
-Reasoning:
+- 容量位数：`c_bits = 6 * 64 = 384`
+- 与哈希型应用常见经验比较：`c_bits >= 2n = 384`，满足 192-bit 目标的容量基线
+- `rate = 384 bit` 能兼顾吞吐与实现简洁，适合先做一致性版本
 
-- `SPX_N = 24` for the current `192s` set, and this profile leaves a safety
-  margin on capacity while still providing practical throughput.
-- one unified sponge avoids early design fragmentation across SPHINCS+ paths.
+备注：
 
-## Byte Encoding Plan (Draft)
+- 上述解释是工程草案层面的容量论证，不替代对完整 Poseidon2 参数（轮数、常量、线性层）的正式安全分析。
 
-For absorb:
+## 4. 字节到域元素的规范映射（写死规则）
 
-1. Prefix with one-byte domain tag (already done in API wrapper).
-2. Absorb payload as a byte stream.
-3. Split stream into `rate` chunks.
-4. For each 8-byte lane, decode as little-endian `uint64_t`.
-5. For partial tail, zero-pad within the chunk.
-6. Apply Poseidon2 permutation between absorb blocks.
-7. Finalize with explicit padding rule:
-   - append `0x01` after message bytes in the next free byte;
-   - set high bit (`0x80`) of the last rate byte in final block.
+必须固定以下映射，不允许只写成“转成 uint64_t”而不做域规约：
 
-For squeeze:
+1. 输入按 `rate_bytes = 48` 分块。
+2. 每块拆成 6 个 lane，每个 lane 为 8 字节小端。
+3. 小端解码得到 `x in [0, 2^64-1]`。
+4. 规范映射到 Goldilocks 元素：
+   - 若 `x < p`，则 `fe = x`
+   - 否则 `fe = x - p`
+5. 对不足 8 字节的尾部 lane，先按小端零填充再执行步骤 3-4。
 
-1. Output little-endian bytes from rate lanes.
-2. Apply permutation when more output is required.
-3. Truncate to requested `outlen`.
+说明：
 
-Note: this keeps a deterministic byte API compatible with existing SPHINCS+
-integration and can be mirrored in STARK circuits.
+- 由于 `p` 接近 `2^64`，单次条件减法即可完成规范化。
+- 该规则必须在 native 与电路实现中完全一致。
 
-## API Contract (Current Draft In Code)
+## 5. Sponge 填充与挤出规则
 
-- `poseidon2_permute(uint64_t state[t])`
-  - low-level permutation hook;
-  - currently stubbed, must become full Poseidon2 rounds.
-- `poseidon2_inc_init(ctx, domain_tag)`
-- `poseidon2_inc_absorb(ctx, input, inlen)`
-- `poseidon2_inc_finalize(ctx)`
-- `poseidon2_inc_squeeze(output, outlen, ctx)`
-- `poseidon2_hash_bytes_domain(output, outlen, domain_tag, input, inlen)`
+吸收阶段：
 
-Backward-compatible helper:
+1. 首先吸收 1 字节语义域标签（domain tag）。
+2. 再吸收消息字节流。
+3. 采用 `pad10*1` 风格固定填充：
+   - 在消息后追加 `0x01`
+   - 终块最后一个 rate 字节按位或 `0x80`
+4. 每吸收满一个 rate 块后调用一次 `poseidon2_permute()`。
 
-- `poseidon2_hash_bytes(output, outlen, domain_bytes, domainlen, input, inlen)`
-  - absorbed under `SPX_P2_DOMAIN_CUSTOM`;
-  - kept for transitional compatibility only.
+挤出阶段：
 
-## Why Sponge-First Instead Of Compression-First
+1. 从 rate 部分按小端导出字节；
+2. 输出不足时继续置换并挤出；
+3. 截断到 `outlen`。
 
-Pros:
+## 6. 域分离策略（含 THASH 细分）
 
-- one mode handles all variable lengths (`inblocks`) in SPHINCS+;
-- lower implementation and audit complexity in first secure milestone;
-- fewer domain-separation mistakes early on.
+本仓库当前约定域标签：
 
-Cons:
+- `SPX_P2_DOMAIN_PRF_ADDR`
+- `SPX_P2_DOMAIN_GEN_MESSAGE_RANDOM`
+- `SPX_P2_DOMAIN_HASH_MESSAGE`
+- `SPX_P2_DOMAIN_THASH_F`
+- `SPX_P2_DOMAIN_THASH_H`
+- `SPX_P2_DOMAIN_THASH_TL`
 
-- fixed-arity calls may be slower than tuned compression circuits;
-- less optimal for some proving workloads.
+THASH 语义入口要求：
 
-Decision:
+- `poseidon2_hash_thash_f()`
+- `poseidon2_hash_thash_h()`
+- `poseidon2_hash_thash_tl()`
+- `poseidon2_hash_thash_by_inblocks()` 作为桥接函数：
+  - `inblocks == 1 -> F`
+  - `inblocks == 2 -> H`
+  - `inblocks >= 3 -> T_l`
 
-- start with sponge-first for correctness and integration speed;
-- add optional compression shortcuts only after KAT and differential tests pass.
+## 7. 正式接口与过渡接口
 
-## Conformance And Validation Plan
+正式接口（后续代码必须优先使用）：
 
-Before declaring the backend "real Poseidon2":
+- `poseidon2_hash_bytes_domain(...)`
+- `poseidon2_hash_thash_f/h/tl(...)`
+- `poseidon2_hash_thash_by_inblocks(...)`
 
-1. add permutation known-answer tests (KAT) for selected states;
-2. add sponge KAT for absorb/squeeze with domain tags;
-3. cross-check vectors against one reference implementation;
-4. rerun SPHINCS+ `test/spx` and `test/fors` for `poseidon2-192s`;
-5. run randomized sign/verify regression (multiple seeds).
+过渡接口（兼容旧调用）：
 
-## Non-Goals For This Draft
+- `poseidon2_hash_bytes(...)`
 
-- no claims of cryptographic conformance yet;
-- no robust-thash mode yet;
-- no SIMD or x4/x8 vectorized backend yet.
+规范约束：
+
+- `poseidon2_hash_bytes(...)` 仅作为迁移期兼容层；
+- 新增代码不得绕开 domain API 直接长期依赖该接口。
+
+## 8. 测试计划（含边界差分）
+
+除 KAT 外，必须新增并长期保留编码/填充差分测试，至少覆盖长度：
+
+- `0, 1, 7, 8, 9, 47, 48, 49`
+
+建议测试项：
+
+1. one-shot 与 incremental 一致性（同 domain、同输入）。
+2. 相邻边界长度差分（同前缀、不同长度输出应不同）。
+3. THASH `F/H/TL` 域分离差分（同输入不同域输出应不同）。
+4. `SPX` 主流程回归：`test/spx`、`test/fors`。
+
+## 9. 一致性验收门槛
+
+在宣称“真实 Poseidon2 后端完成”前，至少满足：
+
+1. 置换级 KAT 通过；
+2. sponge 编码/填充 KAT 通过；
+3. 与参考实现差分比对通过；
+4. SPHINCS+ 功能回归通过；
+5. 边界长度差分测试通过。
+
+## 10. 当前非目标
+
+- 不在本草案阶段实现 robust-thash；
+- 不在本草案阶段实现 SIMD/x4/x8 后端；
+- 不在本草案阶段给出最终性能调优结论。

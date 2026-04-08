@@ -30,6 +30,10 @@ DET_HEADERS = $(HEADERS:randombytes.%=rng.%)
 TESTS =         test/fors \
 		test/spx \
 
+ifneq (,$(findstring poseidon2,$(PARAMS)))
+	TESTS += test/poseidon2_api
+endif
+
 BENCHMARK = test/benchmark
 
 .PHONY: clean test benchmark

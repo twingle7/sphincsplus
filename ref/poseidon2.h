@@ -59,8 +59,33 @@ void poseidon2_hash_bytes_domain(uint8_t *output, size_t outlen,
                                  spx_poseidon2_domain domain_tag,
                                  const uint8_t *input, size_t inlen);
 
+/* Formal THASH semantic-domain entry points. */
+#define poseidon2_hash_thash_f SPX_NAMESPACE(poseidon2_hash_thash_f)
+void poseidon2_hash_thash_f(uint8_t *output, size_t outlen,
+                            const uint8_t *input, size_t inlen);
+
+#define poseidon2_hash_thash_h SPX_NAMESPACE(poseidon2_hash_thash_h)
+void poseidon2_hash_thash_h(uint8_t *output, size_t outlen,
+                            const uint8_t *input, size_t inlen);
+
+#define poseidon2_hash_thash_tl SPX_NAMESPACE(poseidon2_hash_thash_tl)
+void poseidon2_hash_thash_tl(uint8_t *output, size_t outlen,
+                             const uint8_t *input, size_t inlen);
+
 /*
- * Compatibility wrapper for earlier scaffolding.
+ * THASH helper that maps inblocks to semantic domains:
+ * - 1 block -> F
+ * - 2 blocks -> H
+ * - >=3 blocks -> T_l
+ */
+#define poseidon2_hash_thash_by_inblocks SPX_NAMESPACE(poseidon2_hash_thash_by_inblocks)
+void poseidon2_hash_thash_by_inblocks(uint8_t *output, size_t outlen,
+                                      const uint8_t *input, size_t inlen,
+                                      unsigned int inblocks);
+
+/*
+ * Transitional helper for older call sites only.
+ * New code should use poseidon2_hash_bytes_domain() or the THASH semantic APIs.
  * Domain bytes are absorbed as payload under SPX_P2_DOMAIN_CUSTOM.
  */
 #define poseidon2_hash_bytes SPX_NAMESPACE(poseidon2_hash_bytes)

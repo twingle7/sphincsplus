@@ -70,6 +70,39 @@ void poseidon2_hash_bytes_domain(uint8_t *output, size_t outlen,
     poseidon2_inc_squeeze(output, outlen, &ctx);
 }
 
+void poseidon2_hash_thash_f(uint8_t *output, size_t outlen,
+                            const uint8_t *input, size_t inlen)
+{
+    poseidon2_hash_bytes_domain(output, outlen, SPX_P2_DOMAIN_THASH_F, input, inlen);
+}
+
+void poseidon2_hash_thash_h(uint8_t *output, size_t outlen,
+                            const uint8_t *input, size_t inlen)
+{
+    poseidon2_hash_bytes_domain(output, outlen, SPX_P2_DOMAIN_THASH_H, input, inlen);
+}
+
+void poseidon2_hash_thash_tl(uint8_t *output, size_t outlen,
+                             const uint8_t *input, size_t inlen)
+{
+    poseidon2_hash_bytes_domain(output, outlen, SPX_P2_DOMAIN_THASH_TL, input, inlen);
+}
+
+void poseidon2_hash_thash_by_inblocks(uint8_t *output, size_t outlen,
+                                      const uint8_t *input, size_t inlen,
+                                      unsigned int inblocks)
+{
+    if (inblocks == 1) {
+        poseidon2_hash_thash_f(output, outlen, input, inlen);
+        return;
+    }
+    if (inblocks == 2) {
+        poseidon2_hash_thash_h(output, outlen, input, inlen);
+        return;
+    }
+    poseidon2_hash_thash_tl(output, outlen, input, inlen);
+}
+
 void poseidon2_hash_bytes(uint8_t *output, size_t outlen,
                           const uint8_t *domain, size_t domainlen,
                           const uint8_t *input, size_t inlen)
