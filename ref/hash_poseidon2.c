@@ -24,9 +24,8 @@ void prf_addr(unsigned char *out, const spx_ctx *ctx,
     memcpy(buf + SPX_N, addr, SPX_ADDR_BYTES);
     memcpy(buf + SPX_N + SPX_ADDR_BYTES, ctx->sk_seed, SPX_N);
 
-    poseidon2_hash_bytes(out, SPX_N,
-                         (const uint8_t *)"SPX_PRF_ADDR", 12,
-                         buf, sizeof(buf));
+    poseidon2_hash_bytes_domain(out, SPX_N, SPX_P2_DOMAIN_PRF_ADDR,
+                                buf, sizeof(buf));
 }
 
 /**
@@ -40,8 +39,7 @@ void gen_message_random(unsigned char *R, const unsigned char *sk_prf,
     spx_poseidon2_inc_ctx p2ctx;
     (void)ctx;
 
-    poseidon2_inc_init(&p2ctx);
-    poseidon2_inc_absorb(&p2ctx, (const uint8_t *)"SPX_GEN_MESSAGE_RANDOM", 22);
+    poseidon2_inc_init(&p2ctx, SPX_P2_DOMAIN_GEN_MESSAGE_RANDOM);
     poseidon2_inc_absorb(&p2ctx, sk_prf, SPX_N);
     poseidon2_inc_absorb(&p2ctx, optrand, SPX_N);
     poseidon2_inc_absorb(&p2ctx, m, (size_t)mlen);
@@ -69,8 +67,7 @@ void hash_message(unsigned char *digest, uint64_t *tree, uint32_t *leaf_idx,
     unsigned char *bufp = buf;
     spx_poseidon2_inc_ctx p2ctx;
 
-    poseidon2_inc_init(&p2ctx);
-    poseidon2_inc_absorb(&p2ctx, (const uint8_t *)"SPX_HASH_MESSAGE", 16);
+    poseidon2_inc_init(&p2ctx, SPX_P2_DOMAIN_HASH_MESSAGE);
     poseidon2_inc_absorb(&p2ctx, R, SPX_N);
     poseidon2_inc_absorb(&p2ctx, pk, SPX_PK_BYTES);
     poseidon2_inc_absorb(&p2ctx, m, (size_t)mlen);

@@ -19,7 +19,6 @@ void thash(unsigned char *out, const unsigned char *in, unsigned int inblocks,
     memcpy(buf + SPX_N, addr, SPX_ADDR_BYTES);
     memcpy(buf + SPX_N + SPX_ADDR_BYTES, in, inblocks * SPX_N);
 
-    poseidon2_hash_bytes(out, SPX_N,
-                         (const uint8_t *)"SPX_THASH_SIMPLE", 16,
-                         buf, SPX_N + SPX_ADDR_BYTES + inblocks * SPX_N);
+    poseidon2_hash_bytes_domain(out, SPX_N, SPX_P2_DOMAIN_THASH_SIMPLE,
+                                buf, SPX_N + SPX_ADDR_BYTES + inblocks * SPX_N);
 }
