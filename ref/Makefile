@@ -21,7 +21,7 @@ ifneq (,$(findstring sha2,$(PARAMS)))
 endif
 ifneq (,$(findstring poseidon2,$(PARAMS)))
 	SOURCES += fips202.c poseidon2.c hash_poseidon2.c thash_poseidon2_simple.c
-	HEADERS += fips202.h poseidon2.h
+	HEADERS += fips202.h poseidon2.h poseidon2_params_goldilocks_profile.h
 endif
 
 DET_SOURCES = $(SOURCES:randombytes.%=rng.%)
