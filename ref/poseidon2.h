@@ -12,6 +12,8 @@
 #define SPX_POSEIDON2_CAPACITY_WORDS 6
 #define SPX_POSEIDON2_RATE_WORDS (SPX_POSEIDON2_T - SPX_POSEIDON2_CAPACITY_WORDS)
 #define SPX_POSEIDON2_RATE_BYTES (SPX_POSEIDON2_RATE_WORDS * sizeof(uint64_t))
+#define SPX_POSEIDON2_RF 8
+#define SPX_POSEIDON2_RP 22
 
 typedef enum
 {
@@ -27,9 +29,15 @@ typedef enum
 
 typedef struct
 {
-    uint64_t state_inc[26];
+    uint64_t state[SPX_POSEIDON2_T];
+    uint8_t absorb_buf[SPX_POSEIDON2_RATE_BYTES];
+    uint8_t squeeze_buf[SPX_POSEIDON2_RATE_BYTES];
+    size_t absorb_pos;
+    size_t squeeze_pos;
+    size_t squeeze_avail;
     uint8_t domain_tag;
     uint8_t finalized;
+    uint8_t squeezing;
 } spx_poseidon2_inc_ctx;
 
 #define poseidon2_inc_init SPX_NAMESPACE(poseidon2_inc_init)
@@ -48,8 +56,8 @@ void poseidon2_inc_squeeze(uint8_t *output, size_t outlen,
                            spx_poseidon2_inc_ctx *ctx);
 
 /*
- * Draft low-level permutation API. The current implementation is a placeholder
- * and will be replaced by a real Poseidon2 permutation.
+ * Low-level permutation API (Goldilocks profile).
+ * The implementation is now permutation-backed and no longer uses SHAKE.
  */
 #define poseidon2_permute SPX_NAMESPACE(poseidon2_permute)
 void poseidon2_permute(uint64_t state[SPX_POSEIDON2_T]);
