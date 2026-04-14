@@ -20,8 +20,8 @@ ifneq (,$(findstring sha2,$(PARAMS)))
 	HEADERS += sha2.h
 endif
 ifneq (,$(findstring poseidon2,$(PARAMS)))
-	SOURCES += fips202.c poseidon2.c hash_poseidon2.c thash_poseidon2_simple.c
-	HEADERS += fips202.h poseidon2.h poseidon2_params_goldilocks_profile.h
+	SOURCES += fips202.c poseidon2.c hash_poseidon2.c thash_poseidon2_simple.c hash_poseidon2_adapter.c
+	HEADERS += fips202.h poseidon2.h poseidon2_params_goldilocks_profile.h hash_poseidon2_adapter.h
 endif
 
 DET_SOURCES = $(SOURCES:randombytes.%=rng.%)
@@ -33,6 +33,7 @@ TESTS =         test/fors \
 ifneq (,$(findstring poseidon2,$(PARAMS)))
 	TESTS += test/poseidon2_api
 	TESTS += test/poseidon2_kat
+	TESTS += test/poseidon2_adapter
 endif
 
 BENCHMARK = test/benchmark

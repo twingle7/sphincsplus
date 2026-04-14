@@ -24,6 +24,7 @@ typedef enum
     SPX_P2_DOMAIN_THASH_F = 0x11,
     SPX_P2_DOMAIN_THASH_H = 0x12,
     SPX_P2_DOMAIN_THASH_TL = 0x13,
+    SPX_P2_DOMAIN_COMMIT = 0x20,
     SPX_P2_DOMAIN_CUSTOM = 0xff
 } spx_poseidon2_domain;
 
@@ -66,6 +67,16 @@ void poseidon2_permute(uint64_t state[SPX_POSEIDON2_T]);
 void poseidon2_hash_bytes_domain(uint8_t *output, size_t outlen,
                                  spx_poseidon2_domain domain_tag,
                                  const uint8_t *input, size_t inlen);
+
+typedef void (*spx_poseidon2_trace_callback)(
+    void *user,
+    uint8_t domain_tag,
+    const uint8_t *input, size_t input_len,
+    const uint8_t *output, size_t output_len
+);
+
+#define poseidon2_set_trace_callback SPX_NAMESPACE(poseidon2_set_trace_callback)
+void poseidon2_set_trace_callback(spx_poseidon2_trace_callback cb, void *user);
 
 /* Formal THASH semantic-domain entry points. */
 #define poseidon2_hash_thash_f SPX_NAMESPACE(poseidon2_hash_thash_f)

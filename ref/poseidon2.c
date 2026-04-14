@@ -7,6 +7,15 @@
 
 #define P2_GOLDILOCKS_PRIME UINT64_C(0xFFFFFFFF00000001)
 
+static spx_poseidon2_trace_callback g_trace_cb = 0;
+static void *g_trace_user = 0;
+
+void poseidon2_set_trace_callback(spx_poseidon2_trace_callback cb, void *user)
+{
+    g_trace_cb = cb;
+    g_trace_user = user;
+}
+
 static uint64_t p2_mod_reduce_u64(uint64_t x)
 {
     if (x >= P2_GOLDILOCKS_PRIME) {
@@ -247,6 +256,9 @@ void poseidon2_hash_bytes_domain(uint8_t *output, size_t outlen,
     poseidon2_inc_absorb(&ctx, input, inlen);
     poseidon2_inc_finalize(&ctx);
     poseidon2_inc_squeeze(output, outlen, &ctx);
+    if (g_trace_cb != 0) {
+        g_trace_cb(g_trace_user, (uint8_t)domain_tag, input, inlen, output, outlen);
+    }
 }
 
 void poseidon2_hash_thash_f(uint8_t *output, size_t outlen,
