@@ -4,6 +4,7 @@
 
 #include "../api.h"
 #include "../hash_poseidon2_adapter.h"
+#include "poseidon2_test_utils.h"
 
 static spx_p2_trace g_trace;
 
@@ -12,7 +13,7 @@ static void fail(const char *name)
     printf("FAIL: %s\n", name);
 }
 
-int main(void)
+int main(int argc, char **argv)
 {
     static const size_t lens[] = {0, 1, 7, 8, 9, 47, 48, 49};
     uint8_t msg[49];
@@ -24,6 +25,10 @@ int main(void)
     uint8_t sig[CRYPTO_BYTES];
     int verify_ret;
     int trace_verify_ret;
+    int verbose = spx_test_is_verbose(argc, argv);
+    size_t encode_checks = 0;
+    size_t trace_checks = 0;
+    double t0 = spx_test_now_seconds();
     size_t i;
 
     for (i = 0; i < sizeof(msg); i++)
@@ -49,6 +54,11 @@ int main(void)
         {
             fail("encode_lane_count");
             return 1;
+        }
+        encode_checks++;
+        if (verbose) {
+            printf("[adapter] encode len=%llu lanes=%llu\n",
+                   (unsigned long long)n, (unsigned long long)lane_count);
         }
     }
 
@@ -101,8 +111,18 @@ int main(void)
             fail("trace_output_lane_len");
             return 1;
         }
+        trace_checks++;
     }
 
-    printf("poseidon2_adapter test: OK\n");
+    printf("poseidon2_adapter test: OK | encode_checks=%llu trace_calls=%llu trace_lane_checks=%llu elapsed=%.6f s\n",
+           (unsigned long long)encode_checks,
+           (unsigned long long)g_trace.call_count,
+           (unsigned long long)trace_checks,
+           spx_test_now_seconds() - t0);
+    if (verbose) {
+        spx_test_print_hex_prefix("commit", com, SPX_N, SPX_N);
+        printf("[adapter] dropped_calls=%u dropped_lanes=%u total_lanes=%u\n",
+               g_trace.dropped_calls, g_trace.dropped_lanes, g_trace.lane_count);
+    }
     return 0;
 }

@@ -72,8 +72,7 @@ typedef void (*spx_poseidon2_trace_callback)(
     void *user,
     uint8_t domain_tag,
     const uint8_t *input, size_t input_len,
-    const uint8_t *output, size_t output_len
-);
+    const uint8_t *output, size_t output_len);
 
 #define poseidon2_set_trace_callback SPX_NAMESPACE(poseidon2_set_trace_callback)
 void poseidon2_set_trace_callback(spx_poseidon2_trace_callback cb, void *user);

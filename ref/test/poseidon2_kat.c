@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "../poseidon2.h"
+#include "poseidon2_test_utils.h"
 
 static int check_u64_eq(const uint64_t *a, const uint64_t *b, size_t n)
 {
@@ -19,7 +20,7 @@ static void print_fail(const char *name)
     printf("FAIL: %s\n", name);
 }
 
-int main(void)
+int main(int argc, char **argv)
 {
     static const uint64_t exp_permute[SPX_POSEIDON2_T] = {
         UINT64_C(0xe4930b13f59b9a0e), UINT64_C(0xbf64a475d71decb5),
@@ -44,6 +45,8 @@ int main(void)
     uint8_t in_b[49];
     uint8_t out_a[64];
     uint8_t out_b[64];
+    int verbose = spx_test_is_verbose(argc, argv);
+    double t0 = spx_test_now_seconds();
     size_t i;
 
     for (i = 0; i < SPX_POSEIDON2_T; i++)
@@ -55,6 +58,9 @@ int main(void)
     {
         print_fail("permute_kat");
         return 1;
+    }
+    if (verbose) {
+        printf("[kat] permute vector matched\n");
     }
 
     for (i = 0; i < sizeof(in_a); i++)
@@ -84,6 +90,11 @@ int main(void)
         return 1;
     }
 
-    printf("poseidon2_kat test: OK\n");
+    printf("poseidon2_kat test: OK | vectors=3 | elapsed=%.6f s\n",
+           spx_test_now_seconds() - t0);
+    if (verbose) {
+        spx_test_print_hex_prefix("hash_vec_a", out_a, sizeof(out_a), 32);
+        spx_test_print_hex_prefix("hash_vec_b", out_b, sizeof(out_b), 32);
+    }
     return 0;
 }

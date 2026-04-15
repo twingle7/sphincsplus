@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "../poseidon2.h"
+#include "poseidon2_test_utils.h"
 
 static int check_equal(const uint8_t *a, const uint8_t *b, size_t len)
 {
@@ -14,7 +15,7 @@ static int check_diff(const uint8_t *a, const uint8_t *b, size_t len)
     return memcmp(a, b, len) != 0;
 }
 
-int main(void)
+int main(int argc, char **argv)
 {
     static const size_t lens[] = {0, 1, 7, 8, 9, 47, 48, 49};
     uint8_t input[64];
@@ -23,6 +24,10 @@ int main(void)
     uint8_t out_f[64];
     uint8_t out_h[64];
     uint8_t out_tl[64];
+    int verbose = spx_test_is_verbose(argc, argv);
+    size_t oneshot_inc_checks = 0;
+    size_t boundary_checks = 0;
+    double t0 = spx_test_now_seconds();
     size_t i;
 
     for (i = 0; i < sizeof(input); i++) {
@@ -46,6 +51,10 @@ int main(void)
                    (unsigned long long)len);
             return 1;
         }
+        oneshot_inc_checks++;
+        if (verbose) {
+            printf("[api] oneshot/inc len=%llu ok\n", (unsigned long long)len);
+        }
     }
 
     for (i = 0; i + 1 < sizeof(lens) / sizeof(lens[0]); i++) {
@@ -63,6 +72,13 @@ int main(void)
             printf("FAIL: boundary differential collision at len=%llu/%llu\n",
                    (unsigned long long)len_a, (unsigned long long)len_b);
             return 1;
+        }
+        boundary_checks++;
+        if (verbose) {
+            printf("[api] boundary %llu/%llu diff ok\n",
+                   (unsigned long long)len_a, (unsigned long long)len_b);
+            spx_test_print_hex_prefix("  out_a", out_a, sizeof(out_a), 16);
+            spx_test_print_hex_prefix("  out_b", out_b, sizeof(out_b), 16);
         }
     }
 
@@ -83,6 +99,14 @@ int main(void)
         return 1;
     }
 
-    printf("poseidon2_api test: OK\n");
+    printf("poseidon2_api test: OK | checks(oneshot/inc=%llu, boundary=%llu) | elapsed=%.6f s\n",
+           (unsigned long long)oneshot_inc_checks,
+           (unsigned long long)boundary_checks,
+           spx_test_now_seconds() - t0);
+    if (verbose) {
+        spx_test_print_hex_prefix("thash_f", out_f, sizeof(out_f), 24);
+        spx_test_print_hex_prefix("thash_h", out_h, sizeof(out_h), 24);
+        spx_test_print_hex_prefix("thash_tl", out_tl, sizeof(out_tl), 24);
+    }
     return 0;
 }
