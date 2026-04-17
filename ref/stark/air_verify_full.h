@@ -8,11 +8,17 @@
 #include "../params.h"
 #include "witness_format.h"
 
-typedef struct {
+typedef struct
+{
     uint8_t commitment[SPX_N];
     uint32_t constraint_count;
     uint32_t violation_count;
 } spx_p2_verify_full_proof_v1;
+
+#define spx_p2_verify_full_air_eval_module_constraints_v1 SPX_NAMESPACE(spx_p2_verify_full_air_eval_module_constraints_v1)
+int spx_p2_verify_full_air_eval_module_constraints_v1(const spx_p2_trace *trace,
+                                                      uint32_t *out_constraint_count,
+                                                      uint32_t *out_violation_count);
 
 #define spx_p2_verify_full_air_eval_constraints_v1 SPX_NAMESPACE(spx_p2_verify_full_air_eval_constraints_v1)
 int spx_p2_verify_full_air_eval_constraints_v1(const uint8_t *pk,
