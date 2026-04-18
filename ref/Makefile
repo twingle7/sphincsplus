@@ -20,8 +20,8 @@ ifneq (,$(findstring sha2,$(PARAMS)))
 	HEADERS += sha2.h
 endif
 ifneq (,$(findstring poseidon2,$(PARAMS)))
-	SOURCES += fips202.c poseidon2.c hash_poseidon2.c thash_poseidon2_simple.c hash_poseidon2_adapter.c bsig_poseidon2_v0.c show/show_poseidon2_v1.c stark/witness_builder.c stark/air_poseidon2_perm.c stark/air_poseidon2_sponge.c stark/air_hashcall.c stark/air_verify_minimal.c stark/air_verify_full.c
-	HEADERS += fips202.h poseidon2.h poseidon2_params_goldilocks_profile.h hash_poseidon2_adapter.h bsig_poseidon2_v0.h show/show_poseidon2_v1.h stark/witness_format.h stark/air_poseidon2_perm.h stark/air_poseidon2_sponge.h stark/air_hashcall.h stark/air_verify_minimal.h stark/air_verify_full.h
+	SOURCES += fips202.c poseidon2.c hash_poseidon2.c thash_poseidon2_simple.c hash_poseidon2_adapter.c bsig_poseidon2_v0.c show/show_poseidon2_v1.c stark/witness_builder.c stark/air_poseidon2_perm.c stark/air_poseidon2_sponge.c stark/air_hashcall.c stark/air_verify_minimal.c stark/air_verify_full.c stark/pi_f_format_v1.c stark/prover_v1.c stark/verifier_v1.c stark/ffi_v1.c stark/stats_v1.c
+	HEADERS += fips202.h poseidon2.h poseidon2_params_goldilocks_profile.h hash_poseidon2_adapter.h bsig_poseidon2_v0.h show/show_poseidon2_v1.h stark/witness_format.h stark/air_poseidon2_perm.h stark/air_poseidon2_sponge.h stark/air_hashcall.h stark/air_verify_minimal.h stark/air_verify_full.h stark/pi_f_format_v1.h stark/prover_v1.h stark/verifier_v1.h stark/ffi_v1.h stark/stats_v1.h
 endif
 
 DET_SOURCES = $(SOURCES:randombytes.%=rng.%)
@@ -41,6 +41,9 @@ ifneq (,$(findstring poseidon2,$(PARAMS)))
 	TESTS += test/poseidon2_hashcall_air_v1
 	TESTS += test/poseidon2_verify_minimal_air_v1
 	TESTS += test/poseidon2_verify_full_air_v1
+	TESTS += test/poseidon2_show_v1
+	TESTS += test/poseidon2_stark_ffi_v1
+	TESTS += test/poseidon2_stark_stats_v1
 endif
 
 BENCHMARK = test/benchmark

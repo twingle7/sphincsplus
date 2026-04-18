@@ -6,6 +6,7 @@
 
 #include "../hash_poseidon2_adapter.h"
 #include "../params.h"
+#include "../stark/prover_v1.h"
 
 #define SPX_P2_PUBLIC_CTX_MAX 64
 
@@ -16,7 +17,8 @@
  */
 typedef struct {
     uint8_t com[SPX_N];
-    uint8_t pi_f[SPX_N];
+    uint8_t pi_f[SPX_P2_PI_F_V1_MAX_BYTES];
+    size_t pi_f_len;
     uint8_t public_ctx[SPX_P2_PUBLIC_CTX_MAX];
     size_t public_ctx_len;
 } spx_p2_show_v1;
@@ -42,5 +44,16 @@ int spx_p2_show_from_internal_v1(spx_p2_show_v1 *out,
 
 #define spx_p2_show_verify_shape_v1 SPX_NAMESPACE(spx_p2_show_verify_shape_v1)
 int spx_p2_show_verify_shape_v1(const spx_p2_show_v1 *show);
+
+#define spx_p2_show_prove_m10_skeleton_v1 SPX_NAMESPACE(spx_p2_show_prove_m10_skeleton_v1)
+int spx_p2_show_prove_m10_skeleton_v1(spx_p2_show_v1 *out,
+                                      const uint8_t *pk,
+                                      const spx_p2_cred_v1_internal *cred,
+                                      const uint8_t *public_ctx,
+                                      size_t public_ctx_len);
+
+#define spx_p2_show_verify_m10_skeleton_v1 SPX_NAMESPACE(spx_p2_show_verify_m10_skeleton_v1)
+int spx_p2_show_verify_m10_skeleton_v1(const spx_p2_show_v1 *show,
+                                       const uint8_t *pk);
 
 #endif
