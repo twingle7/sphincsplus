@@ -2,7 +2,7 @@
 
 use winterfell::{
     crypto::{hashers::Blake3_256, DefaultRandomCoin, MerkleTree},
-    math::{fields::f128::BaseElement, FieldElement, StarkField, ToElements},
+    math::{fields::f128::BaseElement, FieldElement, ToElements},
     matrix::ColMatrix,
     AcceptableOptions, Air, AirContext, Assertion, BatchingMethod, CompositionPoly,
     CompositionPolyTrace, DefaultConstraintCommitment, DefaultConstraintEvaluator, DefaultTraceLde,
@@ -20,8 +20,18 @@ pub const SPX_P2_RUST_ERR_PROVE: i32 = -4;
 pub const SPX_P2_RUST_ERR_VERIFY: i32 = -5;
 pub const SPX_P2_RUST_ERR_FORMAT: i32 = -6;
 
-const PROOF_MAGIC: u32 = 0x31315253; // "SR11"
 const TRACE_LEN: usize = 64;
+const PK_LEN: usize = 48;
+const COM_LEN: usize = 24;
+const SPX_N: usize = 24;
+
+const PI_F_V2_MAGIC: u32 = 0x32504650; // "PFP2"
+const PI_F_V2_VERSION: u32 = 2;
+const PI_F_V2_FLAG_STARK_PROOF: u32 = 0x0000_0001;
+const PI_F_V2_PROOF_SYSTEM_ID_STARK: u32 = 2;
+const PI_F_V2_STATEMENT_VERSION_VERIFY_FULL_V1: u32 = 1;
+const PI_F_V2_FIXED_HEADER_BYTES: usize = 7 * 4;
+const PI_F_V2_RESERVED_BYTES: usize = 2 * 4;
 
 #[repr(C)]
 pub struct SpxP2FfiBlobV1 {
@@ -47,11 +57,13 @@ pub struct SpxP2FfiPrivateWitnessV1 {
 struct PublicInputs {
     start: BaseElement,
     result: BaseElement,
+    mix: BaseElement,
+    bind: BaseElement,
 }
 
 impl ToElements<BaseElement> for PublicInputs {
     fn to_elements(&self) -> Vec<BaseElement> {
-        vec![self.start, self.result]
+        vec![self.start, self.result, self.mix, self.bind]
     }
 }
 
@@ -59,6 +71,8 @@ struct WorkAir {
     context: AirContext<BaseElement>,
     start: BaseElement,
     result: BaseElement,
+    mix: BaseElement,
+    bind: BaseElement,
 }
 
 impl Air for WorkAir {
@@ -72,6 +86,8 @@ impl Air for WorkAir {
             context: AirContext::new(trace_info, degrees, num_assertions, options),
             start: pub_inputs.start,
             result: pub_inputs.result,
+            mix: pub_inputs.mix,
+            bind: pub_inputs.bind,
         }
     }
 
@@ -82,7 +98,8 @@ impl Air for WorkAir {
         result: &mut [E],
     ) {
         let current_state = frame.current()[0];
-        let next_state = current_state.exp(3u32.into()) + E::from(42u32);
+        let round_const = E::from(42u32) + E::from(self.mix) + E::from(self.bind);
+        let next_state = current_state.exp(3u32.into()) + round_const;
         result[0] = frame.next()[0] - next_state;
     }
 
@@ -127,6 +144,8 @@ impl Prover for WorkProver {
         PublicInputs {
             start: trace.get(0, 0),
             result: trace.get(0, last_step),
+            mix: BaseElement::ZERO,
+            bind: BaseElement::ZERO,
         }
     }
 
@@ -182,31 +201,6 @@ fn options_96bits() -> ProofOptions {
     )
 }
 
-fn hash_to_u128(pk: &[u8], com: &[u8], public_ctx: &[u8]) -> u128 {
-    let mut acc_hi: u64 = 0xcbf29ce484222325u64;
-    let mut acc_lo: u64 = 0x9e3779b97f4a7c15u64;
-    for &b in pk.iter().chain(com.iter()).chain(public_ctx.iter()) {
-        acc_hi ^= b as u64;
-        acc_hi = acc_hi.wrapping_mul(0x100000001b3u64);
-        acc_lo ^= (b as u64).wrapping_mul(0x9e3779b97f4a7c15u64);
-        acc_lo = acc_lo.rotate_left(13).wrapping_add(0x517cc1b727220a95u64);
-    }
-    ((acc_hi as u128) << 64) | (acc_lo as u128)
-}
-
-fn build_work_trace(start: BaseElement, n: usize) -> TraceTable<BaseElement> {
-    let mut trace = TraceTable::new(1, n);
-    trace.fill(
-        |state| {
-            state[0] = start;
-        },
-        |_, state| {
-            state[0] = state[0].exp(3u32.into()) + BaseElement::new(42);
-        },
-    );
-    trace
-}
-
 fn write_u32_le(out: &mut [u8], x: u32) {
     out[0] = (x & 0xff) as u8;
     out[1] = ((x >> 8) & 0xff) as u8;
@@ -221,18 +215,173 @@ fn read_u32_le(input: &[u8]) -> u32 {
         | ((input[3] as u32) << 24)
 }
 
-fn write_u128_le(out: &mut [u8], x: u128) {
-    for (i, b) in out.iter_mut().enumerate().take(16) {
-        *b = ((x >> (8 * i)) & 0xff) as u8;
+fn hash_to_u128(parts: &[&[u8]]) -> u128 {
+    let mut acc_hi: u64 = 0xcbf29ce484222325u64;
+    let mut acc_lo: u64 = 0x9e3779b97f4a7c15u64;
+    for part in parts {
+        for &b in *part {
+            acc_hi ^= b as u64;
+            acc_hi = acc_hi.wrapping_mul(0x100000001b3u64);
+            acc_lo ^= (b as u64).wrapping_mul(0x9e3779b97f4a7c15u64);
+            acc_lo = acc_lo.rotate_left(13).wrapping_add(0x517cc1b727220a95u64);
+        }
     }
+    ((acc_hi as u128) << 64) | (acc_lo as u128)
 }
 
-fn read_u128_le(input: &[u8]) -> u128 {
+fn hash_expand(parts: &[&[u8]], out_len: usize) -> Vec<u8> {
+    let mut out = vec![0u8; out_len];
+    let mut seed = hash_to_u128(parts);
+    for (i, b) in out.iter_mut().enumerate() {
+        let rot = ((i % 17) as u32) + 5;
+        seed = seed.rotate_left(rot) ^ (0x9e3779b97f4a7c15u128 + i as u128);
+        *b = (seed & 0xff) as u8;
+    }
+    out
+}
+
+fn derive_mix(digest: &[u8]) -> BaseElement {
     let mut x = 0u128;
-    for (i, b) in input.iter().enumerate().take(16) {
+    for (i, b) in digest.iter().enumerate().take(16) {
         x |= (*b as u128) << (8 * i);
     }
-    x
+    BaseElement::new(x)
+}
+
+fn iterate_state(mut state: BaseElement, mix: BaseElement, bind: BaseElement, n: usize) -> BaseElement {
+    for _ in 1..n {
+        state = state.exp(3u32.into()) + BaseElement::new(42) + mix + bind;
+    }
+    state
+}
+
+fn build_work_trace(start: BaseElement, mix: BaseElement, bind: BaseElement, n: usize) -> TraceTable<BaseElement> {
+    let mut trace = TraceTable::new(1, n);
+    trace.fill(
+        |state| {
+            state[0] = start;
+        },
+        |_, state| {
+            state[0] = state[0].exp(3u32.into()) + BaseElement::new(42) + mix + bind;
+        },
+    );
+    trace
+}
+
+fn encode_pi_f_v2(
+    out: &mut [u8],
+    public_input_digest: &[u8],
+    ctx_binding: &[u8],
+    commitment: &[u8],
+    proof_bytes: &[u8],
+) -> Option<usize> {
+    if public_input_digest.len() != SPX_N || ctx_binding.len() != SPX_N || commitment.len() != SPX_N {
+        return None;
+    }
+    let total_len = PI_F_V2_FIXED_HEADER_BYTES + SPX_N + SPX_N + SPX_N + 4 + proof_bytes.len() + PI_F_V2_RESERVED_BYTES;
+    if out.len() < total_len || total_len > u32::MAX as usize {
+        return None;
+    }
+    let mut off = 0usize;
+    write_u32_le(&mut out[off..off + 4], PI_F_V2_MAGIC);
+    off += 4;
+    write_u32_le(&mut out[off..off + 4], PI_F_V2_VERSION);
+    off += 4;
+    write_u32_le(&mut out[off..off + 4], PI_F_V2_FLAG_STARK_PROOF);
+    off += 4;
+    write_u32_le(&mut out[off..off + 4], PI_F_V2_FIXED_HEADER_BYTES as u32);
+    off += 4;
+    write_u32_le(&mut out[off..off + 4], total_len as u32);
+    off += 4;
+    write_u32_le(&mut out[off..off + 4], PI_F_V2_PROOF_SYSTEM_ID_STARK);
+    off += 4;
+    write_u32_le(&mut out[off..off + 4], PI_F_V2_STATEMENT_VERSION_VERIFY_FULL_V1);
+    off += 4;
+
+    out[off..off + SPX_N].copy_from_slice(public_input_digest);
+    off += SPX_N;
+    out[off..off + SPX_N].copy_from_slice(ctx_binding);
+    off += SPX_N;
+    out[off..off + SPX_N].copy_from_slice(commitment);
+    off += SPX_N;
+
+    write_u32_le(&mut out[off..off + 4], proof_bytes.len() as u32);
+    off += 4;
+    out[off..off + proof_bytes.len()].copy_from_slice(proof_bytes);
+    off += proof_bytes.len();
+    out[off..off + PI_F_V2_RESERVED_BYTES].fill(0);
+    off += PI_F_V2_RESERVED_BYTES;
+    Some(off)
+}
+
+#[derive(Clone)]
+struct PiFV2Decoded<'a> {
+    flags: u32,
+    proof_system_id: u32,
+    statement_version: u32,
+    public_input_digest: &'a [u8],
+    ctx_binding: &'a [u8],
+    commitment: &'a [u8],
+    proof_bytes: &'a [u8],
+}
+
+fn decode_pi_f_v2(input: &[u8]) -> Option<PiFV2Decoded<'_>> {
+    let min_len = PI_F_V2_FIXED_HEADER_BYTES + SPX_N + SPX_N + SPX_N + 4 + PI_F_V2_RESERVED_BYTES;
+    if input.len() < min_len {
+        return None;
+    }
+    let mut off = 0usize;
+    let magic = read_u32_le(&input[off..off + 4]);
+    off += 4;
+    let version = read_u32_le(&input[off..off + 4]);
+    off += 4;
+    let flags = read_u32_le(&input[off..off + 4]);
+    off += 4;
+    let header_len = read_u32_le(&input[off..off + 4]) as usize;
+    off += 4;
+    let total_len = read_u32_le(&input[off..off + 4]) as usize;
+    off += 4;
+    let proof_system_id = read_u32_le(&input[off..off + 4]);
+    off += 4;
+    let statement_version = read_u32_le(&input[off..off + 4]);
+    off += 4;
+
+    if magic != PI_F_V2_MAGIC || version != PI_F_V2_VERSION {
+        return None;
+    }
+    if header_len != PI_F_V2_FIXED_HEADER_BYTES || total_len != input.len() {
+        return None;
+    }
+
+    let public_input_digest = &input[off..off + SPX_N];
+    off += SPX_N;
+    let ctx_binding = &input[off..off + SPX_N];
+    off += SPX_N;
+    let commitment = &input[off..off + SPX_N];
+    off += SPX_N;
+    let proof_len = read_u32_le(&input[off..off + 4]) as usize;
+    off += 4;
+    if input.len() < off + proof_len + PI_F_V2_RESERVED_BYTES {
+        return None;
+    }
+    if input.len() - off - PI_F_V2_RESERVED_BYTES != proof_len {
+        return None;
+    }
+    let proof_bytes = &input[off..off + proof_len];
+    off += proof_len;
+    if input[off..off + PI_F_V2_RESERVED_BYTES].iter().any(|b| *b != 0) {
+        return None;
+    }
+
+    Some(PiFV2Decoded {
+        flags,
+        proof_system_id,
+        statement_version,
+        public_input_digest,
+        ctx_binding,
+        commitment,
+        proof_bytes,
+    })
 }
 
 #[no_mangle]
@@ -248,50 +397,59 @@ pub unsafe extern "C" fn spx_p2_rust_get_abi_version_v1(out_version: *mut u32) -
 pub unsafe extern "C" fn spx_p2_rust_generate_pi_f_v1(
     out_proof: *mut SpxP2FfiBlobV1,
     pub_inputs: *const SpxP2FfiPublicInputsV1,
-    _wit: *const SpxP2FfiPrivateWitnessV1,
+    wit: *const SpxP2FfiPrivateWitnessV1,
 ) -> i32 {
-    if out_proof.is_null() || pub_inputs.is_null() {
+    if out_proof.is_null() || pub_inputs.is_null() || wit.is_null() {
         return SPX_P2_RUST_ERR_NULL;
     }
     let out = &mut *out_proof;
     let pubi = &*pub_inputs;
-    if out.data.is_null() || pubi.pk.is_null() || pubi.com.is_null() {
+    let witv = &*wit;
+    if out.data.is_null() || pubi.pk.is_null() || pubi.com.is_null() || witv.sigma_com.is_null() {
         return SPX_P2_RUST_ERR_INPUT;
     }
     if pubi.public_ctx_len > 0 && pubi.public_ctx.is_null() {
         return SPX_P2_RUST_ERR_INPUT;
     }
 
-    let pk = std::slice::from_raw_parts(pubi.pk, 48);
-    let com = std::slice::from_raw_parts(pubi.com, 24);
+    let pk = std::slice::from_raw_parts(pubi.pk, PK_LEN);
+    let com = std::slice::from_raw_parts(pubi.com, COM_LEN);
     let public_ctx = if pubi.public_ctx_len == 0 {
         &[]
     } else {
         std::slice::from_raw_parts(pubi.public_ctx, pubi.public_ctx_len)
     };
-
-    let start_u128 = hash_to_u128(pk, com, public_ctx);
+    let statement = PI_F_V2_STATEMENT_VERSION_VERIFY_FULL_V1.to_le_bytes();
+    let public_input_digest = hash_expand(&[pk, com, public_ctx, &statement], SPX_N);
+    let ctx_binding = hash_expand(&[public_ctx], SPX_N);
+    let bind_digest = hash_expand(&[public_input_digest.as_slice(), ctx_binding.as_slice()], 16);
+    let start_u128 = hash_to_u128(&[pk, com, public_ctx]);
     let start = BaseElement::new(start_u128);
-    let trace = build_work_trace(start, TRACE_LEN);
-    let result = trace.get(0, TRACE_LEN - 1);
+    let mix = derive_mix(&public_input_digest);
+    let bind = derive_mix(&bind_digest);
+    let result = iterate_state(start, mix, bind, TRACE_LEN);
+    let trace = build_work_trace(start, mix, bind, TRACE_LEN);
     let proof = match WorkProver::new(options_96bits()).prove(trace) {
         Ok(p) => p,
         Err(_) => return SPX_P2_RUST_ERR_PROVE,
     };
     let proof_bytes = proof.to_bytes();
+    let commitment = hash_expand(&[proof_bytes.as_slice()], SPX_N);
 
-    let total_len = 4 + 4 + 16 + 16 + 4 + proof_bytes.len();
-    if out.cap < total_len {
-        return SPX_P2_RUST_ERR_BUFFER_SMALL;
-    }
     let out_slice = std::slice::from_raw_parts_mut(out.data, out.cap);
-    write_u32_le(&mut out_slice[0..4], PROOF_MAGIC);
-    write_u32_le(&mut out_slice[4..8], 1);
-    write_u128_le(&mut out_slice[8..24], start_u128);
-    write_u128_le(&mut out_slice[24..40], result.as_int());
-    write_u32_le(&mut out_slice[40..44], proof_bytes.len() as u32);
-    out_slice[44..44 + proof_bytes.len()].copy_from_slice(&proof_bytes);
-    out.len = total_len;
+    let encoded_len = match encode_pi_f_v2(
+        out_slice,
+        &public_input_digest,
+        &ctx_binding,
+        &commitment,
+        &proof_bytes,
+    ) {
+        Some(n) => n,
+        None => return SPX_P2_RUST_ERR_BUFFER_SMALL,
+    };
+    out.len = encoded_len;
+
+    let _ = result;
     SPX_P2_RUST_OK
 }
 
@@ -311,39 +469,51 @@ pub unsafe extern "C" fn spx_p2_rust_verify_pi_f_v1(
     if pubi.public_ctx_len > 0 && pubi.public_ctx.is_null() {
         return SPX_P2_RUST_ERR_INPUT;
     }
-    if pf.len < 44 {
-        return SPX_P2_RUST_ERR_FORMAT;
-    }
-
     let data = std::slice::from_raw_parts(pf.data, pf.len);
-    if read_u32_le(&data[0..4]) != PROOF_MAGIC || read_u32_le(&data[4..8]) != 1 {
+    let decoded = match decode_pi_f_v2(data) {
+        Some(v) => v,
+        None => return SPX_P2_RUST_ERR_FORMAT,
+    };
+    if decoded.flags & PI_F_V2_FLAG_STARK_PROOF == 0
+        || decoded.proof_system_id != PI_F_V2_PROOF_SYSTEM_ID_STARK
+        || decoded.statement_version != PI_F_V2_STATEMENT_VERSION_VERIFY_FULL_V1
+    {
         return SPX_P2_RUST_ERR_FORMAT;
     }
 
-    let pk = std::slice::from_raw_parts(pubi.pk, 48);
-    let com = std::slice::from_raw_parts(pubi.com, 24);
+    let pk = std::slice::from_raw_parts(pubi.pk, PK_LEN);
+    let com = std::slice::from_raw_parts(pubi.com, COM_LEN);
     let public_ctx = if pubi.public_ctx_len == 0 {
         &[]
     } else {
         std::slice::from_raw_parts(pubi.public_ctx, pubi.public_ctx_len)
     };
-    let expected_start = hash_to_u128(pk, com, public_ctx);
-    let start = read_u128_le(&data[8..24]);
-    if start != expected_start {
+    let statement = PI_F_V2_STATEMENT_VERSION_VERIFY_FULL_V1.to_le_bytes();
+    let expected_public_input_digest = hash_expand(&[pk, com, public_ctx, &statement], SPX_N);
+    let expected_ctx_binding = hash_expand(&[public_ctx], SPX_N);
+    if decoded.public_input_digest != expected_public_input_digest.as_slice()
+        || decoded.ctx_binding != expected_ctx_binding.as_slice()
+    {
         return SPX_P2_RUST_ERR_VERIFY;
     }
-    let result_u128 = read_u128_le(&data[24..40]);
-    let proof_len = read_u32_le(&data[40..44]) as usize;
-    if pf.len != 44 + proof_len {
-        return SPX_P2_RUST_ERR_FORMAT;
-    }
-    let proof_obj = match Proof::from_bytes(&data[44..]) {
+
+    let start_u128 = hash_to_u128(&[pk, com, public_ctx]);
+    let start = BaseElement::new(start_u128);
+    let mix = derive_mix(decoded.public_input_digest);
+    let bind_seed = hash_expand(&[decoded.public_input_digest, decoded.ctx_binding], 16);
+    let bind = derive_mix(&bind_seed);
+    let result = iterate_state(start, mix, bind, TRACE_LEN);
+    let _ = decoded.commitment;
+
+    let proof_obj = match Proof::from_bytes(decoded.proof_bytes) {
         Ok(p) => p,
         Err(_) => return SPX_P2_RUST_ERR_FORMAT,
     };
     let pub_inputs = PublicInputs {
-        start: BaseElement::new(start),
-        result: BaseElement::new(result_u128),
+        start,
+        result,
+        mix,
+        bind,
     };
     let min_opts = AcceptableOptions::MinConjecturedSecurity(80);
     match winterfell::verify::<

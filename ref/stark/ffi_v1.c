@@ -40,16 +40,20 @@ int spx_p2_ffi_generate_pi_f_v1(spx_p2_ffi_blob_v1 *out_proof,
     {
         return SPX_P2_FFI_ERR_INPUT;
     }
-    if (out_proof->cap < SPX_P2_PI_F_V1_MAX_BYTES)
-    {
-        return SPX_P2_FFI_ERR_BUFFER_SMALL;
-    }
 #ifdef SPX_P2_USE_RUST_STARK
     {
+        if (out_proof->cap == 0)
+        {
+            return SPX_P2_FFI_ERR_BUFFER_SMALL;
+        }
         int ret = spx_p2_rust_generate_pi_f_v1(out_proof, pub, wit);
         return (ret == 0) ? SPX_P2_FFI_OK : SPX_P2_FFI_ERR_PROVE;
     }
 #else
+    if (out_proof->cap < SPX_P2_PI_F_V1_MAX_BYTES)
+    {
+        return SPX_P2_FFI_ERR_BUFFER_SMALL;
+    }
     if (spx_p2_prover_generate_pi_f_v1(out_proof->data, &out_proof->len, out_proof->cap,
                                        pub->pk, pub->com, wit->sigma_com,
                                        pub->public_ctx, pub->public_ctx_len) != 0)
