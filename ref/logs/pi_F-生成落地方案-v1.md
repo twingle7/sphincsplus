@@ -36,7 +36,7 @@
 - [x] 冻结 `pi_F_v1` 最终字节级规范（含 Rust FFI 兼容字段保留区）。
 
 ### P1（M10->M11 过渡）
-- [ ] 在 Rust 侧实现 `trace -> LDE -> composition -> FRI` 的真正 prover。
+- [ ] 在 Rust 侧实现 `trace -> LDE -> composition -> FRI` 的真正 prover（已完成单模块真实 proof，待扩展到 `verify_full`）。
 - [ ] C 侧仅负责 witness/输入构建，proof 生成迁移到 Rust 后端。
 - [ ] 增加 C/Rust FFI 边界层（稳定 ABI + 错误码）。
 

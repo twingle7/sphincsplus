@@ -33,8 +33,14 @@
 ## 6. 当前实现说明
 - 当前实现后端仍调用 C 侧 `prover_v1/verifier_v1`，属于 FFI 形状冻结阶段。
 - 后续接 Rust/Winterfell 时，只需替换接口内部实现，不破坏外部 ABI。
+- 已在 `ffi_v1.c` 中预留 Rust 后端切换开关：`SPX_P2_USE_RUST_STARK`。
+- Rust 侧当前已实现“单模块真实 STARK proof”路径（`stark-rs`），用于联调真实 proof 生成/验证流程。
 
 ## 7. 后续升级点
 - 将 `sigma_com` 从 **proof blob 序列化输出** 中移除（但继续作为 prover 私有 witness 输入）。
 - 增加错误码细分（格式错误、约束错误、后端内部错误）。
 - 增加字节序与结构对齐的跨语言一致性测试（C/Rust 双向）。
+
+## 8. Rust 后端切换说明（预备）
+- 在 C 侧编译时定义 `SPX_P2_USE_RUST_STARK`，`ffi_v1.c` 将优先调用 Rust 导出的 prove/verify 函数。
+- 若未定义该宏，默认继续使用 C 侧骨架 prover/verifier，实现向后兼容。
