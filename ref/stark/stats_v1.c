@@ -5,12 +5,22 @@
 
 #include "../hash_poseidon2_adapter.h"
 #include "ffi_v1.h"
+#include "pi_f_format_v1.h"
+#include "pi_f_format_v2.h"
 #include "stats_v1.h"
 #include "witness_format.h"
 
 static double elapsed_ms(clock_t begin, clock_t end)
 {
     return (double)(end - begin) * 1000.0 / (double)CLOCKS_PER_SEC;
+}
+
+static uint32_t load_u32_le(const uint8_t in[4])
+{
+    return ((uint32_t)in[0]) |
+           ((uint32_t)in[1] << 8) |
+           ((uint32_t)in[2] << 16) |
+           ((uint32_t)in[3] << 24);
 }
 
 int spx_p2_stark_collect_stats_v1(spx_p2_stark_stats_v1 *out_stats,
@@ -75,6 +85,16 @@ int spx_p2_stark_collect_stats_v1(spx_p2_stark_stats_v1 *out_stats,
 
     out_stats->trace_calls = trace.call_count;
     out_stats->trace_lanes = trace.lane_count;
+    if (blob.len >= 8u)
+    {
+        out_stats->proof_magic = load_u32_le(blob.data);
+        out_stats->proof_version = load_u32_le(blob.data + 4u);
+    }
+    else
+    {
+        out_stats->proof_magic = 0u;
+        out_stats->proof_version = 0u;
+    }
     out_stats->witness_rows = rows;
     out_stats->proof_bytes = blob.len;
     return 0;

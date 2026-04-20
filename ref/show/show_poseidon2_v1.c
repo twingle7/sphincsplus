@@ -3,7 +3,6 @@
 #include <string.h>
 
 #include "show_poseidon2_v1.h"
-#include "../stark/verifier_v1.h"
 
 int spx_p2_show_from_internal_v1(spx_p2_show_v1 *out,
                                  const spx_p2_cred_v1_internal *cred,
@@ -70,6 +69,9 @@ int spx_p2_show_prove_m10_skeleton_v1(spx_p2_show_v1 *out,
                                       const uint8_t *public_ctx,
                                       size_t public_ctx_len)
 {
+    spx_p2_ffi_blob_v1 proof_blob;
+    spx_p2_ffi_public_inputs_v1 pub;
+    spx_p2_ffi_private_witness_v1 wit;
     if (out == 0 || pk == 0 || cred == 0)
     {
         return -1;
@@ -80,12 +82,19 @@ int spx_p2_show_prove_m10_skeleton_v1(spx_p2_show_v1 *out,
     }
     memset(out, 0, sizeof(*out));
     memcpy(out->com, cred->com, SPX_N);
-    if (spx_p2_prover_generate_pi_f_v1(out->pi_f, &out->pi_f_len, sizeof(out->pi_f),
-                                       pk, cred->com, cred->sigma_com,
-                                       public_ctx, public_ctx_len) != 0)
+    proof_blob.data = out->pi_f;
+    proof_blob.len = 0;
+    proof_blob.cap = sizeof(out->pi_f);
+    pub.pk = pk;
+    pub.com = cred->com;
+    pub.public_ctx = public_ctx;
+    pub.public_ctx_len = public_ctx_len;
+    wit.sigma_com = cred->sigma_com;
+    if (spx_p2_ffi_generate_pi_f_v1(&proof_blob, &pub, &wit) != SPX_P2_FFI_OK)
     {
         return -1;
     }
+    out->pi_f_len = proof_blob.len;
     if (public_ctx_len > 0)
     {
         memcpy(out->public_ctx, public_ctx, public_ctx_len);
@@ -97,6 +106,8 @@ int spx_p2_show_prove_m10_skeleton_v1(spx_p2_show_v1 *out,
 int spx_p2_show_verify_m10_skeleton_v1(const spx_p2_show_v1 *show,
                                        const uint8_t *pk)
 {
+    spx_p2_ffi_blob_v1 proof_blob;
+    spx_p2_ffi_public_inputs_v1 pub;
     if (show == 0 || pk == 0)
     {
         return -1;
@@ -105,6 +116,75 @@ int spx_p2_show_verify_m10_skeleton_v1(const spx_p2_show_v1 *show,
     {
         return -1;
     }
-    return spx_p2_verifier_verify_pi_f_v1(pk, show->com, show->pi_f, show->pi_f_len,
-                                          show->public_ctx, show->public_ctx_len);
+    proof_blob.data = (uint8_t *)show->pi_f;
+    proof_blob.len = show->pi_f_len;
+    proof_blob.cap = show->pi_f_len;
+    pub.pk = pk;
+    pub.com = show->com;
+    pub.public_ctx = show->public_ctx;
+    pub.public_ctx_len = show->public_ctx_len;
+    return (spx_p2_ffi_verify_pi_f_v1(&proof_blob, &pub) == SPX_P2_FFI_OK) ? 0 : -1;
+}
+
+int spx_p2_show_prove_v2_strict(spx_p2_show_v1 *out,
+                                const uint8_t *pk,
+                                const spx_p2_cred_v1_internal *cred,
+                                const uint8_t *public_ctx,
+                                size_t public_ctx_len)
+{
+    spx_p2_ffi_blob_v1 proof_blob;
+    spx_p2_ffi_public_inputs_v1 pub;
+    spx_p2_ffi_private_witness_v1 wit;
+    if (out == 0 || pk == 0 || cred == 0)
+    {
+        return -1;
+    }
+    if (public_ctx_len > SPX_P2_PUBLIC_CTX_MAX)
+    {
+        return -1;
+    }
+    memset(out, 0, sizeof(*out));
+    memcpy(out->com, cred->com, SPX_N);
+    proof_blob.data = out->pi_f;
+    proof_blob.len = 0;
+    proof_blob.cap = sizeof(out->pi_f);
+    pub.pk = pk;
+    pub.com = cred->com;
+    pub.public_ctx = public_ctx;
+    pub.public_ctx_len = public_ctx_len;
+    wit.sigma_com = cred->sigma_com;
+    if (spx_p2_ffi_generate_pi_f_v2_strict(&proof_blob, &pub, &wit) != SPX_P2_FFI_OK)
+    {
+        return -1;
+    }
+    out->pi_f_len = proof_blob.len;
+    if (public_ctx_len > 0)
+    {
+        memcpy(out->public_ctx, public_ctx, public_ctx_len);
+    }
+    out->public_ctx_len = public_ctx_len;
+    return 0;
+}
+
+int spx_p2_show_verify_v2_strict(const spx_p2_show_v1 *show,
+                                 const uint8_t *pk)
+{
+    spx_p2_ffi_blob_v1 proof_blob;
+    spx_p2_ffi_public_inputs_v1 pub;
+    if (show == 0 || pk == 0)
+    {
+        return -1;
+    }
+    if (spx_p2_show_verify_shape_v1(show) != 0)
+    {
+        return -1;
+    }
+    proof_blob.data = (uint8_t *)show->pi_f;
+    proof_blob.len = show->pi_f_len;
+    proof_blob.cap = show->pi_f_len;
+    pub.pk = pk;
+    pub.com = show->com;
+    pub.public_ctx = show->public_ctx;
+    pub.public_ctx_len = show->public_ctx_len;
+    return (spx_p2_ffi_verify_pi_f_v2_strict(&proof_blob, &pub) == SPX_P2_FFI_OK) ? 0 : -1;
 }

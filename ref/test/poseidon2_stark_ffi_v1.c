@@ -5,6 +5,7 @@
 #include "../api.h"
 #include "../hash_poseidon2_adapter.h"
 #include "../stark/ffi_v1.h"
+#include "../stark/prover_v1.h"
 
 static void fail(const char *name)
 {
@@ -65,6 +66,20 @@ int main(void)
     if (spx_p2_ffi_verify_pi_f_v1(&proof, &pub) != SPX_P2_FFI_OK)
     {
         fail("ffi_verify");
+        return 1;
+    }
+
+    /* M15 compatibility: verifier must still accept legacy v1 proof objects. */
+    if (spx_p2_prover_generate_pi_f_v1(proof.data, &proof.len, proof.cap,
+                                       pub.pk, pub.com, wit.sigma_com,
+                                       pub.public_ctx, pub.public_ctx_len) != 0)
+    {
+        fail("legacy_v1_generate");
+        return 1;
+    }
+    if (spx_p2_ffi_verify_pi_f_v1(&proof, &pub) != SPX_P2_FFI_OK)
+    {
+        fail("legacy_v1_verify_compat");
         return 1;
     }
 

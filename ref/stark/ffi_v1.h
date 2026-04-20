@@ -47,4 +47,18 @@ int spx_p2_ffi_generate_pi_f_v1(spx_p2_ffi_blob_v1 *out_proof,
 int spx_p2_ffi_verify_pi_f_v1(const spx_p2_ffi_blob_v1 *proof,
                               const spx_p2_ffi_public_inputs_v1 *pub);
 
+/*
+ * Strict v2 path:
+ * - generation must output pi_F_v2
+ * - verification only accepts pi_F_v2
+ */
+#define spx_p2_ffi_generate_pi_f_v2_strict SPX_NAMESPACE(spx_p2_ffi_generate_pi_f_v2_strict)
+int spx_p2_ffi_generate_pi_f_v2_strict(spx_p2_ffi_blob_v1 *out_proof,
+                                       const spx_p2_ffi_public_inputs_v1 *pub,
+                                       const spx_p2_ffi_private_witness_v1 *wit);
+
+#define spx_p2_ffi_verify_pi_f_v2_strict SPX_NAMESPACE(spx_p2_ffi_verify_pi_f_v2_strict)
+int spx_p2_ffi_verify_pi_f_v2_strict(const spx_p2_ffi_blob_v1 *proof,
+                                     const spx_p2_ffi_public_inputs_v1 *pub);
+
 #endif

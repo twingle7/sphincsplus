@@ -10,6 +10,8 @@ typedef struct
 {
     uint32_t trace_calls;
     uint32_t trace_lanes;
+    uint32_t proof_magic;
+    uint32_t proof_version;
     size_t witness_rows;
     size_t proof_bytes;
     double prove_ms;

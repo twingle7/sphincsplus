@@ -118,11 +118,13 @@ impl Air for WorkAir {
 
 struct WorkProver {
     options: ProofOptions,
+    mix: BaseElement,
+    bind: BaseElement,
 }
 
 impl WorkProver {
-    fn new(options: ProofOptions) -> Self {
-        Self { options }
+    fn new(options: ProofOptions, mix: BaseElement, bind: BaseElement) -> Self {
+        Self { options, mix, bind }
     }
 }
 
@@ -144,8 +146,8 @@ impl Prover for WorkProver {
         PublicInputs {
             start: trace.get(0, 0),
             result: trace.get(0, last_step),
-            mix: BaseElement::ZERO,
-            bind: BaseElement::ZERO,
+            mix: self.mix,
+            bind: self.bind,
         }
     }
 
@@ -248,6 +250,34 @@ fn derive_mix(digest: &[u8]) -> BaseElement {
     BaseElement::new(x)
 }
 
+struct StatementInputs {
+    public_input_digest: Vec<u8>,
+    ctx_binding: Vec<u8>,
+    bind_seed: Vec<u8>,
+    start: BaseElement,
+    mix: BaseElement,
+    bind: BaseElement,
+}
+
+fn derive_statement_inputs(pk: &[u8], com: &[u8], public_ctx: &[u8]) -> StatementInputs {
+    let statement = PI_F_V2_STATEMENT_VERSION_VERIFY_FULL_V1.to_le_bytes();
+    let public_input_digest = hash_expand(&[pk, com, public_ctx, &statement], SPX_N);
+    let ctx_binding = hash_expand(&[public_ctx], SPX_N);
+    let bind_seed = hash_expand(&[public_input_digest.as_slice(), ctx_binding.as_slice()], 16);
+    let start_u128 = hash_to_u128(&[pk, com, public_ctx]);
+    let start = BaseElement::new(start_u128);
+    let mix = derive_mix(&public_input_digest);
+    let bind = derive_mix(&bind_seed);
+    StatementInputs {
+        public_input_digest,
+        ctx_binding,
+        bind_seed,
+        start,
+        mix,
+        bind,
+    }
+}
+
 fn iterate_state(mut state: BaseElement, mix: BaseElement, bind: BaseElement, n: usize) -> BaseElement {
     for _ in 1..n {
         state = state.exp(3u32.into()) + BaseElement::new(42) + mix + bind;
@@ -266,6 +296,10 @@ fn build_work_trace(start: BaseElement, mix: BaseElement, bind: BaseElement, n: 
         },
     );
     trace
+}
+
+fn derive_commitment(proof_bytes: &[u8]) -> Vec<u8> {
+    hash_expand(&[proof_bytes], SPX_N)
 }
 
 fn encode_pi_f_v2(
@@ -419,22 +453,20 @@ pub unsafe extern "C" fn spx_p2_rust_generate_pi_f_v1(
     } else {
         std::slice::from_raw_parts(pubi.public_ctx, pubi.public_ctx_len)
     };
-    let statement = PI_F_V2_STATEMENT_VERSION_VERIFY_FULL_V1.to_le_bytes();
-    let public_input_digest = hash_expand(&[pk, com, public_ctx, &statement], SPX_N);
-    let ctx_binding = hash_expand(&[public_ctx], SPX_N);
-    let bind_digest = hash_expand(&[public_input_digest.as_slice(), ctx_binding.as_slice()], 16);
-    let start_u128 = hash_to_u128(&[pk, com, public_ctx]);
-    let start = BaseElement::new(start_u128);
-    let mix = derive_mix(&public_input_digest);
-    let bind = derive_mix(&bind_digest);
+    let stmt = derive_statement_inputs(pk, com, public_ctx);
+    let public_input_digest = stmt.public_input_digest;
+    let ctx_binding = stmt.ctx_binding;
+    let start = stmt.start;
+    let mix = stmt.mix;
+    let bind = stmt.bind;
     let result = iterate_state(start, mix, bind, TRACE_LEN);
     let trace = build_work_trace(start, mix, bind, TRACE_LEN);
-    let proof = match WorkProver::new(options_96bits()).prove(trace) {
+    let proof = match WorkProver::new(options_96bits(), mix, bind).prove(trace) {
         Ok(p) => p,
         Err(_) => return SPX_P2_RUST_ERR_PROVE,
     };
     let proof_bytes = proof.to_bytes();
-    let commitment = hash_expand(&[proof_bytes.as_slice()], SPX_N);
+    let commitment = derive_commitment(&proof_bytes);
 
     let out_slice = std::slice::from_raw_parts_mut(out.data, out.cap);
     let encoded_len = match encode_pi_f_v2(
@@ -488,22 +520,26 @@ pub unsafe extern "C" fn spx_p2_rust_verify_pi_f_v1(
     } else {
         std::slice::from_raw_parts(pubi.public_ctx, pubi.public_ctx_len)
     };
-    let statement = PI_F_V2_STATEMENT_VERSION_VERIFY_FULL_V1.to_le_bytes();
-    let expected_public_input_digest = hash_expand(&[pk, com, public_ctx, &statement], SPX_N);
-    let expected_ctx_binding = hash_expand(&[public_ctx], SPX_N);
+    let stmt = derive_statement_inputs(pk, com, public_ctx);
+    let expected_public_input_digest = stmt.public_input_digest;
+    let expected_ctx_binding = stmt.ctx_binding;
     if decoded.public_input_digest != expected_public_input_digest.as_slice()
         || decoded.ctx_binding != expected_ctx_binding.as_slice()
     {
         return SPX_P2_RUST_ERR_VERIFY;
     }
+    {
+        let expected_commitment = derive_commitment(decoded.proof_bytes);
+        if decoded.commitment != expected_commitment.as_slice() {
+            return SPX_P2_RUST_ERR_VERIFY;
+        }
+    }
 
-    let start_u128 = hash_to_u128(&[pk, com, public_ctx]);
-    let start = BaseElement::new(start_u128);
-    let mix = derive_mix(decoded.public_input_digest);
-    let bind_seed = hash_expand(&[decoded.public_input_digest, decoded.ctx_binding], 16);
-    let bind = derive_mix(&bind_seed);
+    let start = stmt.start;
+    let mix = stmt.mix;
+    let bind = stmt.bind;
     let result = iterate_state(start, mix, bind, TRACE_LEN);
-    let _ = decoded.commitment;
+    let _ = stmt.bind_seed;
 
     let proof_obj = match Proof::from_bytes(decoded.proof_bytes) {
         Ok(p) => p,
