@@ -1,8 +1,10 @@
 #include <stddef.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 #include "../hash_poseidon2_adapter.h"
 #include "ffi_v1.h"
+#include "air_verify_full.h"
 #include "pi_f_format_v1.h"
 #include "pi_f_format_v2.h"
 #include "verifier_v1.h"
@@ -41,6 +43,50 @@ static int spx_p2_detect_pi_f_version(const uint8_t *proof, size_t proof_len)
         return 2;
     }
     return 0;
+}
+
+static int spx_p2_eval_verify_full_guard(const uint8_t *pk,
+                                         const uint8_t *com,
+                                         const uint8_t *sigma_com)
+{
+    spx_p2_trace replay;
+    spx_p2_witness_row_v1 *rows = 0;
+    size_t row_count = 0;
+    uint32_t constraints = 0;
+    uint32_t violations = 0;
+    int ret = -1;
+
+    if (spx_p2_trace_verify_com(&replay, pk, com, sigma_com) != 0)
+    {
+        return -1;
+    }
+    if (spx_p2_witness_count_rows_v1(&replay, &row_count) != 0)
+    {
+        return -1;
+    }
+    if (row_count == 0)
+    {
+        return -1;
+    }
+    rows = (spx_p2_witness_row_v1 *)malloc(row_count * sizeof(*rows));
+    if (rows == 0)
+    {
+        return -1;
+    }
+    if (spx_p2_witness_build_rows_v1(rows, row_count, &row_count, &replay) != 0)
+    {
+        goto done;
+    }
+    if (spx_p2_verify_full_air_eval_constraints_v1(pk, com, sigma_com, &replay,
+                                                   rows, row_count,
+                                                   &constraints, &violations) != 0)
+    {
+        goto done;
+    }
+    ret = (violations == 0) ? 0 : -1;
+done:
+    free(rows);
+    return ret;
 }
 
 int spx_p2_ffi_get_abi_version_v1(uint32_t *out_version)
@@ -147,6 +193,11 @@ int spx_p2_ffi_generate_pi_f_v2_strict(spx_p2_ffi_blob_v1 *out_proof,
     }
     /* Strict mode must prove existence of a valid signature witness before STARK proving. */
     if (spx_p2_verify_com(pub->pk, pub->com, wit->sigma_com) != 0)
+    {
+        return SPX_P2_FFI_ERR_PROVE;
+    }
+    /* Additional guard: enforce C verify_full constraints before Rust STARK proving. */
+    if (spx_p2_eval_verify_full_guard(pub->pk, pub->com, wit->sigma_com) != 0)
     {
         return SPX_P2_FFI_ERR_PROVE;
     }

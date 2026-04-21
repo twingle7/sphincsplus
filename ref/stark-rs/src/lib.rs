@@ -2,7 +2,7 @@
 
 use winterfell::{
     crypto::{hashers::Blake3_256, DefaultRandomCoin, MerkleTree},
-    math::{fields::f128::BaseElement, FieldElement, ToElements},
+    math::{fields::f128::BaseElement, FieldElement, StarkField, ToElements},
     matrix::ColMatrix,
     AcceptableOptions, Air, AirContext, Assertion, BatchingMethod, CompositionPoly,
     CompositionPolyTrace, DefaultConstraintCommitment, DefaultConstraintEvaluator, DefaultTraceLde,
@@ -250,10 +250,36 @@ fn derive_mix(digest: &[u8]) -> BaseElement {
     BaseElement::new(x)
 }
 
+fn derive_trace_digest(start: BaseElement, mix: BaseElement, bind: BaseElement, n: usize) -> Vec<u8> {
+    let mut state = start;
+    let mut buf = Vec::with_capacity(n * 16);
+    let mut i = 0usize;
+    while i < n {
+        let x = state.as_int();
+        let mut j = 0usize;
+        while j < 16 {
+            buf.push(((x >> (j * 8)) & 0xff) as u8);
+            j += 1;
+        }
+        if i + 1 < n {
+            state = state.exp(3u32.into()) + BaseElement::new(42) + mix + bind;
+        }
+        i += 1;
+    }
+    hash_expand(&[&buf], SPX_N)
+}
+
+fn derive_trace_calls(n: usize) -> u32 {
+    if n == 0 {
+        0
+    } else {
+        (n - 1) as u32
+    }
+}
+
 struct StatementInputs {
     public_input_digest: Vec<u8>,
     ctx_binding: Vec<u8>,
-    bind_seed: Vec<u8>,
     start: BaseElement,
     mix: BaseElement,
     bind: BaseElement,
@@ -271,7 +297,6 @@ fn derive_statement_inputs(pk: &[u8], com: &[u8], public_ctx: &[u8]) -> Statemen
     StatementInputs {
         public_input_digest,
         ctx_binding,
-        bind_seed,
         start,
         mix,
         bind,
@@ -298,8 +323,17 @@ fn build_work_trace(start: BaseElement, mix: BaseElement, bind: BaseElement, n: 
     trace
 }
 
-fn derive_commitment(proof_bytes: &[u8]) -> Vec<u8> {
-    hash_expand(&[proof_bytes], SPX_N)
+fn derive_commitment(
+    proof_bytes: &[u8],
+    public_input_digest: &[u8],
+    ctx_binding: &[u8],
+    trace_digest: &[u8],
+    witness_rows: u32,
+    trace_calls: u32,
+) -> Vec<u8> {
+    let rows = witness_rows.to_le_bytes();
+    let calls = trace_calls.to_le_bytes();
+    hash_expand(&[proof_bytes, public_input_digest, ctx_binding, trace_digest, &rows, &calls], SPX_N)
 }
 
 fn encode_pi_f_v2(
@@ -461,12 +495,22 @@ pub unsafe extern "C" fn spx_p2_rust_generate_pi_f_v1(
     let bind = stmt.bind;
     let result = iterate_state(start, mix, bind, TRACE_LEN);
     let trace = build_work_trace(start, mix, bind, TRACE_LEN);
+    let trace_digest = derive_trace_digest(start, mix, bind, TRACE_LEN);
+    let witness_rows = TRACE_LEN as u32;
+    let trace_calls = derive_trace_calls(TRACE_LEN);
     let proof = match WorkProver::new(options_96bits(), mix, bind).prove(trace) {
         Ok(p) => p,
         Err(_) => return SPX_P2_RUST_ERR_PROVE,
     };
     let proof_bytes = proof.to_bytes();
-    let commitment = derive_commitment(&proof_bytes);
+    let commitment = derive_commitment(
+        &proof_bytes,
+        &public_input_digest,
+        &ctx_binding,
+        &trace_digest,
+        witness_rows,
+        trace_calls,
+    );
 
     let out_slice = std::slice::from_raw_parts_mut(out.data, out.cap);
     let encoded_len = match encode_pi_f_v2(
@@ -528,18 +572,27 @@ pub unsafe extern "C" fn spx_p2_rust_verify_pi_f_v1(
     {
         return SPX_P2_RUST_ERR_VERIFY;
     }
+    let start = stmt.start;
+    let mix = stmt.mix;
+    let bind = stmt.bind;
+    let trace_digest = derive_trace_digest(start, mix, bind, TRACE_LEN);
+    let witness_rows = TRACE_LEN as u32;
+    let trace_calls = derive_trace_calls(TRACE_LEN);
+    let result = iterate_state(start, mix, bind, TRACE_LEN);
+
     {
-        let expected_commitment = derive_commitment(decoded.proof_bytes);
+        let expected_commitment = derive_commitment(
+            decoded.proof_bytes,
+            decoded.public_input_digest,
+            decoded.ctx_binding,
+            &trace_digest,
+            witness_rows,
+            trace_calls,
+        );
         if decoded.commitment != expected_commitment.as_slice() {
             return SPX_P2_RUST_ERR_VERIFY;
         }
     }
-
-    let start = stmt.start;
-    let mix = stmt.mix;
-    let bind = stmt.bind;
-    let result = iterate_state(start, mix, bind, TRACE_LEN);
-    let _ = stmt.bind_seed;
 
     let proof_obj = match Proof::from_bytes(decoded.proof_bytes) {
         Ok(p) => p,

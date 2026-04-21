@@ -17,11 +17,13 @@
 - [ ] C 默认后端回归测试通过。
 - [ ] Rust 后端回归测试通过。
 - [ ] C/Rust 在共同覆盖样本上无接受/拒绝分歧。
+- [ ] `poseidon2_cross_backend_consistency` 样本集（v1）全部通过。
 
 ## 4. 性能与可观测项
 - [ ] 采集 `trace_calls/trace_lanes/witness_rows/proof_bytes/prove_ms/verify_ms`。
 - [ ] 输出 `proof_magic/proof_version` 以确认后端与版本路径。
 - [ ] benchmark 表格填入至少 1 组真实数据。
+- [ ] `scripts/collect_benchmark_v2.sh` 输出 `benchmark-stark-v2-local.md` 并归档。
 
 ## 5. 文档项
 - [ ] `下一步计划-v2.md` 状态同步到最新里程碑。

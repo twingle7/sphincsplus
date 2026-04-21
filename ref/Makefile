@@ -51,6 +51,10 @@ ifneq (,$(findstring poseidon2,$(PARAMS)))
 	TESTS += test/poseidon2_show_v1
 	TESTS += test/poseidon2_fischlin_blind_e2e
 	TESTS += test/poseidon2_roles_interaction
+	TESTS += test/poseidon2_trace_replay_binding
+	TESTS += test/poseidon2_statement_binding
+	TESTS += test/poseidon2_verify_full_guard
+	TESTS += test/poseidon2_cross_backend_consistency
 	TESTS += test/poseidon2_pi_f_format
 	TESTS += test/poseidon2_stark_ffi_v1
 	TESTS += test/poseidon2_stark_stats

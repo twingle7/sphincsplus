@@ -5,29 +5,33 @@
 - 支持发布前复核与论文附录引用。
 
 ## 2. 三角色交互演示
-- 用例：`test/poseidon2_roles_interaction_v2`
+- 用例：`test/poseidon2_roles_interaction`
 - 核心期望：
   - 输出明确角色流：`[User] -> [Signer] -> [User] -> [Verifier]`；
   - `ShowProve/ShowVerify` 走 `v2-strict` 路径（proof 必须是 `pi_F_v2`）；
   - 首次验证 `ACCEPT`；
   - 篡改 `public_ctx` 后验证 `REJECT (expected)`；
-  - 最终打印 `poseidon2_roles_interaction_v2: OK`。
+  - 最终打印 `poseidon2_roles_interaction test: OK`。
 
-## 3. 测试矩阵（M17 第二阶段）
+## 3. 测试矩阵（M17 第三阶段）
 | suite | command | expected | local_result |
 |---|---|---|---|
-| role-demo | `./test/poseidon2_roles_interaction_v2` | 退出码 0，含 ACCEPT/REJECT | TBD |
-| blind-e2e | `./test/poseidon2_fischlin_blind_e2e_v2` | 退出码 0，输出 OK | TBD |
+| role-demo | `./test/poseidon2_roles_interaction` | 退出码 0，含 ACCEPT/REJECT | TBD |
+| blind-e2e | `./test/poseidon2_fischlin_blind_e2e` | 退出码 0，输出 OK | TBD |
 | show | `./test/poseidon2_show_v1` | 退出码 0，输出 OK | TBD |
 | ffi | `./test/poseidon2_stark_ffi_v1` | 退出码 0，输出 OK | TBD |
-| format | `./test/poseidon2_pi_f_format_v2` | 退出码 0，输出 OK | TBD |
-| stats | `./test/poseidon2_stark_stats_v1` | 退出码 0，`magic/ver` 合法 | TBD |
+| format | `./test/poseidon2_pi_f_format` | 退出码 0，输出 OK | TBD |
+| stats | `./test/poseidon2_stark_stats` | 退出码 0，`magic/ver` 为 final v2 | TBD |
+| binding | `./test/poseidon2_statement_binding` | 退出码 0，篡改 statement 拒绝 | TBD |
+| replay | `./test/poseidon2_trace_replay_binding` | 退出码 0，篡改 commitment/proof 拒绝 | TBD |
+| c-guard | `./test/poseidon2_verify_full_guard` | 退出码 0，篡改 trace 触发 violations | TBD |
+| cross-backend | `./test/poseidon2_cross_backend_consistency` | 退出码 0，C/Rust 结论一致 | TBD |
 
 ## 4. 指标采集（与 benchmark-stark-v2 对齐）
 - 记录字段：
   - `trace_calls/trace_lanes/witness_rows/proof_bytes/proof_magic/proof_version/prove_ms/verify_ms`
 - 采集来源：
-  - `poseidon2_stark_stats_v1` 标准输出。
+  - `poseidon2_stark_stats` 标准输出。
 
 ## 5. 发布前一致性结论
 - C 默认后端：`PASS/FAIL`（TBD）

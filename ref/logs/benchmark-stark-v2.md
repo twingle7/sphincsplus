@@ -12,8 +12,8 @@
 
 ## 采集命令（默认后端）
 ```bash
-make PARAMS=sphincs-poseidon2-192s THASH=simple CC=gcc test/poseidon2_stark_stats_v1
-./test/poseidon2_stark_stats_v1
+make PARAMS=sphincs-poseidon2-192s THASH=simple CC=gcc test/poseidon2_stark_stats
+./test/poseidon2_stark_stats
 ```
 
 ## 采集命令（Rust 后端）
@@ -22,8 +22,8 @@ cd ref/stark-rs
 cargo build --release
 ```
 ```bash
-make PARAMS=sphincs-poseidon2-192s THASH=simple CC=gcc EXTRA_CFLAGS="-DSPX_P2_USE_RUST_STARK" test/poseidon2_stark_stats_v1
-./test/poseidon2_stark_stats_v1
+make PARAMS=sphincs-poseidon2-192s THASH=simple CC=gcc EXTRA_CFLAGS="-DSPX_P2_USE_RUST_STARK" test/poseidon2_stark_stats
+./test/poseidon2_stark_stats
 ```
 
 ## 结果模板
@@ -39,3 +39,9 @@ make PARAMS=sphincs-poseidon2-192s THASH=simple CC=gcc EXTRA_CFLAGS="-DSPX_P2_US
 - Rust 后端：
   - 优先期望 `proof_magic=PFP2`，要求 `proof_version=2`；
   - 若环境受限导致回退，需在报告中说明原因并附日志。
+
+## 自动采集脚本
+```bash
+./scripts/collect_benchmark_v2.sh
+```
+- 运行后会在 `logs/benchmark-stark-v2-local.md` 生成一条本地实测结果。
