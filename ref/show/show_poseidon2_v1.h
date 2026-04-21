@@ -10,6 +10,11 @@
 #include "../stark/prover_v1.h"
 
 #define SPX_P2_PUBLIC_CTX_MAX 64
+/*
+ * Final path uses Rust STARK pi_F_v2 whose proof bytes can be larger than legacy v1 upper bound.
+ * Keep an explicit show-side cap to avoid BUFFER_SMALL on valid contexts.
+ */
+#define SPX_P2_SHOW_PI_F_MAX_BYTES (64u * 1024u)
 
 /*
  * v1 external object:
@@ -19,7 +24,7 @@
 typedef struct
 {
     uint8_t com[SPX_N];
-    uint8_t pi_f[SPX_P2_PI_F_V1_MAX_BYTES];
+    uint8_t pi_f[SPX_P2_SHOW_PI_F_MAX_BYTES];
     size_t pi_f_len;
     uint8_t public_ctx[SPX_P2_PUBLIC_CTX_MAX];
     size_t public_ctx_len;

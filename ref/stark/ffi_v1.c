@@ -1,6 +1,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "../hash_poseidon2_adapter.h"
 #include "ffi_v1.h"
@@ -16,6 +17,43 @@ extern int spx_p2_rust_generate_pi_f_v1(spx_p2_ffi_blob_v1 *out_proof,
                                         const spx_p2_ffi_private_witness_v1 *wit);
 extern int spx_p2_rust_verify_pi_f_v1(const spx_p2_ffi_blob_v1 *proof,
                                       const spx_p2_ffi_public_inputs_v1 *pub);
+
+#define SPX_P2_RUST_OK 0
+#define SPX_P2_RUST_ERR_NULL -1
+#define SPX_P2_RUST_ERR_INPUT -2
+#define SPX_P2_RUST_ERR_BUFFER_SMALL -3
+#define SPX_P2_RUST_ERR_PROVE -4
+#define SPX_P2_RUST_ERR_VERIFY -5
+#define SPX_P2_RUST_ERR_FORMAT -6
+
+static int spx_p2_map_rust_status_to_ffi(int rust_ret)
+{
+    if (rust_ret == SPX_P2_RUST_OK)
+    {
+        return SPX_P2_FFI_OK;
+    }
+    if (rust_ret == SPX_P2_RUST_ERR_NULL)
+    {
+        return SPX_P2_FFI_ERR_NULL;
+    }
+    if (rust_ret == SPX_P2_RUST_ERR_INPUT)
+    {
+        return SPX_P2_FFI_ERR_INPUT;
+    }
+    if (rust_ret == SPX_P2_RUST_ERR_BUFFER_SMALL)
+    {
+        return SPX_P2_FFI_ERR_BUFFER_SMALL;
+    }
+    if (rust_ret == SPX_P2_RUST_ERR_VERIFY || rust_ret == SPX_P2_RUST_ERR_FORMAT)
+    {
+        return SPX_P2_FFI_ERR_VERIFY;
+    }
+    if (rust_ret == SPX_P2_RUST_ERR_PROVE)
+    {
+        return SPX_P2_FFI_ERR_PROVE;
+    }
+    return SPX_P2_FFI_ERR_PROVE;
+}
 #endif
 
 static uint32_t spx_p2_load_u32_le(const uint8_t *in)
@@ -43,6 +81,11 @@ static int spx_p2_detect_pi_f_version(const uint8_t *proof, size_t proof_len)
         return 2;
     }
     return 0;
+}
+
+static int spx_p2_debug_verify_enabled(void)
+{
+    return getenv("SPX_P2_DEBUG_VERIFY") != 0;
 }
 
 static int spx_p2_eval_verify_full_guard(const uint8_t *pk,
@@ -122,8 +165,8 @@ int spx_p2_ffi_generate_pi_f_v1(spx_p2_ffi_blob_v1 *out_proof,
         {
             return SPX_P2_FFI_ERR_BUFFER_SMALL;
         }
-        int ret = spx_p2_rust_generate_pi_f_v1(out_proof, pub, wit);
-        return (ret == 0) ? SPX_P2_FFI_OK : SPX_P2_FFI_ERR_PROVE;
+        int rust_ret = spx_p2_rust_generate_pi_f_v1(out_proof, pub, wit);
+        return spx_p2_map_rust_status_to_ffi(rust_ret);
     }
 #else
     if (out_proof->cap < SPX_P2_PI_F_V1_MAX_BYTES)
@@ -169,8 +212,17 @@ int spx_p2_ffi_verify_pi_f_v1(const spx_p2_ffi_blob_v1 *proof,
     }
 #ifdef SPX_P2_USE_RUST_STARK
     {
-        int ret = spx_p2_rust_verify_pi_f_v1(proof, pub);
-        return (ret == 0) ? SPX_P2_FFI_OK : SPX_P2_FFI_ERR_VERIFY;
+        int rust_ret = spx_p2_rust_verify_pi_f_v1(proof, pub);
+        int ffi_ret = spx_p2_map_rust_status_to_ffi(rust_ret);
+        if (spx_p2_debug_verify_enabled())
+        {
+            fprintf(stderr,
+                    "[ffi_v1] verify v2 via rust: rust_ret=%d ffi_ret=%d proof_len=%llu ctx_len=%llu\n",
+                    rust_ret, ffi_ret,
+                    (unsigned long long)proof->len,
+                    (unsigned long long)pub->public_ctx_len);
+        }
+        return ffi_ret;
     }
 #else
     return SPX_P2_FFI_ERR_VERIFY;
@@ -225,7 +277,19 @@ int spx_p2_ffi_verify_pi_f_v2_strict(const spx_p2_ffi_blob_v1 *proof,
     ver = spx_p2_detect_pi_f_version(proof->data, proof->len);
     if (ver != 2)
     {
+        if (spx_p2_debug_verify_enabled())
+        {
+            fprintf(stderr, "[ffi_v1] verify_v2_strict rejected non-v2 proof: ver=%d len=%llu\n",
+                    ver, (unsigned long long)proof->len);
+        }
         return SPX_P2_FFI_ERR_VERIFY;
     }
-    return spx_p2_ffi_verify_pi_f_v1(proof, pub);
+    {
+        int ret = spx_p2_ffi_verify_pi_f_v1(proof, pub);
+        if (spx_p2_debug_verify_enabled())
+        {
+            fprintf(stderr, "[ffi_v1] verify_v2_strict result=%d\n", ret);
+        }
+        return ret;
+    }
 }

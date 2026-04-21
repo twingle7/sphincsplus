@@ -10,6 +10,8 @@
 #include "stats_v1.h"
 #include "witness_format.h"
 
+#define SPX_P2_STATS_PI_F_MAX_BYTES (64u * 1024u)
+
 static double elapsed_ms(clock_t begin, clock_t end)
 {
     return (double)(end - begin) * 1000.0 / (double)CLOCKS_PER_SEC;
@@ -30,7 +32,7 @@ int spx_p2_stark_collect_stats_v1(spx_p2_stark_stats_v1 *out_stats,
                                   const uint8_t *public_ctx,
                                   size_t public_ctx_len)
 {
-    uint8_t proof_buf[SPX_P2_PI_F_V1_MAX_BYTES];
+    uint8_t proof_buf[SPX_P2_STATS_PI_F_MAX_BYTES];
     spx_p2_trace trace;
     spx_p2_ffi_blob_v1 blob;
     spx_p2_ffi_public_inputs_v1 pub;

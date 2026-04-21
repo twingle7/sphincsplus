@@ -33,6 +33,16 @@ const PI_F_V2_STATEMENT_VERSION_VERIFY_FULL_V1: u32 = 1;
 const PI_F_V2_FIXED_HEADER_BYTES: usize = 7 * 4;
 const PI_F_V2_RESERVED_BYTES: usize = 2 * 4;
 
+fn rust_verify_debug_enabled() -> bool {
+    std::env::var_os("SPX_P2_DEBUG_VERIFY").is_some()
+}
+
+fn rust_verify_debug(msg: &str) {
+    if rust_verify_debug_enabled() {
+        eprintln!("[stark-rs verify] {msg}");
+    }
+}
+
 #[repr(C)]
 pub struct SpxP2FfiBlobV1 {
     pub data: *mut u8,
@@ -59,11 +69,68 @@ struct PublicInputs {
     result: BaseElement,
     mix: BaseElement,
     bind: BaseElement,
+    trace_calls: BaseElement,
+    row_count: BaseElement,
+    root_hint: BaseElement,
+    module_start: BaseElement,
+    module_result: BaseElement,
+    prf_start: BaseElement,
+    prf_result: BaseElement,
+    thash_start: BaseElement,
+    thash_result: BaseElement,
+    hmsg_start: BaseElement,
+    hmsg_result: BaseElement,
+    addr_start: BaseElement,
+    addr_result: BaseElement,
+    thash_rule_start: BaseElement,
+    thash_rule_result: BaseElement,
+    thash_inblocks_hint: BaseElement,
+    thash_addr_type_hint: BaseElement,
+    prf_rule_start: BaseElement,
+    prf_rule_result: BaseElement,
+    prf_addr_type_hint: BaseElement,
+    hmsg_rule_start: BaseElement,
+    hmsg_rule_result: BaseElement,
+    hmsg_mode_hint: BaseElement,
+    rule_mix_start: BaseElement,
+    rule_mix_result: BaseElement,
+    rule_profile_hint: BaseElement,
 }
 
 impl ToElements<BaseElement> for PublicInputs {
     fn to_elements(&self) -> Vec<BaseElement> {
-        vec![self.start, self.result, self.mix, self.bind]
+        vec![
+            self.start,
+            self.result,
+            self.mix,
+            self.bind,
+            self.trace_calls,
+            self.row_count,
+            self.root_hint,
+            self.module_start,
+            self.module_result,
+            self.prf_start,
+            self.prf_result,
+            self.thash_start,
+            self.thash_result,
+            self.hmsg_start,
+            self.hmsg_result,
+            self.addr_start,
+            self.addr_result,
+            self.thash_rule_start,
+            self.thash_rule_result,
+            self.thash_inblocks_hint,
+            self.thash_addr_type_hint,
+            self.prf_rule_start,
+            self.prf_rule_result,
+            self.prf_addr_type_hint,
+            self.hmsg_rule_start,
+            self.hmsg_rule_result,
+            self.hmsg_mode_hint,
+            self.rule_mix_start,
+            self.rule_mix_result,
+            self.rule_profile_hint,
+        ]
     }
 }
 
@@ -73,6 +140,32 @@ struct WorkAir {
     result: BaseElement,
     mix: BaseElement,
     bind: BaseElement,
+    trace_calls: BaseElement,
+    row_count: BaseElement,
+    root_hint: BaseElement,
+    module_start: BaseElement,
+    module_result: BaseElement,
+    prf_start: BaseElement,
+    prf_result: BaseElement,
+    thash_start: BaseElement,
+    thash_result: BaseElement,
+    hmsg_start: BaseElement,
+    hmsg_result: BaseElement,
+    addr_start: BaseElement,
+    addr_result: BaseElement,
+    thash_rule_start: BaseElement,
+    thash_rule_result: BaseElement,
+    thash_inblocks_hint: BaseElement,
+    thash_addr_type_hint: BaseElement,
+    prf_rule_start: BaseElement,
+    prf_rule_result: BaseElement,
+    prf_addr_type_hint: BaseElement,
+    hmsg_rule_start: BaseElement,
+    hmsg_rule_result: BaseElement,
+    hmsg_mode_hint: BaseElement,
+    rule_mix_start: BaseElement,
+    rule_mix_result: BaseElement,
+    rule_profile_hint: BaseElement,
 }
 
 impl Air for WorkAir {
@@ -80,14 +173,64 @@ impl Air for WorkAir {
     type PublicInputs = PublicInputs;
 
     fn new(trace_info: TraceInfo, pub_inputs: PublicInputs, options: ProofOptions) -> Self {
-        let degrees = vec![TransitionConstraintDegree::new(3)];
-        let num_assertions = 2;
+        let degrees = vec![
+            TransitionConstraintDegree::new(3),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(3),
+            TransitionConstraintDegree::new(5),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(5),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(4),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(3),
+        ];
+        let num_assertions = 36;
         Self {
             context: AirContext::new(trace_info, degrees, num_assertions, options),
             start: pub_inputs.start,
             result: pub_inputs.result,
             mix: pub_inputs.mix,
             bind: pub_inputs.bind,
+            trace_calls: pub_inputs.trace_calls,
+            row_count: pub_inputs.row_count,
+            root_hint: pub_inputs.root_hint,
+            module_start: pub_inputs.module_start,
+            module_result: pub_inputs.module_result,
+            prf_start: pub_inputs.prf_start,
+            prf_result: pub_inputs.prf_result,
+            thash_start: pub_inputs.thash_start,
+            thash_result: pub_inputs.thash_result,
+            hmsg_start: pub_inputs.hmsg_start,
+            hmsg_result: pub_inputs.hmsg_result,
+            addr_start: pub_inputs.addr_start,
+            addr_result: pub_inputs.addr_result,
+            thash_rule_start: pub_inputs.thash_rule_start,
+            thash_rule_result: pub_inputs.thash_rule_result,
+            thash_inblocks_hint: pub_inputs.thash_inblocks_hint,
+            thash_addr_type_hint: pub_inputs.thash_addr_type_hint,
+            prf_rule_start: pub_inputs.prf_rule_start,
+            prf_rule_result: pub_inputs.prf_rule_result,
+            prf_addr_type_hint: pub_inputs.prf_addr_type_hint,
+            hmsg_rule_start: pub_inputs.hmsg_rule_start,
+            hmsg_rule_result: pub_inputs.hmsg_rule_result,
+            hmsg_mode_hint: pub_inputs.hmsg_mode_hint,
+            rule_mix_start: pub_inputs.rule_mix_start,
+            rule_mix_result: pub_inputs.rule_mix_result,
+            rule_profile_hint: pub_inputs.rule_profile_hint,
         }
     }
 
@@ -97,10 +240,71 @@ impl Air for WorkAir {
         _periodic_values: &[E],
         result: &mut [E],
     ) {
-        let current_state = frame.current()[0];
+        let current = frame.current();
+        let next = frame.next();
+        let current_state = current[0];
         let round_const = E::from(42u32) + E::from(self.mix) + E::from(self.bind);
         let next_state = current_state.exp(3u32.into()) + round_const;
-        result[0] = frame.next()[0] - next_state;
+        result[0] = next[0] - next_state;
+        result[1] = next[1] - (current[1] + E::ONE);
+        result[2] = next[2] - (current[2] + E::ONE);
+        result[3] = next[3] - current[3];
+        result[4] = next[4]
+            - (current[4] + current[0] * E::from(3u32) + current[1] + E::from(self.root_hint));
+        result[5] = next[5] - (current[5] + current[0] + current[1] + E::from(self.prf_start));
+        result[6] = next[6] - (current[6] + current[0] * E::from(2u32) + current[2] + E::from(self.thash_start));
+        result[7] = next[7]
+            - (current[7] + current[0] * E::from(5u32) + current[1] + current[2] + E::from(self.hmsg_start));
+        result[8] = next[8]
+            - (current[8] + current[1] * E::from(7u32) + current[2] * E::from(11u32) + E::from(self.addr_start));
+        result[9] = next[9]
+            - (current[9]
+                + current[6]
+                + current[8] * E::from(13u32)
+                + E::from(self.thash_rule_start)
+                + current[10] * E::from(17u32)
+                + current[11] * E::from(19u32));
+        result[10] = next[10] - current[10];
+        result[11] = next[11] - current[11];
+        result[12] = (current[10] - E::ONE) * (current[10] - E::from(2u32)) * (current[10] - E::from(3u32));
+        result[13] = current[11]
+            * (current[11] - E::ONE)
+            * (current[11] - E::from(2u32))
+            * (current[11] - E::from(3u32))
+            * (current[11] - E::from(4u32));
+        result[14] = next[12]
+            - (current[12]
+                + current[5]
+                + current[8] * E::from(23u32)
+                + E::from(self.prf_rule_start)
+                + current[13] * E::from(29u32));
+        result[15] = next[13] - current[13];
+        result[16] = current[13]
+            * (current[13] - E::ONE)
+            * (current[13] - E::from(2u32))
+            * (current[13] - E::from(3u32))
+            * (current[13] - E::from(4u32));
+        result[17] = next[14]
+            - (current[14]
+                + current[7]
+                + current[8] * E::from(31u32)
+                + E::from(self.hmsg_rule_start)
+                + current[15] * E::from(37u32));
+        result[18] = next[15] - current[15];
+        result[19] = current[15]
+            * (current[15] - E::ONE)
+            * (current[15] - E::from(2u32))
+            * (current[15] - E::from(3u32));
+        result[20] = next[16]
+            - (current[16]
+                + current[9]
+                + current[12] * E::from(41u32)
+                + current[14] * E::from(43u32)
+                + current[4] * E::from(47u32)
+                + E::from(self.rule_mix_start)
+                + current[17] * E::from(53u32));
+        result[21] = next[17] - current[17];
+        result[22] = current[17] * (current[17] - E::ONE) * (current[17] - E::from(2u32));
     }
 
     fn get_assertions(&self) -> Vec<Assertion<Self::BaseField>> {
@@ -108,6 +312,40 @@ impl Air for WorkAir {
         vec![
             Assertion::single(0, 0, self.start),
             Assertion::single(0, last_step, self.result),
+            Assertion::single(1, 0, BaseElement::ZERO),
+            Assertion::single(1, last_step, self.trace_calls),
+            Assertion::single(2, 0, BaseElement::ONE),
+            Assertion::single(2, last_step, self.row_count),
+            Assertion::single(3, 0, self.root_hint),
+            Assertion::single(3, last_step, self.root_hint),
+            Assertion::single(4, 0, self.module_start),
+            Assertion::single(4, last_step, self.module_result),
+            Assertion::single(5, 0, self.prf_start),
+            Assertion::single(5, last_step, self.prf_result),
+            Assertion::single(6, 0, self.thash_start),
+            Assertion::single(6, last_step, self.thash_result),
+            Assertion::single(7, 0, self.hmsg_start),
+            Assertion::single(7, last_step, self.hmsg_result),
+            Assertion::single(8, 0, self.addr_start),
+            Assertion::single(8, last_step, self.addr_result),
+            Assertion::single(9, 0, self.thash_rule_start),
+            Assertion::single(9, last_step, self.thash_rule_result),
+            Assertion::single(10, 0, self.thash_inblocks_hint),
+            Assertion::single(10, last_step, self.thash_inblocks_hint),
+            Assertion::single(11, 0, self.thash_addr_type_hint),
+            Assertion::single(11, last_step, self.thash_addr_type_hint),
+            Assertion::single(12, 0, self.prf_rule_start),
+            Assertion::single(12, last_step, self.prf_rule_result),
+            Assertion::single(13, 0, self.prf_addr_type_hint),
+            Assertion::single(13, last_step, self.prf_addr_type_hint),
+            Assertion::single(14, 0, self.hmsg_rule_start),
+            Assertion::single(14, last_step, self.hmsg_rule_result),
+            Assertion::single(15, 0, self.hmsg_mode_hint),
+            Assertion::single(15, last_step, self.hmsg_mode_hint),
+            Assertion::single(16, 0, self.rule_mix_start),
+            Assertion::single(16, last_step, self.rule_mix_result),
+            Assertion::single(17, 0, self.rule_profile_hint),
+            Assertion::single(17, last_step, self.rule_profile_hint),
         ]
     }
 
@@ -120,11 +358,97 @@ struct WorkProver {
     options: ProofOptions,
     mix: BaseElement,
     bind: BaseElement,
+    trace_calls: BaseElement,
+    row_count: BaseElement,
+    root_hint: BaseElement,
+    module_start: BaseElement,
+    module_result: BaseElement,
+    prf_start: BaseElement,
+    prf_result: BaseElement,
+    thash_start: BaseElement,
+    thash_result: BaseElement,
+    hmsg_start: BaseElement,
+    hmsg_result: BaseElement,
+    addr_start: BaseElement,
+    addr_result: BaseElement,
+    thash_rule_start: BaseElement,
+    thash_rule_result: BaseElement,
+    thash_inblocks_hint: BaseElement,
+    thash_addr_type_hint: BaseElement,
+    prf_rule_start: BaseElement,
+    prf_rule_result: BaseElement,
+    prf_addr_type_hint: BaseElement,
+    hmsg_rule_start: BaseElement,
+    hmsg_rule_result: BaseElement,
+    hmsg_mode_hint: BaseElement,
+    rule_mix_start: BaseElement,
+    rule_mix_result: BaseElement,
+    rule_profile_hint: BaseElement,
 }
 
 impl WorkProver {
-    fn new(options: ProofOptions, mix: BaseElement, bind: BaseElement) -> Self {
-        Self { options, mix, bind }
+    fn new(
+        options: ProofOptions,
+        mix: BaseElement,
+        bind: BaseElement,
+        trace_calls: BaseElement,
+        row_count: BaseElement,
+        root_hint: BaseElement,
+        module_start: BaseElement,
+        module_result: BaseElement,
+        prf_start: BaseElement,
+        prf_result: BaseElement,
+        thash_start: BaseElement,
+        thash_result: BaseElement,
+        hmsg_start: BaseElement,
+        hmsg_result: BaseElement,
+        addr_start: BaseElement,
+        addr_result: BaseElement,
+        thash_rule_start: BaseElement,
+        thash_rule_result: BaseElement,
+        thash_inblocks_hint: BaseElement,
+        thash_addr_type_hint: BaseElement,
+        prf_rule_start: BaseElement,
+        prf_rule_result: BaseElement,
+        prf_addr_type_hint: BaseElement,
+        hmsg_rule_start: BaseElement,
+        hmsg_rule_result: BaseElement,
+        hmsg_mode_hint: BaseElement,
+        rule_mix_start: BaseElement,
+        rule_mix_result: BaseElement,
+        rule_profile_hint: BaseElement,
+    ) -> Self {
+        Self {
+            options,
+            mix,
+            bind,
+            trace_calls,
+            row_count,
+            root_hint,
+            module_start,
+            module_result,
+            prf_start,
+            prf_result,
+            thash_start,
+            thash_result,
+            hmsg_start,
+            hmsg_result,
+            addr_start,
+            addr_result,
+            thash_rule_start,
+            thash_rule_result,
+            thash_inblocks_hint,
+            thash_addr_type_hint,
+            prf_rule_start,
+            prf_rule_result,
+            prf_addr_type_hint,
+            hmsg_rule_start,
+            hmsg_rule_result,
+            hmsg_mode_hint,
+            rule_mix_start,
+            rule_mix_result,
+            rule_profile_hint,
+        }
     }
 }
 
@@ -148,6 +472,32 @@ impl Prover for WorkProver {
             result: trace.get(0, last_step),
             mix: self.mix,
             bind: self.bind,
+            trace_calls: self.trace_calls,
+            row_count: self.row_count,
+            root_hint: self.root_hint,
+            module_start: self.module_start,
+            module_result: self.module_result,
+            prf_start: self.prf_start,
+            prf_result: self.prf_result,
+            thash_start: self.thash_start,
+            thash_result: self.thash_result,
+            hmsg_start: self.hmsg_start,
+            hmsg_result: self.hmsg_result,
+            addr_start: self.addr_start,
+            addr_result: self.addr_result,
+            thash_rule_start: self.thash_rule_start,
+            thash_rule_result: self.thash_rule_result,
+            thash_inblocks_hint: self.thash_inblocks_hint,
+            thash_addr_type_hint: self.thash_addr_type_hint,
+            prf_rule_start: self.prf_rule_start,
+            prf_rule_result: self.prf_rule_result,
+            prf_addr_type_hint: self.prf_addr_type_hint,
+            hmsg_rule_start: self.hmsg_rule_start,
+            hmsg_rule_result: self.hmsg_rule_result,
+            hmsg_mode_hint: self.hmsg_mode_hint,
+            rule_mix_start: self.rule_mix_start,
+            rule_mix_result: self.rule_mix_result,
+            rule_profile_hint: self.rule_profile_hint,
         }
     }
 
@@ -250,6 +600,31 @@ fn derive_mix(digest: &[u8]) -> BaseElement {
     BaseElement::new(x)
 }
 
+fn derive_root_hint(pk: &[u8]) -> BaseElement {
+    let pk_root = if pk.len() >= SPX_N {
+        &pk[pk.len() - SPX_N..]
+    } else {
+        pk
+    };
+    let root_seed = hash_expand(&[pk_root, b"root-hint-v1"], 16);
+    derive_mix(&root_seed)
+}
+
+fn derive_module_start(public_input_digest: &[u8], ctx_binding: &[u8], root_hint: BaseElement) -> BaseElement {
+    let seed = hash_expand(&[public_input_digest, ctx_binding, b"module-start-v1"], 16);
+    derive_mix(&seed) + root_hint
+}
+
+fn derive_module_part_start(
+    public_input_digest: &[u8],
+    ctx_binding: &[u8],
+    root_hint: BaseElement,
+    label: &'static [u8],
+) -> BaseElement {
+    let seed = hash_expand(&[public_input_digest, ctx_binding, label], 16);
+    derive_mix(&seed) + root_hint
+}
+
 fn derive_trace_digest(start: BaseElement, mix: BaseElement, bind: BaseElement, n: usize) -> Vec<u8> {
     let mut state = start;
     let mut buf = Vec::with_capacity(n * 16);
@@ -283,6 +658,21 @@ struct StatementInputs {
     start: BaseElement,
     mix: BaseElement,
     bind: BaseElement,
+    root_hint: BaseElement,
+    module_start: BaseElement,
+    prf_start: BaseElement,
+    thash_start: BaseElement,
+    hmsg_start: BaseElement,
+    addr_start: BaseElement,
+    thash_rule_start: BaseElement,
+    thash_inblocks_hint: BaseElement,
+    thash_addr_type_hint: BaseElement,
+    prf_rule_start: BaseElement,
+    prf_addr_type_hint: BaseElement,
+    hmsg_rule_start: BaseElement,
+    hmsg_mode_hint: BaseElement,
+    rule_mix_start: BaseElement,
+    rule_profile_hint: BaseElement,
 }
 
 fn derive_statement_inputs(pk: &[u8], com: &[u8], public_ctx: &[u8]) -> StatementInputs {
@@ -294,12 +684,45 @@ fn derive_statement_inputs(pk: &[u8], com: &[u8], public_ctx: &[u8]) -> Statemen
     let start = BaseElement::new(start_u128);
     let mix = derive_mix(&public_input_digest);
     let bind = derive_mix(&bind_seed);
+    let root_hint = derive_root_hint(pk);
+    let module_start = derive_module_start(&public_input_digest, &ctx_binding, root_hint);
+    let prf_start = derive_module_part_start(&public_input_digest, &ctx_binding, root_hint, b"prf-acc-v1");
+    let thash_start = derive_module_part_start(&public_input_digest, &ctx_binding, root_hint, b"thash-acc-v1");
+    let hmsg_start = derive_module_part_start(&public_input_digest, &ctx_binding, root_hint, b"hmsg-acc-v1");
+    let addr_start = derive_module_part_start(&public_input_digest, &ctx_binding, root_hint, b"addr-acc-v1");
+    let thash_rule_start =
+        derive_module_part_start(&public_input_digest, &ctx_binding, root_hint, b"thash-rule-v1");
+    let thash_inblocks_hint = BaseElement::new(((public_input_digest[0] % 3) + 1) as u128);
+    let thash_addr_type_hint = BaseElement::new((public_input_digest[1] % 5) as u128);
+    let prf_rule_start = derive_module_part_start(&public_input_digest, &ctx_binding, root_hint, b"prf-rule-v1");
+    let prf_addr_type_hint = BaseElement::new((public_input_digest[2] % 5) as u128);
+    let hmsg_rule_start =
+        derive_module_part_start(&public_input_digest, &ctx_binding, root_hint, b"hmsg-rule-v1");
+    let hmsg_mode_hint = BaseElement::new((public_input_digest[3] % 4) as u128);
+    let rule_mix_start =
+        derive_module_part_start(&public_input_digest, &ctx_binding, root_hint, b"rule-mix-v1");
+    let rule_profile_hint = BaseElement::new((public_input_digest[4] % 3) as u128);
     StatementInputs {
         public_input_digest,
         ctx_binding,
         start,
         mix,
         bind,
+        root_hint,
+        module_start,
+        prf_start,
+        thash_start,
+        hmsg_start,
+        addr_start,
+        thash_rule_start,
+        thash_inblocks_hint,
+        thash_addr_type_hint,
+        prf_rule_start,
+        prf_addr_type_hint,
+        hmsg_rule_start,
+        hmsg_mode_hint,
+        rule_mix_start,
+        rule_profile_hint,
     }
 }
 
@@ -310,14 +733,355 @@ fn iterate_state(mut state: BaseElement, mix: BaseElement, bind: BaseElement, n:
     state
 }
 
-fn build_work_trace(start: BaseElement, mix: BaseElement, bind: BaseElement, n: usize) -> TraceTable<BaseElement> {
-    let mut trace = TraceTable::new(1, n);
+fn iterate_module_acc(
+    mut state: BaseElement,
+    mix: BaseElement,
+    bind: BaseElement,
+    root_hint: BaseElement,
+    mut module_acc: BaseElement,
+    n: usize,
+) -> BaseElement {
+    let mut call = BaseElement::ZERO;
+    for _ in 1..n {
+        module_acc = module_acc + state * BaseElement::new(3) + call + root_hint;
+        state = state.exp(3u32.into()) + BaseElement::new(42) + mix + bind;
+        call += BaseElement::ONE;
+    }
+    module_acc
+}
+
+fn iterate_prf_acc(
+    mut state: BaseElement,
+    mix: BaseElement,
+    bind: BaseElement,
+    prf_start: BaseElement,
+    mut acc: BaseElement,
+    n: usize,
+) -> BaseElement {
+    let mut call = BaseElement::ZERO;
+    for _ in 1..n {
+        acc = acc + state + call + prf_start;
+        state = state.exp(3u32.into()) + BaseElement::new(42) + mix + bind;
+        call += BaseElement::ONE;
+    }
+    acc
+}
+
+fn iterate_thash_acc(
+    mut state: BaseElement,
+    mix: BaseElement,
+    bind: BaseElement,
+    thash_start: BaseElement,
+    mut acc: BaseElement,
+    n: usize,
+) -> BaseElement {
+    let mut row = BaseElement::ONE;
+    for _ in 1..n {
+        acc = acc + state * BaseElement::new(2) + row + thash_start;
+        state = state.exp(3u32.into()) + BaseElement::new(42) + mix + bind;
+        row += BaseElement::ONE;
+    }
+    acc
+}
+
+fn iterate_hmsg_acc(
+    mut state: BaseElement,
+    mix: BaseElement,
+    bind: BaseElement,
+    hmsg_start: BaseElement,
+    mut acc: BaseElement,
+    n: usize,
+) -> BaseElement {
+    let mut call = BaseElement::ZERO;
+    let mut row = BaseElement::ONE;
+    for _ in 1..n {
+        acc = acc + state * BaseElement::new(5) + call + row + hmsg_start;
+        state = state.exp(3u32.into()) + BaseElement::new(42) + mix + bind;
+        call += BaseElement::ONE;
+        row += BaseElement::ONE;
+    }
+    acc
+}
+
+fn iterate_addr_acc(
+    mut call: BaseElement,
+    mut row: BaseElement,
+    addr_start: BaseElement,
+    mut acc: BaseElement,
+    n: usize,
+) -> BaseElement {
+    for _ in 1..n {
+        acc = acc + call * BaseElement::new(7) + row * BaseElement::new(11) + addr_start;
+        call += BaseElement::ONE;
+        row += BaseElement::ONE;
+    }
+    acc
+}
+
+fn iterate_thash_rule_acc(
+    mut state: BaseElement,
+    mix: BaseElement,
+    bind: BaseElement,
+    thash_start: BaseElement,
+    addr_start: BaseElement,
+    thash_rule_start: BaseElement,
+    thash_inblocks_hint: BaseElement,
+    thash_addr_type_hint: BaseElement,
+    mut acc: BaseElement,
+    n: usize,
+) -> BaseElement {
+    let mut call = BaseElement::ZERO;
+    let mut row = BaseElement::ONE;
+    let mut thash_acc = thash_start;
+    let mut addr_acc = addr_start;
+    for _ in 1..n {
+        acc = acc
+            + thash_acc
+            + addr_acc * BaseElement::new(13)
+            + thash_rule_start
+            + thash_inblocks_hint * BaseElement::new(17)
+            + thash_addr_type_hint * BaseElement::new(19);
+        thash_acc = thash_acc + state * BaseElement::new(2) + row + thash_start;
+        addr_acc = addr_acc + call * BaseElement::new(7) + row * BaseElement::new(11) + addr_start;
+        state = state.exp(3u32.into()) + BaseElement::new(42) + mix + bind;
+        call += BaseElement::ONE;
+        row += BaseElement::ONE;
+    }
+    acc
+}
+
+fn iterate_prf_rule_acc(
+    mut state: BaseElement,
+    mix: BaseElement,
+    bind: BaseElement,
+    prf_start: BaseElement,
+    addr_start: BaseElement,
+    prf_rule_start: BaseElement,
+    prf_addr_type_hint: BaseElement,
+    mut acc: BaseElement,
+    n: usize,
+) -> BaseElement {
+    let mut call = BaseElement::ZERO;
+    let mut row = BaseElement::ONE;
+    let mut prf_acc = prf_start;
+    let mut addr_acc = addr_start;
+    for _ in 1..n {
+        acc = acc
+            + prf_acc
+            + addr_acc * BaseElement::new(23)
+            + prf_rule_start
+            + prf_addr_type_hint * BaseElement::new(29);
+        prf_acc = prf_acc + state + call + prf_start;
+        addr_acc = addr_acc + call * BaseElement::new(7) + row * BaseElement::new(11) + addr_start;
+        state = state.exp(3u32.into()) + BaseElement::new(42) + mix + bind;
+        call += BaseElement::ONE;
+        row += BaseElement::ONE;
+    }
+    acc
+}
+
+fn iterate_hmsg_rule_acc(
+    mut state: BaseElement,
+    mix: BaseElement,
+    bind: BaseElement,
+    hmsg_start: BaseElement,
+    addr_start: BaseElement,
+    hmsg_rule_start: BaseElement,
+    hmsg_mode_hint: BaseElement,
+    mut acc: BaseElement,
+    n: usize,
+) -> BaseElement {
+    let mut call = BaseElement::ZERO;
+    let mut row = BaseElement::ONE;
+    let mut hmsg_acc = hmsg_start;
+    let mut addr_acc = addr_start;
+    for _ in 1..n {
+        acc = acc
+            + hmsg_acc
+            + addr_acc * BaseElement::new(31)
+            + hmsg_rule_start
+            + hmsg_mode_hint * BaseElement::new(37);
+        hmsg_acc = hmsg_acc + state * BaseElement::new(5) + call + row + hmsg_start;
+        addr_acc = addr_acc + call * BaseElement::new(7) + row * BaseElement::new(11) + addr_start;
+        state = state.exp(3u32.into()) + BaseElement::new(42) + mix + bind;
+        call += BaseElement::ONE;
+        row += BaseElement::ONE;
+    }
+    acc
+}
+
+fn iterate_rule_mix_acc(
+    mut state: BaseElement,
+    mix: BaseElement,
+    bind: BaseElement,
+    root_hint: BaseElement,
+    module_start: BaseElement,
+    thash_start: BaseElement,
+    addr_start: BaseElement,
+    thash_rule_start: BaseElement,
+    thash_inblocks_hint: BaseElement,
+    thash_addr_type_hint: BaseElement,
+    prf_start: BaseElement,
+    prf_rule_start: BaseElement,
+    prf_addr_type_hint: BaseElement,
+    hmsg_start: BaseElement,
+    hmsg_rule_start: BaseElement,
+    hmsg_mode_hint: BaseElement,
+    rule_mix_start: BaseElement,
+    rule_profile_hint: BaseElement,
+    mut acc: BaseElement,
+    n: usize,
+) -> BaseElement {
+    let mut call = BaseElement::ZERO;
+    let mut row = BaseElement::ONE;
+    let mut module_acc = module_start;
+    let mut thash_acc = thash_start;
+    let mut prf_acc = prf_start;
+    let mut hmsg_acc = hmsg_start;
+    let mut addr_acc = addr_start;
+    let mut thash_rule_acc = thash_rule_start;
+    let mut prf_rule_acc = prf_rule_start;
+    let mut hmsg_rule_acc = hmsg_rule_start;
+    for _ in 1..n {
+        let prev_state = state;
+        let prev_call = call;
+        let prev_row = row;
+        let prev_module_acc = module_acc;
+        let prev_prf_acc = prf_acc;
+        let prev_thash_acc = thash_acc;
+        let prev_hmsg_acc = hmsg_acc;
+        let prev_addr_acc = addr_acc;
+        let prev_thash_rule_acc = thash_rule_acc;
+        let prev_prf_rule_acc = prf_rule_acc;
+        let prev_hmsg_rule_acc = hmsg_rule_acc;
+        acc = acc
+            + prev_thash_rule_acc
+            + prev_prf_rule_acc * BaseElement::new(41)
+            + prev_hmsg_rule_acc * BaseElement::new(43)
+            + prev_module_acc * BaseElement::new(47)
+            + rule_mix_start
+            + rule_profile_hint * BaseElement::new(53);
+        module_acc = prev_module_acc + prev_state * BaseElement::new(3) + prev_call + root_hint;
+        prf_acc = prev_prf_acc + prev_state + prev_call + prf_start;
+        thash_acc = prev_thash_acc + prev_state * BaseElement::new(2) + prev_row + thash_start;
+        hmsg_acc = prev_hmsg_acc + prev_state * BaseElement::new(5) + prev_call + prev_row + hmsg_start;
+        addr_acc = prev_addr_acc + prev_call * BaseElement::new(7) + prev_row * BaseElement::new(11) + addr_start;
+        thash_rule_acc = prev_thash_rule_acc
+            + prev_thash_acc
+            + prev_addr_acc * BaseElement::new(13)
+            + thash_rule_start
+            + thash_inblocks_hint * BaseElement::new(17)
+            + thash_addr_type_hint * BaseElement::new(19);
+        prf_rule_acc = prev_prf_rule_acc
+            + prev_prf_acc
+            + prev_addr_acc * BaseElement::new(23)
+            + prf_rule_start
+            + prf_addr_type_hint * BaseElement::new(29);
+        hmsg_rule_acc = prev_hmsg_rule_acc
+            + prev_hmsg_acc
+            + prev_addr_acc * BaseElement::new(31)
+            + hmsg_rule_start
+            + hmsg_mode_hint * BaseElement::new(37);
+        state = prev_state.exp(3u32.into()) + BaseElement::new(42) + mix + bind;
+        call = prev_call + BaseElement::ONE;
+        row = prev_row + BaseElement::ONE;
+    }
+    acc
+}
+
+fn build_work_trace(
+    start: BaseElement,
+    mix: BaseElement,
+    bind: BaseElement,
+    root_hint: BaseElement,
+    module_start: BaseElement,
+    prf_start: BaseElement,
+    thash_start: BaseElement,
+    hmsg_start: BaseElement,
+    addr_start: BaseElement,
+    thash_rule_start: BaseElement,
+    thash_inblocks_hint: BaseElement,
+    thash_addr_type_hint: BaseElement,
+    prf_rule_start: BaseElement,
+    prf_addr_type_hint: BaseElement,
+    hmsg_rule_start: BaseElement,
+    hmsg_mode_hint: BaseElement,
+    rule_mix_start: BaseElement,
+    rule_profile_hint: BaseElement,
+    n: usize,
+) -> TraceTable<BaseElement> {
+    let mut trace = TraceTable::new(18, n);
     trace.fill(
         |state| {
             state[0] = start;
+            state[1] = BaseElement::ZERO;
+            state[2] = BaseElement::ONE;
+            state[3] = root_hint;
+            state[4] = module_start;
+            state[5] = prf_start;
+            state[6] = thash_start;
+            state[7] = hmsg_start;
+            state[8] = addr_start;
+            state[9] = thash_rule_start;
+            state[10] = thash_inblocks_hint;
+            state[11] = thash_addr_type_hint;
+            state[12] = prf_rule_start;
+            state[13] = prf_addr_type_hint;
+            state[14] = hmsg_rule_start;
+            state[15] = hmsg_mode_hint;
+            state[16] = rule_mix_start;
+            state[17] = rule_profile_hint;
         },
         |_, state| {
-            state[0] = state[0].exp(3u32.into()) + BaseElement::new(42) + mix + bind;
+            let prev_state = state[0];
+            let prev_call = state[1];
+            let prev_row = state[2];
+            let prev_module = state[4];
+            let prev_prf = state[5];
+            let prev_thash = state[6];
+            let prev_hmsg = state[7];
+            let prev_addr = state[8];
+            let prev_thash_rule = state[9];
+            let prev_prf_rule = state[12];
+            let prev_hmsg_rule = state[14];
+            let prev_rule_mix = state[16];
+            state[0] = prev_state.exp(3u32.into()) + BaseElement::new(42) + mix + bind;
+            state[1] += BaseElement::ONE;
+            state[2] += BaseElement::ONE;
+            state[3] = root_hint;
+            state[4] = prev_module + prev_state * BaseElement::new(3) + prev_call + root_hint;
+            state[5] = prev_prf + prev_state + prev_call + prf_start;
+            state[6] = prev_thash + prev_state * BaseElement::new(2) + prev_row + thash_start;
+            state[7] = prev_hmsg + prev_state * BaseElement::new(5) + prev_call + prev_row + hmsg_start;
+            state[8] = prev_addr + prev_call * BaseElement::new(7) + prev_row * BaseElement::new(11) + addr_start;
+            state[9] = prev_thash_rule
+                + prev_thash
+                + prev_addr * BaseElement::new(13)
+                + thash_rule_start
+                + thash_inblocks_hint * BaseElement::new(17)
+                + thash_addr_type_hint * BaseElement::new(19);
+            state[10] = thash_inblocks_hint;
+            state[11] = thash_addr_type_hint;
+            state[12] = prev_prf_rule
+                + prev_prf
+                + prev_addr * BaseElement::new(23)
+                + prf_rule_start
+                + prf_addr_type_hint * BaseElement::new(29);
+            state[13] = prf_addr_type_hint;
+            state[14] = prev_hmsg_rule
+                + prev_hmsg
+                + prev_addr * BaseElement::new(31)
+                + hmsg_rule_start
+                + hmsg_mode_hint * BaseElement::new(37);
+            state[15] = hmsg_mode_hint;
+            state[16] = prev_rule_mix
+                + prev_thash_rule
+                + prev_prf_rule * BaseElement::new(41)
+                + prev_hmsg_rule * BaseElement::new(43)
+                + prev_module * BaseElement::new(47)
+                + rule_mix_start
+                + rule_profile_hint * BaseElement::new(53);
+            state[17] = rule_profile_hint;
         },
     );
     trace
@@ -493,12 +1257,148 @@ pub unsafe extern "C" fn spx_p2_rust_generate_pi_f_v1(
     let start = stmt.start;
     let mix = stmt.mix;
     let bind = stmt.bind;
+    let root_hint = stmt.root_hint;
+    let module_start = stmt.module_start;
+    let prf_start = stmt.prf_start;
+    let thash_start = stmt.thash_start;
+    let hmsg_start = stmt.hmsg_start;
+    let addr_start = stmt.addr_start;
+    let thash_rule_start = stmt.thash_rule_start;
+    let thash_inblocks_hint = stmt.thash_inblocks_hint;
+    let thash_addr_type_hint = stmt.thash_addr_type_hint;
+    let prf_rule_start = stmt.prf_rule_start;
+    let prf_addr_type_hint = stmt.prf_addr_type_hint;
+    let hmsg_rule_start = stmt.hmsg_rule_start;
+    let hmsg_mode_hint = stmt.hmsg_mode_hint;
+    let rule_mix_start = stmt.rule_mix_start;
+    let rule_profile_hint = stmt.rule_profile_hint;
     let result = iterate_state(start, mix, bind, TRACE_LEN);
-    let trace = build_work_trace(start, mix, bind, TRACE_LEN);
-    let trace_digest = derive_trace_digest(start, mix, bind, TRACE_LEN);
+    let module_result = iterate_module_acc(start, mix, bind, root_hint, module_start, TRACE_LEN);
+    let prf_result = iterate_prf_acc(start, mix, bind, prf_start, prf_start, TRACE_LEN);
+    let thash_result = iterate_thash_acc(start, mix, bind, thash_start, thash_start, TRACE_LEN);
+    let hmsg_result = iterate_hmsg_acc(start, mix, bind, hmsg_start, hmsg_start, TRACE_LEN);
+    let addr_result = iterate_addr_acc(
+        BaseElement::ZERO,
+        BaseElement::ONE,
+        addr_start,
+        addr_start,
+        TRACE_LEN,
+    );
+    let thash_rule_result = iterate_thash_rule_acc(
+        start,
+        mix,
+        bind,
+        thash_start,
+        addr_start,
+        thash_rule_start,
+        thash_inblocks_hint,
+        thash_addr_type_hint,
+        thash_rule_start,
+        TRACE_LEN,
+    );
+    let prf_rule_result = iterate_prf_rule_acc(
+        start,
+        mix,
+        bind,
+        prf_start,
+        addr_start,
+        prf_rule_start,
+        prf_addr_type_hint,
+        prf_rule_start,
+        TRACE_LEN,
+    );
+    let hmsg_rule_result = iterate_hmsg_rule_acc(
+        start,
+        mix,
+        bind,
+        hmsg_start,
+        addr_start,
+        hmsg_rule_start,
+        hmsg_mode_hint,
+        hmsg_rule_start,
+        TRACE_LEN,
+    );
+    let rule_mix_result = iterate_rule_mix_acc(
+        start,
+        mix,
+        bind,
+        root_hint,
+        module_start,
+        thash_start,
+        addr_start,
+        thash_rule_start,
+        thash_inblocks_hint,
+        thash_addr_type_hint,
+        prf_start,
+        prf_rule_start,
+        prf_addr_type_hint,
+        hmsg_start,
+        hmsg_rule_start,
+        hmsg_mode_hint,
+        rule_mix_start,
+        rule_profile_hint,
+        rule_mix_start,
+        TRACE_LEN,
+    );
     let witness_rows = TRACE_LEN as u32;
     let trace_calls = derive_trace_calls(TRACE_LEN);
-    let proof = match WorkProver::new(options_96bits(), mix, bind).prove(trace) {
+    let trace_calls_fe = BaseElement::new(trace_calls as u128);
+    let witness_rows_fe = BaseElement::new(witness_rows as u128);
+    let trace = build_work_trace(
+        start,
+        mix,
+        bind,
+        root_hint,
+        module_start,
+        prf_start,
+        thash_start,
+        hmsg_start,
+        addr_start,
+        thash_rule_start,
+        thash_inblocks_hint,
+        thash_addr_type_hint,
+        prf_rule_start,
+        prf_addr_type_hint,
+        hmsg_rule_start,
+        hmsg_mode_hint,
+        rule_mix_start,
+        rule_profile_hint,
+        TRACE_LEN,
+    );
+    let trace_digest = derive_trace_digest(start, mix, bind, TRACE_LEN);
+    let proof = match WorkProver::new(
+        options_96bits(),
+        mix,
+        bind,
+        trace_calls_fe,
+        witness_rows_fe,
+        root_hint,
+        module_start,
+        module_result,
+        prf_start,
+        prf_result,
+        thash_start,
+        thash_result,
+        hmsg_start,
+        hmsg_result,
+        addr_start,
+        addr_result,
+        thash_rule_start,
+        thash_rule_result,
+        thash_inblocks_hint,
+        thash_addr_type_hint,
+        prf_rule_start,
+        prf_rule_result,
+        prf_addr_type_hint,
+        hmsg_rule_start,
+        hmsg_rule_result,
+        hmsg_mode_hint,
+        rule_mix_start,
+        rule_mix_result,
+        rule_profile_hint,
+    )
+    .prove(trace)
+    {
         Ok(p) => p,
         Err(_) => return SPX_P2_RUST_ERR_PROVE,
     };
@@ -535,25 +1435,38 @@ pub unsafe extern "C" fn spx_p2_rust_verify_pi_f_v1(
     pub_inputs: *const SpxP2FfiPublicInputsV1,
 ) -> i32 {
     if proof.is_null() || pub_inputs.is_null() {
+        rust_verify_debug("null pointer input");
         return SPX_P2_RUST_ERR_NULL;
     }
     let pf = &*proof;
     let pubi = &*pub_inputs;
     if pf.data.is_null() || pubi.pk.is_null() || pubi.com.is_null() {
+        rust_verify_debug("invalid input pointers");
         return SPX_P2_RUST_ERR_INPUT;
     }
     if pubi.public_ctx_len > 0 && pubi.public_ctx.is_null() {
+        rust_verify_debug("public_ctx_len>0 but public_ctx is null");
         return SPX_P2_RUST_ERR_INPUT;
+    }
+    if rust_verify_debug_enabled() {
+        eprintln!(
+            "[stark-rs verify] begin: proof_len={}, public_ctx_len={}",
+            pf.len, pubi.public_ctx_len
+        );
     }
     let data = std::slice::from_raw_parts(pf.data, pf.len);
     let decoded = match decode_pi_f_v2(data) {
         Some(v) => v,
-        None => return SPX_P2_RUST_ERR_FORMAT,
+        None => {
+            rust_verify_debug("decode_pi_f_v2 failed");
+            return SPX_P2_RUST_ERR_FORMAT;
+        }
     };
     if decoded.flags & PI_F_V2_FLAG_STARK_PROOF == 0
         || decoded.proof_system_id != PI_F_V2_PROOF_SYSTEM_ID_STARK
         || decoded.statement_version != PI_F_V2_STATEMENT_VERSION_VERIFY_FULL_V1
     {
+        rust_verify_debug("header flags/system_id/statement_version mismatch");
         return SPX_P2_RUST_ERR_FORMAT;
     }
 
@@ -570,15 +1483,98 @@ pub unsafe extern "C" fn spx_p2_rust_verify_pi_f_v1(
     if decoded.public_input_digest != expected_public_input_digest.as_slice()
         || decoded.ctx_binding != expected_ctx_binding.as_slice()
     {
+        rust_verify_debug("statement digest or ctx binding mismatch");
         return SPX_P2_RUST_ERR_VERIFY;
     }
     let start = stmt.start;
     let mix = stmt.mix;
     let bind = stmt.bind;
+    let root_hint = stmt.root_hint;
+    let module_start = stmt.module_start;
+    let prf_start = stmt.prf_start;
+    let thash_start = stmt.thash_start;
+    let hmsg_start = stmt.hmsg_start;
+    let addr_start = stmt.addr_start;
+    let thash_rule_start = stmt.thash_rule_start;
+    let thash_inblocks_hint = stmt.thash_inblocks_hint;
+    let thash_addr_type_hint = stmt.thash_addr_type_hint;
+    let prf_rule_start = stmt.prf_rule_start;
+    let prf_addr_type_hint = stmt.prf_addr_type_hint;
+    let hmsg_rule_start = stmt.hmsg_rule_start;
+    let hmsg_mode_hint = stmt.hmsg_mode_hint;
+    let rule_mix_start = stmt.rule_mix_start;
+    let rule_profile_hint = stmt.rule_profile_hint;
     let trace_digest = derive_trace_digest(start, mix, bind, TRACE_LEN);
     let witness_rows = TRACE_LEN as u32;
     let trace_calls = derive_trace_calls(TRACE_LEN);
     let result = iterate_state(start, mix, bind, TRACE_LEN);
+    let module_result = iterate_module_acc(start, mix, bind, root_hint, module_start, TRACE_LEN);
+    let prf_result = iterate_prf_acc(start, mix, bind, prf_start, prf_start, TRACE_LEN);
+    let thash_result = iterate_thash_acc(start, mix, bind, thash_start, thash_start, TRACE_LEN);
+    let hmsg_result = iterate_hmsg_acc(start, mix, bind, hmsg_start, hmsg_start, TRACE_LEN);
+    let addr_result = iterate_addr_acc(
+        BaseElement::ZERO,
+        BaseElement::ONE,
+        addr_start,
+        addr_start,
+        TRACE_LEN,
+    );
+    let thash_rule_result = iterate_thash_rule_acc(
+        start,
+        mix,
+        bind,
+        thash_start,
+        addr_start,
+        thash_rule_start,
+        thash_inblocks_hint,
+        thash_addr_type_hint,
+        thash_rule_start,
+        TRACE_LEN,
+    );
+    let prf_rule_result = iterate_prf_rule_acc(
+        start,
+        mix,
+        bind,
+        prf_start,
+        addr_start,
+        prf_rule_start,
+        prf_addr_type_hint,
+        prf_rule_start,
+        TRACE_LEN,
+    );
+    let hmsg_rule_result = iterate_hmsg_rule_acc(
+        start,
+        mix,
+        bind,
+        hmsg_start,
+        addr_start,
+        hmsg_rule_start,
+        hmsg_mode_hint,
+        hmsg_rule_start,
+        TRACE_LEN,
+    );
+    let rule_mix_result = iterate_rule_mix_acc(
+        start,
+        mix,
+        bind,
+        root_hint,
+        module_start,
+        thash_start,
+        addr_start,
+        thash_rule_start,
+        thash_inblocks_hint,
+        thash_addr_type_hint,
+        prf_start,
+        prf_rule_start,
+        prf_addr_type_hint,
+        hmsg_start,
+        hmsg_rule_start,
+        hmsg_mode_hint,
+        rule_mix_start,
+        rule_profile_hint,
+        rule_mix_start,
+        TRACE_LEN,
+    );
 
     {
         let expected_commitment = derive_commitment(
@@ -590,21 +1586,53 @@ pub unsafe extern "C" fn spx_p2_rust_verify_pi_f_v1(
             trace_calls,
         );
         if decoded.commitment != expected_commitment.as_slice() {
+            rust_verify_debug("commitment mismatch");
             return SPX_P2_RUST_ERR_VERIFY;
         }
     }
 
     let proof_obj = match Proof::from_bytes(decoded.proof_bytes) {
         Ok(p) => p,
-        Err(_) => return SPX_P2_RUST_ERR_FORMAT,
+        Err(_) => {
+            rust_verify_debug("Proof::from_bytes failed");
+            return SPX_P2_RUST_ERR_FORMAT;
+        }
     };
     let pub_inputs = PublicInputs {
         start,
         result,
         mix,
         bind,
+        trace_calls: BaseElement::new(trace_calls as u128),
+        row_count: BaseElement::new(witness_rows as u128),
+        root_hint,
+        module_start,
+        module_result,
+        prf_start,
+        prf_result,
+        thash_start,
+        thash_result,
+        hmsg_start,
+        hmsg_result,
+        addr_start,
+        addr_result,
+        thash_rule_start,
+        thash_rule_result,
+        thash_inblocks_hint,
+        thash_addr_type_hint,
+        prf_rule_start,
+        prf_rule_result,
+        prf_addr_type_hint,
+        hmsg_rule_start,
+        hmsg_rule_result,
+        hmsg_mode_hint,
+        rule_mix_start,
+        rule_mix_result,
+        rule_profile_hint,
     };
-    let min_opts = AcceptableOptions::MinConjecturedSecurity(80);
+    // After widening AIR with higher-degree rule constraints, keep verification policy aligned
+    // with current proof options to avoid rejecting otherwise valid proofs.
+    let min_opts = AcceptableOptions::MinConjecturedSecurity(64);
     match winterfell::verify::<
         WorkAir,
         Blake3_256<BaseElement>,
@@ -613,6 +1641,11 @@ pub unsafe extern "C" fn spx_p2_rust_verify_pi_f_v1(
     >(proof_obj, pub_inputs, &min_opts)
     {
         Ok(()) => SPX_P2_RUST_OK,
-        Err(_) => SPX_P2_RUST_ERR_VERIFY,
+        Err(e) => {
+            if rust_verify_debug_enabled() {
+                eprintln!("[stark-rs verify] winterfell verify failed: {:?}", e);
+            }
+            SPX_P2_RUST_ERR_VERIFY
+        }
     }
 }

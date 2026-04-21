@@ -58,6 +58,7 @@ int main(void)
     static spx_p2_cred_internal cred;
     static spx_p2_show show_obj;
     uint8_t pk[CRYPTO_PUBLICKEYBYTES];
+    uint8_t pk_bad[CRYPTO_PUBLICKEYBYTES];
     uint8_t sk[CRYPTO_SECRETKEYBYTES];
     uint8_t m[24];
     uint8_t r[16];
@@ -82,6 +83,7 @@ int main(void)
         fail("sign");
         return 1;
     }
+    memcpy(pk_bad, pk, sizeof(pk_bad));
 
     /* Case 1: valid sample => both accept. */
     c_ok = c_verify_full_guard_accept(pk, cred.com, cred.sigma_com);
@@ -113,6 +115,17 @@ int main(void)
         fail("case_tamper_com_mismatch");
         return 1;
     }
+
+    /* Case 4: tampered pk-root byte => both reject. */
+    pk_bad[CRYPTO_PUBLICKEYBYTES - 1u] ^= 1u;
+    c_ok = c_verify_full_guard_accept(pk_bad, cred.com, cred.sigma_com);
+    rs_ok = (spx_p2_show_prove(&show_obj, pk_bad, &cred, public_ctx, sizeof(public_ctx)) == 0) ? 1 : 0;
+    if (!(c_ok == 0 && rs_ok == 0))
+    {
+        fail("case_tamper_pk_root_mismatch");
+        return 1;
+    }
+    pk_bad[CRYPTO_PUBLICKEYBYTES - 1u] ^= 1u;
 
     printf("poseidon2_cross_backend_consistency test: OK\n");
     return 0;

@@ -1,8 +1,15 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "show_poseidon2_v1.h"
+
+static int spx_p2_debug_verify_enabled(void)
+{
+    return getenv("SPX_P2_DEBUG_VERIFY") != 0;
+}
 
 int spx_p2_show_from_internal_v1(spx_p2_show_v1 *out,
                                  const spx_p2_cred_v1_internal *cred,
@@ -52,7 +59,7 @@ int spx_p2_show_verify_shape_v1(const spx_p2_show_v1 *show)
     {
         return -1;
     }
-    if (show->pi_f_len == 0 || show->pi_f_len > SPX_P2_PI_F_V1_MAX_BYTES)
+    if (show->pi_f_len == 0 || show->pi_f_len > sizeof(show->pi_f))
     {
         return -1;
     }
@@ -171,6 +178,7 @@ int spx_p2_show_verify_v2_strict(const spx_p2_show_v1 *show,
 {
     spx_p2_ffi_blob_v1 proof_blob;
     spx_p2_ffi_public_inputs_v1 pub;
+    int ret;
     if (show == 0 || pk == 0)
     {
         return -1;
@@ -186,5 +194,14 @@ int spx_p2_show_verify_v2_strict(const spx_p2_show_v1 *show,
     pub.com = show->com;
     pub.public_ctx = show->public_ctx;
     pub.public_ctx_len = show->public_ctx_len;
-    return (spx_p2_ffi_verify_pi_f_v2_strict(&proof_blob, &pub) == SPX_P2_FFI_OK) ? 0 : -1;
+    ret = spx_p2_ffi_verify_pi_f_v2_strict(&proof_blob, &pub);
+    if (spx_p2_debug_verify_enabled())
+    {
+        fprintf(stderr,
+                "[show_v2_strict] verify ret=%d pi_f_len=%llu ctx_len=%llu\n",
+                ret,
+                (unsigned long long)show->pi_f_len,
+                (unsigned long long)show->public_ctx_len);
+    }
+    return (ret == SPX_P2_FFI_OK) ? 0 : -1;
 }
