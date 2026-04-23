@@ -62,8 +62,9 @@ run_sign_verify_case() {
   local sign_us
   local verify_us
 
+  # Force rebuild because PARAMS changes do not change target path (`test/benchmark`).
   echo "[bench:$case_name] build benchmark (PARAMS=$params)"
-  make PARAMS="$params" THASH="$THASH" CC="$CC_BIN" test/benchmark >/dev/null
+  make -B PARAMS="$params" THASH="$THASH" CC="$CC_BIN" test/benchmark >/dev/null
 
   for i in $(seq 1 "$RUNS"); do
     out="$(./test/benchmark)"
@@ -93,9 +94,10 @@ run_case4_stark() {
   local prove_e2e_ms
   local verify_ms
 
+  # Same reason as above: avoid stale binary reuse across different macro/params.
   echo "[bench:$case_name] build rust backend + stats test"
   (cd stark-rs && cargo build --release >/dev/null)
-  make PARAMS="$params" THASH="$THASH" CC="$CC_BIN" EXTRA_CFLAGS="-DSPX_P2_USE_RUST_STARK" test/poseidon2_stark_stats >/dev/null
+  make -B PARAMS="$params" THASH="$THASH" CC="$CC_BIN" EXTRA_CFLAGS="-DSPX_P2_USE_RUST_STARK" test/poseidon2_stark_stats >/dev/null
 
   for i in $(seq 1 "$RUNS"); do
     line="$(./test/poseidon2_stark_stats | tail -n 1)"
