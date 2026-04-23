@@ -41,6 +41,7 @@ ifneq (,$(findstring poseidon2,$(PARAMS)))
 	TESTS += test/poseidon2_api
 	TESTS += test/poseidon2_kat
 	TESTS += test/poseidon2_adapter
+	TESTS += test/poseidon2_instantiation_m1
 	TESTS += test/poseidon2_show_v1_boundary
 	TESTS += test/poseidon2_witness_v1
 	TESTS += test/poseidon2_perm_air_v1

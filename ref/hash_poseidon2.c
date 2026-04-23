@@ -18,7 +18,7 @@ void initialize_hash_function(spx_ctx *ctx)
 void prf_addr(unsigned char *out, const spx_ctx *ctx,
               const uint32_t addr[8])
 {
-    unsigned char buf[2 * SPX_N + SPX_ADDR_BYTES];
+    unsigned char buf[SPX_P2_ENCODED_PRF_ADDR_BYTES];
 
     memcpy(buf, ctx->pub_seed, SPX_N);
     memcpy(buf + SPX_N, addr, SPX_ADDR_BYTES);

@@ -17,16 +17,26 @@
 
 typedef enum
 {
+    /* PRF(pk_seed || ADRS || sk_seed) */
     SPX_P2_DOMAIN_PRF_ADDR = 0x01,
+    /* PRF_msg(sk_prf || optrand || m) */
     SPX_P2_DOMAIN_GEN_MESSAGE_RANDOM = 0x02,
+    /* H_msg(R || pk || m) */
     SPX_P2_DOMAIN_HASH_MESSAGE = 0x03,
     SPX_P2_DOMAIN_THASH_SIMPLE = 0x10,
+    /* THASH F/H/T_l share encoding but use distinct domains. */
     SPX_P2_DOMAIN_THASH_F = 0x11,
     SPX_P2_DOMAIN_THASH_H = 0x12,
     SPX_P2_DOMAIN_THASH_TL = 0x13,
+    /* Commit(m || r) */
     SPX_P2_DOMAIN_COMMIT = 0x20,
     SPX_P2_DOMAIN_CUSTOM = 0xff
 } spx_poseidon2_domain;
+
+/* M1: fixed encoding sizes for SPHINCS+ Poseidon2 simple instantiation. */
+#define SPX_P2_ENCODED_PRF_ADDR_BYTES (2 * SPX_N + SPX_ADDR_BYTES)
+#define SPX_P2_ENCODED_THASH_BYTES(inblocks) (SPX_N + SPX_ADDR_BYTES + (inblocks) * SPX_N)
+#define SPX_P2_HMSG_PREFIX_BYTES (SPX_N + SPX_PK_BYTES)
 
 typedef struct
 {
