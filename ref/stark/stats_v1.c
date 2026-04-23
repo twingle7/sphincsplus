@@ -38,6 +38,10 @@ int spx_p2_stark_collect_stats_v1(spx_p2_stark_stats_v1 *out_stats,
     spx_p2_ffi_public_inputs_v1 pub;
     spx_p2_ffi_private_witness_v1 wit;
     size_t rows = 0;
+    clock_t t_pre0;
+    clock_t t_pre1;
+    clock_t t_prove0;
+    clock_t t_prove1;
     clock_t t0;
     clock_t t1;
     int ret;
@@ -49,6 +53,7 @@ int spx_p2_stark_collect_stats_v1(spx_p2_stark_stats_v1 *out_stats,
     }
 
     memset(out_stats, 0, sizeof(*out_stats));
+    t_pre0 = clock();
     if (spx_p2_trace_verify_com(&trace, pk, com, sigma_com) != 0)
     {
         return -1;
@@ -57,6 +62,8 @@ int spx_p2_stark_collect_stats_v1(spx_p2_stark_stats_v1 *out_stats,
     {
         return -1;
     }
+    t_pre1 = clock();
+    out_stats->preprocess_ms = elapsed_ms(t_pre0, t_pre1);
 
     blob.data = proof_buf;
     blob.len = 0;
@@ -67,14 +74,17 @@ int spx_p2_stark_collect_stats_v1(spx_p2_stark_stats_v1 *out_stats,
     pub.public_ctx_len = public_ctx_len;
     wit.sigma_com = sigma_com;
 
-    t0 = clock();
+    t_prove0 = clock();
     ret = spx_p2_ffi_generate_pi_f_v1(&blob, &pub, &wit);
-    t1 = clock();
+    t_prove1 = clock();
     if (ret != SPX_P2_FFI_OK)
     {
         return -1;
     }
-    out_stats->prove_ms = elapsed_ms(t0, t1);
+    out_stats->prove_core_ms = elapsed_ms(t_prove0, t_prove1);
+    out_stats->prove_e2e_ms = elapsed_ms(t_pre0, t_prove1);
+    /* Keep backward-compatible field name for legacy readers. */
+    out_stats->prove_ms = out_stats->prove_core_ms;
 
     t0 = clock();
     ret = spx_p2_ffi_verify_pi_f_v1(&blob, &pub);

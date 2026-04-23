@@ -14,6 +14,9 @@ typedef struct
     uint32_t proof_version;
     size_t witness_rows;
     size_t proof_bytes;
+    double preprocess_ms;
+    double prove_core_ms;
+    double prove_e2e_ms;
     double prove_ms;
     double verify_ms;
 } spx_p2_stark_stats_v1;

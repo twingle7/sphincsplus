@@ -52,11 +52,12 @@ int main(void)
         fail("proof_not_final_v2");
         return 1;
     }
-    printf("poseidon2_stark_stats: calls=%u lanes=%u rows=%llu proof=%llu magic=0x%08x ver=%u prove_ms=%.3f verify_ms=%.3f\n",
+    printf("poseidon2_stark_stats: calls=%u lanes=%u rows=%llu proof=%llu magic=0x%08x ver=%u preprocess_ms=%.3f prove_core_ms=%.3f prove_e2e_ms=%.3f prove_ms=%.3f verify_ms=%.3f\n",
            stats.trace_calls, stats.trace_lanes,
            (unsigned long long)stats.witness_rows,
            (unsigned long long)stats.proof_bytes,
            stats.proof_magic, stats.proof_version,
+           stats.preprocess_ms, stats.prove_core_ms, stats.prove_e2e_ms,
            stats.prove_ms, stats.verify_ms);
     return 0;
 }
