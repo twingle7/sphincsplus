@@ -1,0 +1,4 @@
+Parameters: n = 16, h = 60, d = 6, b = 8, k = 17, w = 256
+Running 10 iterations.
+thash                avg.        8.48 us (0.00 sec); median         15,121 cycles,      1x:         15,121 cycles
+Generating keypair.. 
