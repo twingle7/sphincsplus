@@ -1,0 +1,12 @@
+Parameters: n = 16, h = 60, d = 6, b = 10, k = 17, w = 16
+Running 10 iterations.
+thash                avg.        8.38 us (0.00 sec); median         15,060 cycles,      1x:         15,060 cycles
+Generating keypair.. avg.  5482876.05 us (5.48 sec); median  9,855,009,207 cycles,      1x:  9,855,009,207 cycles
+  - WOTS pk gen..    avg.     5322.66 us (0.01 sec); median      9,419,094 cycles,   1024x:  9,645,152,256 cycles
+Signing..            avg. 33461010.71 us (33.46 sec); median 59,843,608,213 cycles,      1x: 59,843,608,213 cycles
+  - FORS signing..   avg.   493897.64 us (0.49 sec); median    877,705,456 cycles,      1x:    877,705,456 cycles
+  - WOTS pk gen..    avg.     5452.77 us (0.01 sec); median      9,301,860 cycles,   6144x: 57,150,627,840 cycles
+Verifying..          avg.    18508.73 us (0.02 sec); median     33,069,600 cycles,      1x:     33,069,600 cycles
+Signature size: 7328 (7.16 KiB)
+Public key size: 32 (0.03 KiB)
+Secret key size: 64 (0.06 KiB)

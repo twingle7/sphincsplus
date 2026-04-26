@@ -1,0 +1,9 @@
+group,candidate_id,sig_bytes,sign_ms,verify_ms,witness_rows,prove_e2e_ms,source
+sha2-192s baseline,-,16224,1089.731,0.943,N/A,N/A,benchmark-4way+params
+cand_41 (rec),41,6800,32652.622,19.275,21910,22.169,M5 frontier
+cand_61,61,8032,32833.710,18.636,20436,21.675,M5 frontier
+cand_29,29,7328,33461.011,18.509,21844,22.637,M5 frontier
+cand_9 (rec),9,6800,34229.064,19.105,19930,22.654,M5 frontier
+cand_13 (rec),13,7248,34348.821,18.663,20294,22.540,M5 frontier
+poseidon2-192s baseline,-,16224,35402.570,27.016,N/A,N/A,benchmark-4way+params
+cand_2425,2425,6880,66153.005,18.861,19995,21.800,M5 frontier

@@ -1,0 +1,1 @@
+poseidon2_stark_stats: calls=4096 lanes=41488 rows=45584 proof=23184 magic=0x32504650 ver=2 preprocess_ms=235.928 prove_core_ms=3.345 prove_e2e_ms=239.275 prove_ms=3.345 verify_ms=0.421

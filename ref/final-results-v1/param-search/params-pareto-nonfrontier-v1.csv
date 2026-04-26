@@ -1,0 +1,5 @@
+candidate_id,n,h,d,k,a,w,q,sig_bytes,sign_ms,verify_ms,witness_rows,prove_e2e_ms_median,proof_bytes,claimed_security_bits,dominated_by_candidate_id,dominated_axes,drop_reason
+53,16,60,6,22,12,16,65536,8912,35214.303,21.160,22471,22.722,23761,128,9,sig_bytes;sign_ms;verify_ms;witness_rows,pareto_dominated
+2429,16,66,6,17,10,16,65536,7424,67078.184,21.394,21592,22.781,24051,128,9,sig_bytes;sign_ms;verify_ms;witness_rows,pareto_dominated
+2453,16,66,6,22,12,16,65536,9008,68102.277,20.651,22384,22.753,24017,128,9,sig_bytes;sign_ms;verify_ms;witness_rows,pareto_dominated
+2465,16,66,6,33,8,16,65536,9184,65544.763,19.464,22362,22.767,21768,128,9,sig_bytes;sign_ms;verify_ms;witness_rows,pareto_dominated
