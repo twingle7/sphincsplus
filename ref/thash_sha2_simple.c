@@ -3,6 +3,7 @@
 
 #include "thash.h"
 #include "address.h"
+#include "hash_profile.h"
 #include "params.h"
 #include "utils.h"
 #include "sha2.h"
@@ -37,6 +38,7 @@ void thash(unsigned char *out, const unsigned char *in, unsigned int inblocks,
 
     sha256_inc_finalize(outbuf, sha2_state, buf, SPX_SHA256_ADDR_BYTES + inblocks*SPX_N);
     memcpy(out, outbuf, SPX_N);
+    spx_hash_profile_note_thash(inblocks, SPX_SHA256_ADDR_BYTES + (size_t)inblocks * SPX_N, 0);
 }
 
 #if SPX_SHA512
@@ -55,5 +57,6 @@ static void thash_512(unsigned char *out, const unsigned char *in, unsigned int 
 
     sha512_inc_finalize(outbuf, sha2_state, buf, SPX_SHA256_ADDR_BYTES + inblocks*SPX_N);
     memcpy(out, outbuf, SPX_N);
+    spx_hash_profile_note_thash(inblocks, SPX_SHA256_ADDR_BYTES + (size_t)inblocks * SPX_N, 0);
 }
 #endif

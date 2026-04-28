@@ -3,6 +3,7 @@
 
 #include "thash.h"
 #include "address.h"
+#include "hash_profile.h"
 #include "params.h"
 #include "utils.h"
 
@@ -34,4 +35,5 @@ void thash(unsigned char *out, const unsigned char *in, unsigned int inblocks,
 
         haraka_S(out, SPX_N, buf, SPX_ADDR_BYTES + inblocks*SPX_N, ctx);
     }
+    spx_hash_profile_note_thash(inblocks, SPX_ADDR_BYTES + (size_t)inblocks * SPX_N, 0);
 }

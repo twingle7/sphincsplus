@@ -4,6 +4,7 @@
 
 #include "../api.h"
 #include "../hash_poseidon2_adapter.h"
+#include "../randombytes.h"
 #include "../show/show_poseidon2.h"
 #include "../stark/pi_f_format.h"
 
@@ -20,6 +21,7 @@ int main(void)
     uint8_t sk[CRYPTO_SECRETKEYBYTES];
     uint8_t m[24];
     uint8_t r[16];
+    uint8_t omega2[SPX_N];
     uint8_t public_ctx[8] = {3, 1, 4, 1, 5, 9, 2, 6};
     size_t siglen = 0;
     size_t statement_ver_off = 24u;
@@ -29,8 +31,15 @@ int main(void)
     memset(&show_obj, 0, sizeof(show_obj));
     memset(m, 0x21, sizeof(m));
     memset(r, 0x12, sizeof(r));
+    randombytes(omega2, sizeof(omega2));
 
     spx_p2_commit(cred.com, m, sizeof(m), r, sizeof(r));
+    memcpy(cred.m, m, sizeof(m));
+    cred.mlen = sizeof(m);
+    memcpy(cred.r, r, sizeof(r));
+    cred.rlen = sizeof(r);
+    memcpy(cred.omega2, omega2, sizeof(omega2));
+    cred.omega2_len = sizeof(omega2);
     if (crypto_sign_keypair(pk, sk) != 0)
     {
         fail("keypair");
@@ -77,6 +86,19 @@ int main(void)
         return 1;
     }
     show_obj.pi_f[pid_off] ^= 1u;
+
+    if (show_obj.m_pub_len == 0)
+    {
+        fail("m20_main_path_not_selected");
+        return 1;
+    }
+    show_obj.m_pub[0] ^= 1u;
+    if (spx_p2_show_verify(&show_obj, pk) == 0)
+    {
+        fail("tamper_m_pub_should_reject");
+        return 1;
+    }
+    show_obj.m_pub[0] ^= 1u;
 
     printf("poseidon2_statement_binding test: OK | pi_f_len=%llu\n",
            (unsigned long long)show_obj.pi_f_len);

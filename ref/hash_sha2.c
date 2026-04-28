@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "address.h"
+#include "hash_profile.h"
 #include "utils.h"
 #include "params.h"
 #include "hash.h"
@@ -53,6 +54,7 @@ void prf_addr(unsigned char *out, const spx_ctx *ctx,
     sha256_inc_finalize(outbuf, sha2_state, buf, SPX_SHA256_ADDR_BYTES + SPX_N);
 
     memcpy(out, outbuf, SPX_N);
+    spx_hash_profile_note_prf_addr(SPX_SHA256_ADDR_BYTES + SPX_N);
 }
 
 /**
@@ -192,6 +194,8 @@ void hash_message(unsigned char *digest, uint64_t *tree, uint32_t *leaf_idx,
 
     *leaf_idx = (uint32_t)bytes_to_ull(bufp, SPX_LEAF_BYTES);
     *leaf_idx &= (~(uint32_t)0) >> (32 - SPX_LEAF_BITS);
-}
 
+    spx_hash_profile_note_hash_message((size_t)SPX_N + (size_t)SPX_PK_BYTES + (size_t)mlen,
+                                       SPX_DGST_BYTES);
+}
 

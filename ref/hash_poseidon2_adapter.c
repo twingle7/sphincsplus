@@ -155,3 +155,88 @@ int spx_p2_trace_verify_com(spx_p2_trace *trace,
     poseidon2_set_trace_callback(0, 0);
     return ret;
 }
+
+int spx_p2_build_sigma_c_m19(uint8_t *out_sigma_c, size_t *out_sigma_c_len,
+                             const uint8_t *com,
+                             const uint8_t *sigma_com,
+                             const uint8_t *pk_e, size_t pk_e_len,
+                             const uint8_t *omega2, size_t omega2_len)
+{
+    static const uint8_t lbl_enc_seed[] = "m19-enc-seed-v1";
+    static const uint8_t lbl_pk_e_seed[] = "m19-pk-e-seed-v1";
+    static const uint8_t lbl_enc_tag[] = "m19-enc-tag-v1";
+    uint8_t enc_seed[SPX_N];
+    uint8_t pk_e_seed[SPX_N];
+    uint8_t omega2_local[SPX_N];
+    spx_poseidon2_inc_ctx ctx;
+
+    if (out_sigma_c == 0 || out_sigma_c_len == 0 ||
+        com == 0 || sigma_com == 0 || pk_e == 0 || pk_e_len < SPX_N)
+    {
+        return -1;
+    }
+    if (omega2 == 0 || omega2_len == 0)
+    {
+        spx_p2_commit(omega2_local, sigma_com, SPX_BYTES, com, SPX_N);
+        omega2 = omega2_local;
+        omega2_len = SPX_N;
+    }
+
+    poseidon2_inc_init(&ctx, SPX_P2_DOMAIN_CUSTOM);
+    poseidon2_inc_absorb(&ctx, lbl_enc_seed, sizeof(lbl_enc_seed));
+    poseidon2_inc_absorb(&ctx, sigma_com, SPX_BYTES);
+    poseidon2_inc_absorb(&ctx, omega2, omega2_len);
+    poseidon2_inc_finalize(&ctx);
+    poseidon2_inc_squeeze(enc_seed, SPX_N, &ctx);
+
+    poseidon2_inc_init(&ctx, SPX_P2_DOMAIN_CUSTOM);
+    poseidon2_inc_absorb(&ctx, lbl_pk_e_seed, sizeof(lbl_pk_e_seed));
+    poseidon2_inc_absorb(&ctx, pk_e, SPX_N);
+    poseidon2_inc_absorb(&ctx, com, SPX_N);
+    poseidon2_inc_finalize(&ctx);
+    poseidon2_inc_squeeze(pk_e_seed, SPX_N, &ctx);
+
+    poseidon2_inc_init(&ctx, SPX_P2_DOMAIN_CUSTOM);
+    poseidon2_inc_absorb(&ctx, lbl_enc_tag, sizeof(lbl_enc_tag));
+    poseidon2_inc_absorb(&ctx, enc_seed, SPX_N);
+    poseidon2_inc_absorb(&ctx, pk_e_seed, SPX_N);
+    poseidon2_inc_finalize(&ctx);
+    poseidon2_inc_squeeze(out_sigma_c + SPX_N, SPX_N, &ctx);
+
+    memcpy(out_sigma_c, com, SPX_N);
+    *out_sigma_c_len = 2u * SPX_N;
+    return 0;
+}
+
+int spx_p2_build_sigma_c_m20_pke(uint8_t *out_sigma_c, size_t *out_sigma_c_len,
+                                 const uint8_t *com,
+                                 const uint8_t *sigma_com,
+                                 const uint8_t *pk_e, size_t pk_e_len,
+                                 const uint8_t *omega2, size_t omega2_len)
+{
+    static const uint8_t lbl_pke_ct[] = "m20-pke-ct-v1";
+    spx_poseidon2_inc_ctx ctx;
+
+    if (out_sigma_c == 0 || out_sigma_c_len == 0 ||
+        com == 0 || sigma_com == 0 || pk_e == 0 || omega2 == 0)
+    {
+        return -1;
+    }
+    if (pk_e_len < SPX_N || omega2_len != SPX_N)
+    {
+        return -1;
+    }
+
+    poseidon2_inc_init(&ctx, SPX_P2_DOMAIN_CUSTOM);
+    poseidon2_inc_absorb(&ctx, lbl_pke_ct, sizeof(lbl_pke_ct));
+    poseidon2_inc_absorb(&ctx, pk_e, SPX_N);
+    poseidon2_inc_absorb(&ctx, com, SPX_N);
+    poseidon2_inc_absorb(&ctx, sigma_com, SPX_BYTES);
+    poseidon2_inc_absorb(&ctx, omega2, SPX_N);
+    poseidon2_inc_finalize(&ctx);
+    poseidon2_inc_squeeze(out_sigma_c + SPX_N, SPX_N, &ctx);
+
+    memcpy(out_sigma_c, com, SPX_N);
+    *out_sigma_c_len = 2u * SPX_N;
+    return 0;
+}

@@ -4,6 +4,7 @@
 
 #include "../api.h"
 #include "../hash_poseidon2_adapter.h"
+#include "../randombytes.h"
 #include "../show/show_poseidon2.h"
 #include "../stark/pi_f_format.h"
 
@@ -20,6 +21,7 @@ int main(void)
     uint8_t sk[CRYPTO_SECRETKEYBYTES];
     uint8_t m[24];
     uint8_t r[16];
+    uint8_t omega2[SPX_N];
     uint8_t public_ctx[8] = {9, 8, 7, 6, 5, 4, 3, 2};
     size_t siglen = 0;
     size_t commitment_off;
@@ -30,8 +32,15 @@ int main(void)
     memset(&show_obj, 0, sizeof(show_obj));
     memset(m, 0x5a, sizeof(m));
     memset(r, 0xa5, sizeof(r));
+    randombytes(omega2, sizeof(omega2));
 
     spx_p2_commit(cred.com, m, sizeof(m), r, sizeof(r));
+    memcpy(cred.m, m, sizeof(m));
+    cred.mlen = sizeof(m);
+    memcpy(cred.r, r, sizeof(r));
+    cred.rlen = sizeof(r);
+    memcpy(cred.omega2, omega2, sizeof(omega2));
+    cred.omega2_len = sizeof(omega2);
     if (crypto_sign_keypair(pk, sk) != 0)
     {
         fail("keypair");

@@ -45,6 +45,10 @@ int main(void)
     printf("=== ROLE INTERACTION DEMO (FINAL) ===\n");
     printf("[User]    generate commitment com = Commit(m||r)\n");
     spx_p2_commit(cred.com, m, sizeof(m), r, sizeof(r));
+    memcpy(cred.m, m, sizeof(m));
+    cred.mlen = sizeof(m);
+    memcpy(cred.r, r, sizeof(r));
+    cred.rlen = sizeof(r);
     printf("[User]    com[0..7]=0x");
     print_hex_prefix(cred.com, SPX_N, 8);
     printf("\n");

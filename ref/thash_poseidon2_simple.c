@@ -3,6 +3,7 @@
 
 #include "thash.h"
 #include "address.h"
+#include "hash_profile.h"
 #include "params.h"
 #include "utils.h"
 #include "poseidon2.h"
@@ -22,4 +23,5 @@ void thash(unsigned char *out, const unsigned char *in, unsigned int inblocks,
     poseidon2_hash_thash_by_inblocks(out, SPX_N,
                                      buf, SPX_P2_ENCODED_THASH_BYTES(inblocks),
                                      inblocks);
+    spx_hash_profile_note_thash(inblocks, SPX_P2_ENCODED_THASH_BYTES(inblocks), 0);
 }

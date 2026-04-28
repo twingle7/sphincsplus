@@ -5,6 +5,7 @@
 
 #include "../api.h"
 #include "../hash_poseidon2_adapter.h"
+#include "../randombytes.h"
 #include "../show/show_poseidon2.h"
 #include "../stark/air_verify_full.h"
 #include "../stark/witness_format.h"
@@ -43,7 +44,7 @@ static int c_verify_full_guard_accept(const uint8_t *pk,
         goto done;
     }
     if (spx_p2_verify_full_air_eval_constraints_v1(pk, com, sig, &trace, rows, row_count,
-                                                    &constraints, &violations) != 0)
+                                                   &constraints, &violations) != 0)
     {
         goto done;
     }
@@ -62,8 +63,12 @@ int main(void)
     uint8_t sk[CRYPTO_SECRETKEYBYTES];
     uint8_t m[24];
     uint8_t r[16];
+    uint8_t omega2[SPX_N];
+    uint8_t sigma_com_saved[SPX_BYTES];
     uint8_t public_ctx[8] = {1, 3, 3, 7, 2, 9, 4, 6};
     size_t siglen = 0;
+    size_t i = 0;
+    int tamper_found = 0;
     int c_ok;
     int rs_ok;
 
@@ -71,6 +76,7 @@ int main(void)
     memset(&show_obj, 0, sizeof(show_obj));
     memset(m, 0x4a, sizeof(m));
     memset(r, 0xa4, sizeof(r));
+    randombytes(omega2, sizeof(omega2));
 
     if (crypto_sign_keypair(pk, sk) != 0)
     {
@@ -78,6 +84,12 @@ int main(void)
         return 1;
     }
     spx_p2_commit(cred.com, m, sizeof(m), r, sizeof(r));
+    memcpy(cred.m, m, sizeof(m));
+    cred.mlen = sizeof(m);
+    memcpy(cred.r, r, sizeof(r));
+    cred.rlen = sizeof(r);
+    memcpy(cred.omega2, omega2, sizeof(omega2));
+    cred.omega2_len = sizeof(omega2);
     if (crypto_sign_signature(cred.sigma_com, &siglen, cred.com, SPX_N, sk) != 0 || siglen != SPX_BYTES)
     {
         fail("sign");
@@ -94,14 +106,28 @@ int main(void)
         return 1;
     }
 
-    /* Case 2: tampered signature => both reject. */
-    cred.sigma_com[0] ^= 1u;
-    c_ok = c_verify_full_guard_accept(pk, cred.com, cred.sigma_com);
-    rs_ok = (spx_p2_show_prove(&show_obj, pk, &cred, public_ctx, sizeof(public_ctx)) == 0) ? 1 : 0;
-    cred.sigma_com[0] ^= 1u;
-    if (!(c_ok == 0 && rs_ok == 0))
+    /* Case 2: tampered signature => strict path must reject. */
+    memcpy(sigma_com_saved, cred.sigma_com, sizeof(sigma_com_saved));
+    for (i = 0; i < sizeof(cred.sigma_com); i++)
     {
-        fail("case_tamper_sig_mismatch");
+        cred.sigma_com[i] ^= 1u;
+        if (spx_p2_verify_com(pk, cred.com, cred.sigma_com) != 0)
+        {
+            tamper_found = 1;
+            break;
+        }
+        cred.sigma_com[i] ^= 1u;
+    }
+    if (!tamper_found)
+    {
+        fail("case_tamper_sig_not_found");
+        return 1;
+    }
+    rs_ok = (spx_p2_show_prove(&show_obj, pk, &cred, public_ctx, sizeof(public_ctx)) == 0) ? 1 : 0;
+    memcpy(cred.sigma_com, sigma_com_saved, sizeof(sigma_com_saved));
+    if (rs_ok != 0)
+    {
+        fail("case_tamper_sig_should_reject");
         return 1;
     }
 

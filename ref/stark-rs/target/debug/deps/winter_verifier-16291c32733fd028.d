@@ -1,0 +1,9 @@
+/mnt/d/Desktop/My_Sphincs+/sphincsplus/ref/stark-rs/target/debug/deps/winter_verifier-16291c32733fd028.d: /home/twingle7/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/winter-verifier-0.13.1/src/lib.rs /home/twingle7/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/winter-verifier-0.13.1/src/channel.rs /home/twingle7/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/winter-verifier-0.13.1/src/evaluator.rs /home/twingle7/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/winter-verifier-0.13.1/src/composer.rs /home/twingle7/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/winter-verifier-0.13.1/src/errors.rs
+
+/mnt/d/Desktop/My_Sphincs+/sphincsplus/ref/stark-rs/target/debug/deps/libwinter_verifier-16291c32733fd028.rmeta: /home/twingle7/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/winter-verifier-0.13.1/src/lib.rs /home/twingle7/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/winter-verifier-0.13.1/src/channel.rs /home/twingle7/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/winter-verifier-0.13.1/src/evaluator.rs /home/twingle7/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/winter-verifier-0.13.1/src/composer.rs /home/twingle7/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/winter-verifier-0.13.1/src/errors.rs
+
+/home/twingle7/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/winter-verifier-0.13.1/src/lib.rs:
+/home/twingle7/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/winter-verifier-0.13.1/src/channel.rs:
+/home/twingle7/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/winter-verifier-0.13.1/src/evaluator.rs:
+/home/twingle7/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/winter-verifier-0.13.1/src/composer.rs:
+/home/twingle7/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/winter-verifier-0.13.1/src/errors.rs:

@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "../api.h"
@@ -21,7 +22,7 @@ int main(void)
     uint8_t m[24];
     uint8_t r[16];
     uint8_t public_ctx[8] = {1, 2, 3, 4, 5, 6, 7, 8};
-    uint8_t proof_buf[SPX_P2_PI_F_V1_MAX_BYTES];
+    uint8_t *proof_buf = 0;
     size_t siglen = 0;
     uint32_t abi_version = 0;
     spx_p2_ffi_blob_v1 proof;
@@ -49,9 +50,15 @@ int main(void)
         return 1;
     }
 
+    proof_buf = (uint8_t *)malloc(1024u * 1024u);
+    if (proof_buf == 0)
+    {
+        fail("alloc_proof_buf");
+        return 1;
+    }
     proof.data = proof_buf;
     proof.len = 0;
-    proof.cap = sizeof(proof_buf);
+    proof.cap = 1024u * 1024u;
     pub.pk = pk;
     pub.com = com;
     pub.public_ctx = public_ctx;
@@ -61,11 +68,13 @@ int main(void)
     if (spx_p2_ffi_generate_pi_f_v1(&proof, &pub, &wit) != SPX_P2_FFI_OK)
     {
         fail("ffi_generate");
+        free(proof_buf);
         return 1;
     }
     if (spx_p2_ffi_verify_pi_f_v1(&proof, &pub) != SPX_P2_FFI_OK)
     {
         fail("ffi_verify");
+        free(proof_buf);
         return 1;
     }
 
@@ -75,11 +84,13 @@ int main(void)
                                        pub.public_ctx, pub.public_ctx_len) != 0)
     {
         fail("legacy_v1_generate");
+        free(proof_buf);
         return 1;
     }
     if (spx_p2_ffi_verify_pi_f_v1(&proof, &pub) != SPX_P2_FFI_OK)
     {
         fail("legacy_v1_verify_compat");
+        free(proof_buf);
         return 1;
     }
 
@@ -87,6 +98,7 @@ int main(void)
     if (spx_p2_ffi_verify_pi_f_v1(&proof, &pub) == SPX_P2_FFI_OK)
     {
         fail("tamper_proof");
+        free(proof_buf);
         return 1;
     }
     proof.data[0] ^= 1u;
@@ -95,10 +107,12 @@ int main(void)
     if (spx_p2_ffi_verify_pi_f_v1(&proof, &pub) == SPX_P2_FFI_OK)
     {
         fail("tamper_ctx");
+        free(proof_buf);
         return 1;
     }
 
     printf("poseidon2_stark_ffi_v1 test: OK | abi=%u pi_f_len=%llu\n",
            abi_version, (unsigned long long)proof.len);
+    free(proof_buf);
     return 0;
 }

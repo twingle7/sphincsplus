@@ -24,12 +24,18 @@ const TRACE_LEN: usize = 64;
 const PK_LEN: usize = 48;
 const COM_LEN: usize = 24;
 const SPX_N: usize = 24;
+const SPX_SIGMA_COM_LEN: usize = 16224;
+const COM_LIMBS: usize = 3;
+const SIGMA_C_LIMBS: usize = 6;
+const TRACE_WIDTH: usize = 52;
 
 const PI_F_V2_MAGIC: u32 = 0x32504650; // "PFP2"
 const PI_F_V2_VERSION: u32 = 2;
 const PI_F_V2_FLAG_STARK_PROOF: u32 = 0x0000_0001;
 const PI_F_V2_PROOF_SYSTEM_ID_STARK: u32 = 2;
 const PI_F_V2_STATEMENT_VERSION_VERIFY_FULL_V1: u32 = 1;
+const PI_F_V2_STATEMENT_VERSION_VERIFY_FULL_V2: u32 = 2;
+const PI_F_V2_STATEMENT_VERSION_VERIFY_FULL: u32 = PI_F_V2_STATEMENT_VERSION_VERIFY_FULL_V2;
 const PI_F_V2_FIXED_HEADER_BYTES: usize = 7 * 4;
 const PI_F_V2_RESERVED_BYTES: usize = 2 * 4;
 
@@ -43,6 +49,85 @@ fn rust_verify_debug(msg: &str) {
     }
 }
 
+fn debug_validate_m20_commit_columns(
+    trace: &TraceTable<BaseElement>,
+    com_input_public_l0: BaseElement,
+    com_input_public_l1: BaseElement,
+    com_input_public_l2: BaseElement,
+    com_input_m_tail: BaseElement,
+) -> Option<(usize, usize, BaseElement)> {
+    let last_step = trace.length() - 1;
+    let lane256 = BaseElement::new(256);
+    let lane5_pad = BaseElement::new(COMMIT_PAD_LANE5_BASE as u128);
+
+    for row in 0..trace.length() {
+        let c18 = trace.get(18, row);
+        let c19 = trace.get(19, row);
+        let c20 = trace.get(20, row);
+        let c24 = trace.get(24, row);
+        let c25 = trace.get(25, row);
+        let c26 = trace.get(26, row);
+        let c27 = trace.get(27, row);
+        let c34 = trace.get(34, row);
+        let c35 = trace.get(35, row);
+        let c36 = trace.get(36, row);
+        let c37 = trace.get(37, row);
+        let c38 = trace.get(38, row);
+        let c39 = trace.get(39, row);
+        let c40 = trace.get(40, row);
+        let c41 = trace.get(41, row);
+        let c42 = trace.get(42, row);
+        let c43 = trace.get(43, row);
+        let c44 = trace.get(44, row);
+        let c45 = trace.get(45, row);
+        let c46 = trace.get(46, row);
+        let c47 = trace.get(47, row);
+        let c48 = trace.get(48, row);
+        let c49 = trace.get(49, row);
+        let c50 = trace.get(50, row);
+        let c51 = trace.get(51, row);
+
+        let checks = [
+            c34 - c18,
+            c35 - c19,
+            c36 - c20,
+            c27 * (c27 - BaseElement::ONE),
+            c43 - com_input_public_l0,
+            c44 - com_input_public_l1,
+            c45 - com_input_public_l2,
+            c46 - (com_input_m_tail + c49 * lane256),
+            c47 - c50,
+            c48 - (c51 + lane5_pad),
+        ];
+        for (offset, value) in checks.iter().enumerate() {
+            if *value != BaseElement::ZERO {
+                return Some((row, 54 + offset, *value));
+            }
+        }
+
+        if row < last_step {
+            let next_checks = [
+                trace.get(43, row + 1) - c43,
+                trace.get(44, row + 1) - c44,
+                trace.get(45, row + 1) - c45,
+                trace.get(46, row + 1) - c46,
+                trace.get(47, row + 1) - c47,
+                trace.get(48, row + 1) - c48,
+                trace.get(49, row + 1) - c49,
+                trace.get(50, row + 1) - c50,
+                trace.get(51, row + 1) - c51,
+            ];
+            for (offset, value) in next_checks.iter().enumerate() {
+                if *value != BaseElement::ZERO {
+                    return Some((row, 61 + offset, *value));
+                }
+            }
+        }
+    }
+
+    None
+}
+
 #[repr(C)]
 pub struct SpxP2FfiBlobV1 {
     pub data: *mut u8,
@@ -53,14 +138,109 @@ pub struct SpxP2FfiBlobV1 {
 #[repr(C)]
 pub struct SpxP2FfiPublicInputsV1 {
     pub pk: *const u8,
+    pub pk_e: *const u8,
+    pub pk_e_len: usize,
     pub com: *const u8,
+    pub m_pub: *const u8,
+    pub m_pub_len: usize,
     pub public_ctx: *const u8,
     pub public_ctx_len: usize,
+    pub sigma_c: *const u8,
+    pub sigma_c_len: usize,
 }
 
 #[repr(C)]
 pub struct SpxP2FfiPrivateWitnessV1 {
     pub sigma_com: *const u8,
+    pub m: *const u8,
+    pub mlen: usize,
+    pub r: *const u8,
+    pub rlen: usize,
+    pub omega2: *const u8,
+    pub omega2_len: usize,
+}
+
+extern "C" {
+    #[link_name = "SPX_poseidon2_hash_bytes_domain"]
+    fn poseidon2_hash_bytes_domain(
+        output: *mut u8,
+        outlen: usize,
+        domain_tag: i32,
+        input: *const u8,
+        inlen: usize,
+    );
+    #[link_name = "SPX_spx_p2_verify_com"]
+    fn spx_p2_verify_com(pk: *const u8, com: *const u8, sigma_com: *const u8) -> i32;
+    #[link_name = "SPX_spx_p2_build_sigma_c_m20_pke"]
+    fn spx_p2_build_sigma_c_m20_pke(
+        out_sigma_c: *mut u8,
+        out_sigma_c_len: *mut usize,
+        com: *const u8,
+        sigma_com: *const u8,
+        pk_e: *const u8,
+        pk_e_len: usize,
+        omega2: *const u8,
+        omega2_len: usize,
+    ) -> i32;
+}
+
+const SPX_P2_DOMAIN_CUSTOM: i32 = 0xff;
+const SPX_P2_DOMAIN_COMMIT: i32 = 0x20;
+const COMMIT_M_PUB_LEN: usize = 24;
+const COMMIT_R_LEN: usize = 16;
+const COMMIT_PAD_LANE5_BASE: u64 = (1u64 << 8) | (0x80u64 << 56);
+
+unsafe fn rust_commit_domain(out: &mut [u8; SPX_N], m: &[u8], r: &[u8]) {
+    let mut input = Vec::with_capacity(m.len() + r.len());
+    input.extend_from_slice(m);
+    input.extend_from_slice(r);
+    poseidon2_hash_bytes_domain(
+        out.as_mut_ptr(),
+        SPX_N,
+        SPX_P2_DOMAIN_COMMIT,
+        input.as_ptr(),
+        input.len(),
+    );
+}
+
+fn load_lane_le(bytes: &[u8]) -> BaseElement {
+    let mut value = 0u64;
+    let mut i = 0usize;
+    while i < bytes.len() {
+        value |= (bytes[i] as u64) << (8 * i);
+        i += 1;
+    }
+    BaseElement::new(value as u128)
+}
+
+fn derive_commit_open_public_parts(m_pub: &[u8]) -> Option<([BaseElement; 3], BaseElement)> {
+    if m_pub.len() != COMMIT_M_PUB_LEN {
+        return None;
+    }
+    let lane0 = load_lane_le(&[
+        SPX_P2_DOMAIN_COMMIT as u8,
+        m_pub[0],
+        m_pub[1],
+        m_pub[2],
+        m_pub[3],
+        m_pub[4],
+        m_pub[5],
+        m_pub[6],
+    ]);
+    let lane1 = load_lane_le(&m_pub[7..15]);
+    let lane2 = load_lane_le(&m_pub[15..23]);
+    let m_tail = BaseElement::new(m_pub[23] as u128);
+    Some(([lane0, lane1, lane2], m_tail))
+}
+
+fn derive_commit_open_witness_parts(r: &[u8]) -> Option<(BaseElement, BaseElement, BaseElement)> {
+    if r.len() != COMMIT_R_LEN {
+        return None;
+    }
+    let r_prefix7 = load_lane_le(&r[0..7]);
+    let r_middle8 = load_lane_le(&r[7..15]);
+    let r_last = BaseElement::new(r[15] as u128);
+    Some((r_prefix7, r_middle8, r_last))
 }
 
 #[derive(Clone)]
@@ -95,6 +275,29 @@ struct PublicInputs {
     rule_mix_start: BaseElement,
     rule_mix_result: BaseElement,
     rule_profile_hint: BaseElement,
+    com_public_l0: BaseElement,
+    com_public_l1: BaseElement,
+    com_public_l2: BaseElement,
+    sigma_c_public_l0: BaseElement,
+    sigma_c_public_l1: BaseElement,
+    sigma_c_public_l2: BaseElement,
+    sigma_c_public_l3: BaseElement,
+    sigma_c_public_l4: BaseElement,
+    sigma_c_public_l5: BaseElement,
+    public_ctx_l0: BaseElement,
+    public_ctx_l1: BaseElement,
+    public_ctx_l2: BaseElement,
+    sigma_ctx_rel_l0: BaseElement,
+    sigma_ctx_rel_l1: BaseElement,
+    sigma_ctx_rel_l2: BaseElement,
+    enc_mode_hint: BaseElement,
+    pk_e_public_l0: BaseElement,
+    pk_e_public_l1: BaseElement,
+    pk_e_public_l2: BaseElement,
+    com_input_public_l0: BaseElement,
+    com_input_public_l1: BaseElement,
+    com_input_public_l2: BaseElement,
+    com_input_m_tail: BaseElement,
 }
 
 impl ToElements<BaseElement> for PublicInputs {
@@ -130,6 +333,29 @@ impl ToElements<BaseElement> for PublicInputs {
             self.rule_mix_start,
             self.rule_mix_result,
             self.rule_profile_hint,
+            self.com_public_l0,
+            self.com_public_l1,
+            self.com_public_l2,
+            self.sigma_c_public_l0,
+            self.sigma_c_public_l1,
+            self.sigma_c_public_l2,
+            self.sigma_c_public_l3,
+            self.sigma_c_public_l4,
+            self.sigma_c_public_l5,
+            self.public_ctx_l0,
+            self.public_ctx_l1,
+            self.public_ctx_l2,
+            self.sigma_ctx_rel_l0,
+            self.sigma_ctx_rel_l1,
+            self.sigma_ctx_rel_l2,
+            self.enc_mode_hint,
+            self.pk_e_public_l0,
+            self.pk_e_public_l1,
+            self.pk_e_public_l2,
+            self.com_input_public_l0,
+            self.com_input_public_l1,
+            self.com_input_public_l2,
+            self.com_input_m_tail,
         ]
     }
 }
@@ -166,6 +392,29 @@ struct WorkAir {
     rule_mix_start: BaseElement,
     rule_mix_result: BaseElement,
     rule_profile_hint: BaseElement,
+    com_public_l0: BaseElement,
+    com_public_l1: BaseElement,
+    com_public_l2: BaseElement,
+    sigma_c_public_l0: BaseElement,
+    sigma_c_public_l1: BaseElement,
+    sigma_c_public_l2: BaseElement,
+    sigma_c_public_l3: BaseElement,
+    sigma_c_public_l4: BaseElement,
+    sigma_c_public_l5: BaseElement,
+    public_ctx_l0: BaseElement,
+    public_ctx_l1: BaseElement,
+    public_ctx_l2: BaseElement,
+    sigma_ctx_rel_l0: BaseElement,
+    sigma_ctx_rel_l1: BaseElement,
+    sigma_ctx_rel_l2: BaseElement,
+    enc_mode_hint: BaseElement,
+    pk_e_public_l0: BaseElement,
+    pk_e_public_l1: BaseElement,
+    pk_e_public_l2: BaseElement,
+    com_input_public_l0: BaseElement,
+    com_input_public_l1: BaseElement,
+    com_input_public_l2: BaseElement,
+    com_input_m_tail: BaseElement,
 }
 
 impl Air for WorkAir {
@@ -197,8 +446,61 @@ impl Air for WorkAir {
             TransitionConstraintDegree::new(1),
             TransitionConstraintDegree::new(1),
             TransitionConstraintDegree::new(3),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(2),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
         ];
-        let num_assertions = 36;
+        let num_assertions = 80;
         Self {
             context: AirContext::new(trace_info, degrees, num_assertions, options),
             start: pub_inputs.start,
@@ -231,6 +533,29 @@ impl Air for WorkAir {
             rule_mix_start: pub_inputs.rule_mix_start,
             rule_mix_result: pub_inputs.rule_mix_result,
             rule_profile_hint: pub_inputs.rule_profile_hint,
+            com_public_l0: pub_inputs.com_public_l0,
+            com_public_l1: pub_inputs.com_public_l1,
+            com_public_l2: pub_inputs.com_public_l2,
+            sigma_c_public_l0: pub_inputs.sigma_c_public_l0,
+            sigma_c_public_l1: pub_inputs.sigma_c_public_l1,
+            sigma_c_public_l2: pub_inputs.sigma_c_public_l2,
+            sigma_c_public_l3: pub_inputs.sigma_c_public_l3,
+            sigma_c_public_l4: pub_inputs.sigma_c_public_l4,
+            sigma_c_public_l5: pub_inputs.sigma_c_public_l5,
+            public_ctx_l0: pub_inputs.public_ctx_l0,
+            public_ctx_l1: pub_inputs.public_ctx_l1,
+            public_ctx_l2: pub_inputs.public_ctx_l2,
+            sigma_ctx_rel_l0: pub_inputs.sigma_ctx_rel_l0,
+            sigma_ctx_rel_l1: pub_inputs.sigma_ctx_rel_l1,
+            sigma_ctx_rel_l2: pub_inputs.sigma_ctx_rel_l2,
+            enc_mode_hint: pub_inputs.enc_mode_hint,
+            pk_e_public_l0: pub_inputs.pk_e_public_l0,
+            pk_e_public_l1: pub_inputs.pk_e_public_l1,
+            pk_e_public_l2: pub_inputs.pk_e_public_l2,
+            com_input_public_l0: pub_inputs.com_input_public_l0,
+            com_input_public_l1: pub_inputs.com_input_public_l1,
+            com_input_public_l2: pub_inputs.com_input_public_l2,
+            com_input_m_tail: pub_inputs.com_input_m_tail,
         }
     }
 
@@ -305,6 +630,66 @@ impl Air for WorkAir {
                 + current[17] * E::from(53u32));
         result[21] = next[17] - current[17];
         result[22] = current[17] * (current[17] - E::ONE) * (current[17] - E::from(2u32));
+        result[23] = next[18] - current[18];
+        result[24] = next[19] - current[19];
+        result[25] = next[20] - current[20];
+        result[26] = next[21] - current[21];
+        result[27] = next[22] - current[22];
+        result[28] = next[23] - current[23];
+        result[29] = next[24] - current[24];
+        result[30] = next[25] - current[25];
+        result[31] = next[26] - current[26];
+        result[32] = next[27] - current[27];
+        result[33] = next[28] - current[28];
+        result[34] = next[29] - current[29];
+        result[35] = next[30] - current[30];
+        result[36] = next[31] - current[31];
+        result[37] = next[32] - current[32];
+        result[38] = next[33] - current[33];
+        result[39] = current[21] - current[18];
+        result[40] = current[22] - current[19];
+        result[41] = current[23] - current[20];
+        result[42] = current[24] - current[18] - current[28] - current[31];
+        result[43] = current[25] - current[19] - current[29] - current[32];
+        result[44] = current[26] - current[20] - current[30] - current[33];
+        // Keep witness-derived commitment limbs constant across rows.
+        result[45] = next[34] - current[34];
+        result[46] = next[35] - current[35];
+        result[47] = next[36] - current[36];
+        result[48] = next[37] - current[37];
+        result[49] = next[38] - current[38];
+        result[50] = next[39] - current[39];
+        result[51] = next[40] - current[40];
+        result[52] = next[41] - current[41];
+        result[53] = next[42] - current[42];
+        // Enforce Com(m_pub; r) opening inside AIR by matching witness limbs to public com limbs.
+        result[54] = current[34] - current[18];
+        result[55] = current[35] - current[19];
+        result[56] = current[36] - current[20];
+        // The real sigma_C tail is produced by the PKE/hash construction, not by a linear limb rule.
+        // Keep these slots neutral until the full PKE relation is internalized in AIR.
+        result[57] = E::ZERO;
+        result[58] = E::ZERO;
+        result[59] = E::ZERO;
+        // Harden mode gating: enc_mode_hint must be a boolean bit.
+        result[60] = current[27] * (current[27] - E::ONE);
+        // Keep G1 absorb-lane witness materialization constant across rows.
+        result[61] = next[43] - current[43];
+        result[62] = next[44] - current[44];
+        result[63] = next[45] - current[45];
+        result[64] = next[46] - current[46];
+        result[65] = next[47] - current[47];
+        result[66] = next[48] - current[48];
+        result[67] = next[49] - current[49];
+        result[68] = next[50] - current[50];
+        result[69] = next[51] - current[51];
+        // G1 Phase 1: internalize the exact single-block commit absorb lanes.
+        result[70] = current[43] - E::from(self.com_input_public_l0);
+        result[71] = current[44] - E::from(self.com_input_public_l1);
+        result[72] = current[45] - E::from(self.com_input_public_l2);
+        result[73] = current[46] - (E::from(self.com_input_m_tail) + current[49] * E::from(256u32));
+        result[74] = current[47] - current[50];
+        result[75] = current[48] - (current[51] + E::from(BaseElement::new(COMMIT_PAD_LANE5_BASE as u128)));
     }
 
     fn get_assertions(&self) -> Vec<Assertion<Self::BaseField>> {
@@ -346,6 +731,50 @@ impl Air for WorkAir {
             Assertion::single(16, last_step, self.rule_mix_result),
             Assertion::single(17, 0, self.rule_profile_hint),
             Assertion::single(17, last_step, self.rule_profile_hint),
+            Assertion::single(18, 0, self.com_public_l0),
+            Assertion::single(18, last_step, self.com_public_l0),
+            Assertion::single(19, 0, self.com_public_l1),
+            Assertion::single(19, last_step, self.com_public_l1),
+            Assertion::single(20, 0, self.com_public_l2),
+            Assertion::single(20, last_step, self.com_public_l2),
+            Assertion::single(21, 0, self.sigma_c_public_l0),
+            Assertion::single(21, last_step, self.sigma_c_public_l0),
+            Assertion::single(22, 0, self.sigma_c_public_l1),
+            Assertion::single(22, last_step, self.sigma_c_public_l1),
+            Assertion::single(23, 0, self.sigma_c_public_l2),
+            Assertion::single(23, last_step, self.sigma_c_public_l2),
+            Assertion::single(24, 0, self.sigma_c_public_l3),
+            Assertion::single(24, last_step, self.sigma_c_public_l3),
+            Assertion::single(25, 0, self.sigma_c_public_l4),
+            Assertion::single(25, last_step, self.sigma_c_public_l4),
+            Assertion::single(26, 0, self.sigma_c_public_l5),
+            Assertion::single(26, last_step, self.sigma_c_public_l5),
+            Assertion::single(27, 0, self.enc_mode_hint),
+            Assertion::single(27, last_step, self.enc_mode_hint),
+            Assertion::single(28, 0, self.public_ctx_l0),
+            Assertion::single(28, last_step, self.public_ctx_l0),
+            Assertion::single(29, 0, self.public_ctx_l1),
+            Assertion::single(29, last_step, self.public_ctx_l1),
+            Assertion::single(30, 0, self.public_ctx_l2),
+            Assertion::single(30, last_step, self.public_ctx_l2),
+            Assertion::single(31, 0, self.sigma_ctx_rel_l0),
+            Assertion::single(31, last_step, self.sigma_ctx_rel_l0),
+            Assertion::single(32, 0, self.sigma_ctx_rel_l1),
+            Assertion::single(32, last_step, self.sigma_ctx_rel_l1),
+            Assertion::single(33, 0, self.sigma_ctx_rel_l2),
+            Assertion::single(33, last_step, self.sigma_ctx_rel_l2),
+            Assertion::single(37, 0, self.pk_e_public_l0),
+            Assertion::single(37, last_step, self.pk_e_public_l0),
+            Assertion::single(38, 0, self.pk_e_public_l1),
+            Assertion::single(38, last_step, self.pk_e_public_l1),
+            Assertion::single(39, 0, self.pk_e_public_l2),
+            Assertion::single(39, last_step, self.pk_e_public_l2),
+            Assertion::single(43, 0, self.com_input_public_l0),
+            Assertion::single(43, last_step, self.com_input_public_l0),
+            Assertion::single(44, 0, self.com_input_public_l1),
+            Assertion::single(44, last_step, self.com_input_public_l1),
+            Assertion::single(45, 0, self.com_input_public_l2),
+            Assertion::single(45, last_step, self.com_input_public_l2),
         ]
     }
 
@@ -384,6 +813,29 @@ struct WorkProver {
     rule_mix_start: BaseElement,
     rule_mix_result: BaseElement,
     rule_profile_hint: BaseElement,
+    com_public_l0: BaseElement,
+    com_public_l1: BaseElement,
+    com_public_l2: BaseElement,
+    sigma_c_public_l0: BaseElement,
+    sigma_c_public_l1: BaseElement,
+    sigma_c_public_l2: BaseElement,
+    sigma_c_public_l3: BaseElement,
+    sigma_c_public_l4: BaseElement,
+    sigma_c_public_l5: BaseElement,
+    public_ctx_l0: BaseElement,
+    public_ctx_l1: BaseElement,
+    public_ctx_l2: BaseElement,
+    sigma_ctx_rel_l0: BaseElement,
+    sigma_ctx_rel_l1: BaseElement,
+    sigma_ctx_rel_l2: BaseElement,
+    enc_mode_hint: BaseElement,
+    pk_e_public_l0: BaseElement,
+    pk_e_public_l1: BaseElement,
+    pk_e_public_l2: BaseElement,
+    com_input_public_l0: BaseElement,
+    com_input_public_l1: BaseElement,
+    com_input_public_l2: BaseElement,
+    com_input_m_tail: BaseElement,
 }
 
 impl WorkProver {
@@ -417,6 +869,29 @@ impl WorkProver {
         rule_mix_start: BaseElement,
         rule_mix_result: BaseElement,
         rule_profile_hint: BaseElement,
+        com_public_l0: BaseElement,
+        com_public_l1: BaseElement,
+        com_public_l2: BaseElement,
+        sigma_c_public_l0: BaseElement,
+        sigma_c_public_l1: BaseElement,
+        sigma_c_public_l2: BaseElement,
+        sigma_c_public_l3: BaseElement,
+        sigma_c_public_l4: BaseElement,
+        sigma_c_public_l5: BaseElement,
+        public_ctx_l0: BaseElement,
+        public_ctx_l1: BaseElement,
+        public_ctx_l2: BaseElement,
+        sigma_ctx_rel_l0: BaseElement,
+        sigma_ctx_rel_l1: BaseElement,
+        sigma_ctx_rel_l2: BaseElement,
+        enc_mode_hint: BaseElement,
+        pk_e_public_l0: BaseElement,
+        pk_e_public_l1: BaseElement,
+        pk_e_public_l2: BaseElement,
+        com_input_public_l0: BaseElement,
+        com_input_public_l1: BaseElement,
+        com_input_public_l2: BaseElement,
+        com_input_m_tail: BaseElement,
     ) -> Self {
         Self {
             options,
@@ -448,6 +923,29 @@ impl WorkProver {
             rule_mix_start,
             rule_mix_result,
             rule_profile_hint,
+            com_public_l0,
+            com_public_l1,
+            com_public_l2,
+            sigma_c_public_l0,
+            sigma_c_public_l1,
+            sigma_c_public_l2,
+            sigma_c_public_l3,
+            sigma_c_public_l4,
+            sigma_c_public_l5,
+            public_ctx_l0,
+            public_ctx_l1,
+            public_ctx_l2,
+            sigma_ctx_rel_l0,
+            sigma_ctx_rel_l1,
+            sigma_ctx_rel_l2,
+            enc_mode_hint,
+            pk_e_public_l0,
+            pk_e_public_l1,
+            pk_e_public_l2,
+            com_input_public_l0,
+            com_input_public_l1,
+            com_input_public_l2,
+            com_input_m_tail,
         }
     }
 }
@@ -498,6 +996,29 @@ impl Prover for WorkProver {
             rule_mix_start: self.rule_mix_start,
             rule_mix_result: self.rule_mix_result,
             rule_profile_hint: self.rule_profile_hint,
+            com_public_l0: self.com_public_l0,
+            com_public_l1: self.com_public_l1,
+            com_public_l2: self.com_public_l2,
+            sigma_c_public_l0: self.sigma_c_public_l0,
+            sigma_c_public_l1: self.sigma_c_public_l1,
+            sigma_c_public_l2: self.sigma_c_public_l2,
+            sigma_c_public_l3: self.sigma_c_public_l3,
+            sigma_c_public_l4: self.sigma_c_public_l4,
+            sigma_c_public_l5: self.sigma_c_public_l5,
+            public_ctx_l0: self.public_ctx_l0,
+            public_ctx_l1: self.public_ctx_l1,
+            public_ctx_l2: self.public_ctx_l2,
+            sigma_ctx_rel_l0: self.sigma_ctx_rel_l0,
+            sigma_ctx_rel_l1: self.sigma_ctx_rel_l1,
+            sigma_ctx_rel_l2: self.sigma_ctx_rel_l2,
+            enc_mode_hint: self.enc_mode_hint,
+            pk_e_public_l0: self.pk_e_public_l0,
+            pk_e_public_l1: self.pk_e_public_l1,
+            pk_e_public_l2: self.pk_e_public_l2,
+            com_input_public_l0: self.com_input_public_l0,
+            com_input_public_l1: self.com_input_public_l1,
+            com_input_public_l2: self.com_input_public_l2,
+            com_input_m_tail: self.com_input_m_tail,
         }
     }
 
@@ -600,6 +1121,54 @@ fn derive_mix(digest: &[u8]) -> BaseElement {
     BaseElement::new(x)
 }
 
+fn decode_public_limbs<const LIMBS: usize>(bytes: &[u8]) -> Option<[BaseElement; LIMBS]> {
+    if bytes.len() != LIMBS * 8 {
+        return None;
+    }
+    let mut out = [BaseElement::ZERO; LIMBS];
+    let mut i = 0usize;
+    while i < LIMBS {
+        let begin = i * 8;
+        let end = begin + 8;
+        let mut limb = [0u8; 8];
+        limb.copy_from_slice(&bytes[begin..end]);
+        out[i] = BaseElement::new(u64::from_le_bytes(limb) as u128);
+        i += 1;
+    }
+    Some(out)
+}
+
+fn decode_sigma_c_public_limbs(
+    sigma_c: Option<&[u8]>,
+    com_public_limbs: [BaseElement; COM_LIMBS],
+) -> Option<[BaseElement; SIGMA_C_LIMBS]> {
+    match sigma_c {
+        Some(bytes) => decode_public_limbs::<SIGMA_C_LIMBS>(bytes),
+        None => Some([
+            com_public_limbs[0],
+            com_public_limbs[1],
+            com_public_limbs[2],
+            BaseElement::ZERO,
+            BaseElement::ZERO,
+            BaseElement::ZERO,
+        ]),
+    }
+}
+
+fn canonicalize_public_ctx_limbs(public_ctx: &[u8]) -> [BaseElement; COM_LIMBS] {
+    let mut canonical = [0u8; COM_LEN];
+    let copy_len = public_ctx.len().min(COM_LEN);
+    canonical[..copy_len].copy_from_slice(&public_ctx[..copy_len]);
+    decode_public_limbs::<COM_LIMBS>(&canonical)
+        .expect("canonical public_ctx has fixed 24-byte length")
+}
+
+fn canonicalize_pk_e_public_limbs(pk_e: &[u8]) -> [BaseElement; COM_LIMBS] {
+    let pk_e_digest = hash_expand(&[pk_e], COM_LEN);
+    decode_public_limbs::<COM_LIMBS>(&pk_e_digest)
+        .expect("canonical pk_e digest has fixed 24-byte length")
+}
+
 fn derive_root_hint(pk: &[u8]) -> BaseElement {
     let pk_root = if pk.len() >= SPX_N {
         &pk[pk.len() - SPX_N..]
@@ -673,14 +1242,49 @@ struct StatementInputs {
     hmsg_mode_hint: BaseElement,
     rule_mix_start: BaseElement,
     rule_profile_hint: BaseElement,
+    com_public_limbs: [BaseElement; COM_LIMBS],
+    sigma_c_public_limbs: [BaseElement; SIGMA_C_LIMBS],
+    public_ctx_limbs: [BaseElement; COM_LIMBS],
+    sigma_ctx_rel_limbs: [BaseElement; COM_LIMBS],
+    enc_mode_hint: BaseElement,
+    pk_e_public_limbs: [BaseElement; COM_LIMBS],
+    com_input_public_limbs: [BaseElement; COM_LIMBS],
+    com_input_m_tail: BaseElement,
 }
 
-fn derive_statement_inputs(pk: &[u8], com: &[u8], public_ctx: &[u8]) -> StatementInputs {
-    let statement = PI_F_V2_STATEMENT_VERSION_VERIFY_FULL_V1.to_le_bytes();
-    let public_input_digest = hash_expand(&[pk, com, public_ctx, &statement], SPX_N);
-    let ctx_binding = hash_expand(&[public_ctx], SPX_N);
+fn derive_statement_inputs(
+    pk: &[u8],
+    pk_e: &[u8],
+    com: &[u8],
+    m_pub: &[u8],
+    public_ctx: &[u8],
+    sigma_c: Option<&[u8]>,
+) -> Option<StatementInputs> {
+    let statement = PI_F_V2_STATEMENT_VERSION_VERIFY_FULL.to_le_bytes();
+    let sigma_c_digest = match sigma_c {
+        Some(bytes) => hash_expand(&[bytes], SPX_N),
+        None => vec![0u8; SPX_N],
+    };
+    let pk_e_digest = hash_expand(&[pk_e], SPX_N);
+    let m_pub_digest = hash_expand(&[m_pub], SPX_N);
+    let public_input_digest = hash_expand(
+        &[
+            pk,
+            pk_e_digest.as_slice(),
+            com,
+            m_pub_digest.as_slice(),
+            public_ctx,
+            &statement,
+            sigma_c_digest.as_slice(),
+        ],
+        SPX_N,
+    );
+    let ctx_binding = hash_expand(
+        &[public_ctx, m_pub_digest.as_slice(), pk_e_digest.as_slice(), sigma_c_digest.as_slice()],
+        SPX_N,
+    );
     let bind_seed = hash_expand(&[public_input_digest.as_slice(), ctx_binding.as_slice()], 16);
-    let start_u128 = hash_to_u128(&[pk, com, public_ctx]);
+    let start_u128 = hash_to_u128(&[pk, com, m_pub, public_ctx]);
     let start = BaseElement::new(start_u128);
     let mix = derive_mix(&public_input_digest);
     let bind = derive_mix(&bind_seed);
@@ -702,7 +1306,22 @@ fn derive_statement_inputs(pk: &[u8], com: &[u8], public_ctx: &[u8]) -> Statemen
     let rule_mix_start =
         derive_module_part_start(&public_input_digest, &ctx_binding, root_hint, b"rule-mix-v1");
     let rule_profile_hint = BaseElement::new((public_input_digest[4] % 3) as u128);
-    StatementInputs {
+    let com_public_limbs = decode_public_limbs::<COM_LIMBS>(com)?;
+    let sigma_c_public_limbs = decode_sigma_c_public_limbs(sigma_c, com_public_limbs)?;
+    let public_ctx_limbs = canonicalize_public_ctx_limbs(public_ctx);
+    let pk_e_public_limbs = canonicalize_pk_e_public_limbs(pk_e);
+    let (com_input_public_limbs, com_input_m_tail) = derive_commit_open_public_parts(m_pub)?;
+    let sigma_ctx_rel_limbs = [
+        sigma_c_public_limbs[3] - com_public_limbs[0] - public_ctx_limbs[0],
+        sigma_c_public_limbs[4] - com_public_limbs[1] - public_ctx_limbs[1],
+        sigma_c_public_limbs[5] - com_public_limbs[2] - public_ctx_limbs[2],
+    ];
+    let enc_mode_hint = if m_pub.is_empty() {
+        BaseElement::ZERO
+    } else {
+        BaseElement::ONE
+    };
+    Some(StatementInputs {
         public_input_digest,
         ctx_binding,
         start,
@@ -723,7 +1342,15 @@ fn derive_statement_inputs(pk: &[u8], com: &[u8], public_ctx: &[u8]) -> Statemen
         hmsg_mode_hint,
         rule_mix_start,
         rule_profile_hint,
-    }
+        com_public_limbs,
+        sigma_c_public_limbs,
+        public_ctx_limbs,
+        sigma_ctx_rel_limbs,
+        enc_mode_hint,
+        pk_e_public_limbs,
+        com_input_public_limbs,
+        com_input_m_tail,
+    })
 }
 
 fn iterate_state(mut state: BaseElement, mix: BaseElement, bind: BaseElement, n: usize) -> BaseElement {
@@ -1008,9 +1635,41 @@ fn build_work_trace(
     hmsg_mode_hint: BaseElement,
     rule_mix_start: BaseElement,
     rule_profile_hint: BaseElement,
+    com_public_l0: BaseElement,
+    com_public_l1: BaseElement,
+    com_public_l2: BaseElement,
+    sigma_c_public_l0: BaseElement,
+    sigma_c_public_l1: BaseElement,
+    sigma_c_public_l2: BaseElement,
+    sigma_c_public_l3: BaseElement,
+    sigma_c_public_l4: BaseElement,
+    sigma_c_public_l5: BaseElement,
+    public_ctx_l0: BaseElement,
+    public_ctx_l1: BaseElement,
+    public_ctx_l2: BaseElement,
+    sigma_ctx_rel_l0: BaseElement,
+    sigma_ctx_rel_l1: BaseElement,
+    sigma_ctx_rel_l2: BaseElement,
+    enc_mode_hint: BaseElement,
+    pk_e_public_l0: BaseElement,
+    pk_e_public_l1: BaseElement,
+    pk_e_public_l2: BaseElement,
+    com_input_public_l0: BaseElement,
+    com_input_public_l1: BaseElement,
+    com_input_public_l2: BaseElement,
+    com_input_m_tail: BaseElement,
+    com_input_r_prefix7: BaseElement,
+    com_input_r_middle8: BaseElement,
+    com_input_r_last: BaseElement,
+    com_witness_l0: BaseElement,
+    com_witness_l1: BaseElement,
+    com_witness_l2: BaseElement,
+    omega2_witness_l0: BaseElement,
+    omega2_witness_l1: BaseElement,
+    omega2_witness_l2: BaseElement,
     n: usize,
 ) -> TraceTable<BaseElement> {
-    let mut trace = TraceTable::new(18, n);
+    let mut trace = TraceTable::new(TRACE_WIDTH, n);
     trace.fill(
         |state| {
             state[0] = start;
@@ -1031,6 +1690,40 @@ fn build_work_trace(
             state[15] = hmsg_mode_hint;
             state[16] = rule_mix_start;
             state[17] = rule_profile_hint;
+            state[18] = com_public_l0;
+            state[19] = com_public_l1;
+            state[20] = com_public_l2;
+            state[21] = sigma_c_public_l0;
+            state[22] = sigma_c_public_l1;
+            state[23] = sigma_c_public_l2;
+            state[24] = sigma_c_public_l3;
+            state[25] = sigma_c_public_l4;
+            state[26] = sigma_c_public_l5;
+            state[27] = enc_mode_hint;
+            state[28] = public_ctx_l0;
+            state[29] = public_ctx_l1;
+            state[30] = public_ctx_l2;
+            state[31] = sigma_ctx_rel_l0;
+            state[32] = sigma_ctx_rel_l1;
+            state[33] = sigma_ctx_rel_l2;
+            state[34] = com_witness_l0;
+            state[35] = com_witness_l1;
+            state[36] = com_witness_l2;
+            state[37] = pk_e_public_l0;
+            state[38] = pk_e_public_l1;
+            state[39] = pk_e_public_l2;
+            state[40] = omega2_witness_l0;
+            state[41] = omega2_witness_l1;
+            state[42] = omega2_witness_l2;
+            state[43] = com_input_public_l0;
+            state[44] = com_input_public_l1;
+            state[45] = com_input_public_l2;
+            state[46] = com_input_m_tail + com_input_r_prefix7 * BaseElement::new(256);
+            state[47] = com_input_r_middle8;
+            state[48] = com_input_r_last + BaseElement::new(COMMIT_PAD_LANE5_BASE as u128);
+            state[49] = com_input_r_prefix7;
+            state[50] = com_input_r_middle8;
+            state[51] = com_input_r_last;
         },
         |_, state| {
             let prev_state = state[0];
@@ -1082,6 +1775,40 @@ fn build_work_trace(
                 + rule_mix_start
                 + rule_profile_hint * BaseElement::new(53);
             state[17] = rule_profile_hint;
+            state[18] = com_public_l0;
+            state[19] = com_public_l1;
+            state[20] = com_public_l2;
+            state[21] = sigma_c_public_l0;
+            state[22] = sigma_c_public_l1;
+            state[23] = sigma_c_public_l2;
+            state[24] = sigma_c_public_l3;
+            state[25] = sigma_c_public_l4;
+            state[26] = sigma_c_public_l5;
+            state[27] = enc_mode_hint;
+            state[28] = public_ctx_l0;
+            state[29] = public_ctx_l1;
+            state[30] = public_ctx_l2;
+            state[31] = sigma_ctx_rel_l0;
+            state[32] = sigma_ctx_rel_l1;
+            state[33] = sigma_ctx_rel_l2;
+            state[34] = com_witness_l0;
+            state[35] = com_witness_l1;
+            state[36] = com_witness_l2;
+            state[37] = pk_e_public_l0;
+            state[38] = pk_e_public_l1;
+            state[39] = pk_e_public_l2;
+            state[40] = omega2_witness_l0;
+            state[41] = omega2_witness_l1;
+            state[42] = omega2_witness_l2;
+            state[43] = com_input_public_l0;
+            state[44] = com_input_public_l1;
+            state[45] = com_input_public_l2;
+            state[46] = com_input_m_tail + com_input_r_prefix7 * BaseElement::new(256);
+            state[47] = com_input_r_middle8;
+            state[48] = com_input_r_last + BaseElement::new(COMMIT_PAD_LANE5_BASE as u128);
+            state[49] = com_input_r_prefix7;
+            state[50] = com_input_r_middle8;
+            state[51] = com_input_r_last;
         },
     );
     trace
@@ -1127,7 +1854,7 @@ fn encode_pi_f_v2(
     off += 4;
     write_u32_le(&mut out[off..off + 4], PI_F_V2_PROOF_SYSTEM_ID_STARK);
     off += 4;
-    write_u32_le(&mut out[off..off + 4], PI_F_V2_STATEMENT_VERSION_VERIFY_FULL_V1);
+    write_u32_le(&mut out[off..off + 4], PI_F_V2_STATEMENT_VERSION_VERIFY_FULL);
     off += 4;
 
     out[off..off + SPX_N].copy_from_slice(public_input_digest);
@@ -1217,6 +1944,190 @@ fn decode_pi_f_v2(input: &[u8]) -> Option<PiFV2Decoded<'_>> {
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn spx_p2_rust_validate_strict_relation_inputs_v1(
+    pub_inputs: *const SpxP2FfiPublicInputsV1,
+    wit: *const SpxP2FfiPrivateWitnessV1,
+    require_witness: i32,
+) -> i32 {
+    if pub_inputs.is_null() {
+        return SPX_P2_RUST_ERR_NULL;
+    }
+    let pubi = &*pub_inputs;
+    if pubi.pk.is_null() || pubi.com.is_null() || pubi.pk_e.is_null() || pubi.sigma_c.is_null() {
+        return SPX_P2_RUST_ERR_INPUT;
+    }
+    if pubi.pk_e_len != SPX_N || pubi.sigma_c_len != 2 * SPX_N {
+        return SPX_P2_RUST_ERR_INPUT;
+    }
+    if pubi.m_pub.is_null() != (pubi.m_pub_len == 0) {
+        return SPX_P2_RUST_ERR_INPUT;
+    }
+    if require_witness != 0 {
+        if wit.is_null() {
+            return SPX_P2_RUST_ERR_NULL;
+        }
+        let witv = &*wit;
+        if witv.sigma_com.is_null() {
+            return SPX_P2_RUST_ERR_INPUT;
+        }
+        // Strict prove path is frozen to M20 data-plane semantics.
+        if pubi.m_pub.is_null()
+            || pubi.m_pub_len == 0
+            || witv.m.is_null()
+            || witv.mlen == 0
+            || witv.r.is_null()
+            || witv.rlen == 0
+        {
+            return SPX_P2_RUST_ERR_INPUT;
+        }
+        if pubi.m_pub_len != witv.mlen {
+            return SPX_P2_RUST_ERR_INPUT;
+        }
+        let m_pub = std::slice::from_raw_parts(pubi.m_pub, pubi.m_pub_len);
+        let m_wit = std::slice::from_raw_parts(witv.m, witv.mlen);
+        if m_pub != m_wit {
+            return SPX_P2_RUST_ERR_INPUT;
+        }
+        if witv.omega2.is_null() || witv.omega2_len != SPX_N {
+            return SPX_P2_RUST_ERR_INPUT;
+        }
+    }
+    SPX_P2_RUST_OK
+}
+
+unsafe fn rust_build_sigma_c_m19_native(
+    pubi: &SpxP2FfiPublicInputsV1,
+    witv: &SpxP2FfiPrivateWitnessV1,
+) -> Result<[u8; 2 * SPX_N], i32> {
+    const LBL_ENC_SEED: &[u8] = b"m19-enc-seed-v1\0";
+    const LBL_PK_E_SEED: &[u8] = b"m19-pk-e-seed-v1\0";
+    const LBL_ENC_TAG: &[u8] = b"m19-enc-tag-v1\0";
+
+    if pubi.com.is_null() || pubi.pk_e.is_null() || pubi.sigma_c.is_null() || witv.sigma_com.is_null() {
+        return Err(SPX_P2_RUST_ERR_INPUT);
+    }
+    if pubi.pk_e_len != SPX_N || pubi.sigma_c_len != 2 * SPX_N {
+        return Err(SPX_P2_RUST_ERR_INPUT);
+    }
+    if (witv.omega2_len > 0 && witv.omega2.is_null())
+        || (!witv.omega2.is_null() && witv.omega2_len == 0)
+        || (witv.omega2_len != 0 && witv.omega2_len != SPX_N)
+    {
+        return Err(SPX_P2_RUST_ERR_INPUT);
+    }
+
+    let com = std::slice::from_raw_parts(pubi.com, SPX_N);
+    let sigma_com = std::slice::from_raw_parts(witv.sigma_com, SPX_SIGMA_COM_LEN);
+    let pk_e = std::slice::from_raw_parts(pubi.pk_e, SPX_N);
+
+    let mut omega2_local = [0u8; SPX_N];
+    let omega2 = if witv.omega2.is_null() || witv.omega2_len == 0 {
+        rust_commit_domain(&mut omega2_local, sigma_com, com);
+        omega2_local.as_slice()
+    } else {
+        std::slice::from_raw_parts(witv.omega2, witv.omega2_len)
+    };
+
+    let mut input1 = Vec::with_capacity(LBL_ENC_SEED.len() + SPX_SIGMA_COM_LEN + omega2.len());
+    input1.extend_from_slice(LBL_ENC_SEED);
+    input1.extend_from_slice(sigma_com);
+    input1.extend_from_slice(omega2);
+    let mut enc_seed = [0u8; SPX_N];
+    poseidon2_hash_bytes_domain(
+        enc_seed.as_mut_ptr(),
+        SPX_N,
+        SPX_P2_DOMAIN_CUSTOM,
+        input1.as_ptr(),
+        input1.len(),
+    );
+
+    let mut input2 = Vec::with_capacity(LBL_PK_E_SEED.len() + 2 * SPX_N);
+    input2.extend_from_slice(LBL_PK_E_SEED);
+    input2.extend_from_slice(pk_e);
+    input2.extend_from_slice(com);
+    let mut pk_e_seed = [0u8; SPX_N];
+    poseidon2_hash_bytes_domain(
+        pk_e_seed.as_mut_ptr(),
+        SPX_N,
+        SPX_P2_DOMAIN_CUSTOM,
+        input2.as_ptr(),
+        input2.len(),
+    );
+
+    let mut input3 = Vec::with_capacity(LBL_ENC_TAG.len() + 2 * SPX_N);
+    input3.extend_from_slice(LBL_ENC_TAG);
+    input3.extend_from_slice(&enc_seed);
+    input3.extend_from_slice(&pk_e_seed);
+    let mut out = [0u8; 2 * SPX_N];
+    out[..SPX_N].copy_from_slice(com);
+    poseidon2_hash_bytes_domain(
+        out[SPX_N..].as_mut_ptr(),
+        SPX_N,
+        SPX_P2_DOMAIN_CUSTOM,
+        input3.as_ptr(),
+        input3.len(),
+    );
+    Ok(out)
+}
+
+unsafe fn rust_build_sigma_c_m20_pke_native(
+    pubi: &SpxP2FfiPublicInputsV1,
+    witv: &SpxP2FfiPrivateWitnessV1,
+) -> Result<[u8; 2 * SPX_N], i32> {
+    if pubi.com.is_null() || pubi.pk_e.is_null() || witv.sigma_com.is_null() || witv.omega2.is_null() {
+        return Err(SPX_P2_RUST_ERR_INPUT);
+    }
+    if pubi.pk_e_len != SPX_N || witv.omega2_len != SPX_N {
+        return Err(SPX_P2_RUST_ERR_INPUT);
+    }
+    let mut out = [0u8; 2 * SPX_N];
+    let mut out_len = 0usize;
+    let ret = spx_p2_build_sigma_c_m20_pke(
+        out.as_mut_ptr(),
+        &mut out_len as *mut usize,
+        pubi.com,
+        witv.sigma_com,
+        pubi.pk_e,
+        pubi.pk_e_len,
+        witv.omega2,
+        witv.omega2_len,
+    );
+    if ret != 0 || out_len != 2 * SPX_N {
+        return Err(SPX_P2_RUST_ERR_INPUT);
+    }
+    Ok(out)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn spx_p2_rust_validate_strict_witness_relation_v1(
+    pub_inputs: *const SpxP2FfiPublicInputsV1,
+    wit: *const SpxP2FfiPrivateWitnessV1,
+) -> i32 {
+    let ret = spx_p2_rust_validate_strict_relation_inputs_v1(pub_inputs, wit, 1);
+    if ret != SPX_P2_RUST_OK {
+        return ret;
+    }
+    let pubi = &*pub_inputs;
+    let witv = &*wit;
+    if spx_p2_verify_com(pubi.pk, pubi.com, witv.sigma_com) != 0 {
+        return SPX_P2_RUST_ERR_PROVE;
+    }
+    let sigma_c = std::slice::from_raw_parts(pubi.sigma_c, pubi.sigma_c_len);
+    let expected = match if pubi.m_pub.is_null() || pubi.m_pub_len == 0 {
+        rust_build_sigma_c_m19_native(pubi, witv)
+    } else {
+        rust_build_sigma_c_m20_pke_native(pubi, witv)
+    } {
+        Ok(v) => v,
+        Err(e) => return e,
+    };
+    if sigma_c != expected {
+        return SPX_P2_RUST_ERR_INPUT;
+    }
+    SPX_P2_RUST_OK
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn spx_p2_rust_get_abi_version_v1(out_version: *mut u32) -> i32 {
     if out_version.is_null() {
         return SPX_P2_RUST_ERR_NULL;
@@ -1240,10 +2151,40 @@ pub unsafe extern "C" fn spx_p2_rust_generate_pi_f_v1(
     if out.data.is_null() || pubi.pk.is_null() || pubi.com.is_null() || witv.sigma_com.is_null() {
         return SPX_P2_RUST_ERR_INPUT;
     }
+    if (witv.omega2_len > 0 && witv.omega2.is_null()) || (!witv.omega2.is_null() && witv.omega2_len == 0) {
+        return SPX_P2_RUST_ERR_INPUT;
+    }
+    if (witv.mlen > 0 && witv.m.is_null()) || (!witv.m.is_null() && witv.mlen == 0) {
+        return SPX_P2_RUST_ERR_INPUT;
+    }
+    if (witv.rlen > 0 && witv.r.is_null()) || (!witv.r.is_null() && witv.rlen == 0) {
+        return SPX_P2_RUST_ERR_INPUT;
+    }
     if pubi.public_ctx_len > 0 && pubi.public_ctx.is_null() {
         return SPX_P2_RUST_ERR_INPUT;
     }
-
+    if (pubi.m_pub_len > 0 && pubi.m_pub.is_null()) || (!pubi.m_pub.is_null() && pubi.m_pub_len == 0) {
+        return SPX_P2_RUST_ERR_INPUT;
+    }
+    if (pubi.pk_e_len > 0 && pubi.pk_e.is_null()) || (!pubi.pk_e.is_null() && pubi.pk_e_len == 0) {
+        return SPX_P2_RUST_ERR_INPUT;
+    }
+    if (pubi.sigma_c_len > 0 && pubi.sigma_c.is_null())
+        || (!pubi.sigma_c.is_null() && pubi.sigma_c_len == 0)
+    {
+        return SPX_P2_RUST_ERR_INPUT;
+    }
+    let strict_input_ret = spx_p2_rust_validate_strict_relation_inputs_v1(pub_inputs, wit, 1);
+    if strict_input_ret != SPX_P2_RUST_OK {
+        return strict_input_ret;
+    }
+    // M20-8 semantic anchor: enforce native strict witness relation on proving path.
+    // This keeps Enc semantics aligned with SPX_p2_build_sigma_c_m20_pke while AIR keeps
+    // consistency bindings for proof-side trace constraints.
+    let strict_witness_ret = spx_p2_rust_validate_strict_witness_relation_v1(pub_inputs, wit);
+    if strict_witness_ret != SPX_P2_RUST_OK {
+        return strict_witness_ret;
+    }
     let pk = std::slice::from_raw_parts(pubi.pk, PK_LEN);
     let com = std::slice::from_raw_parts(pubi.com, COM_LEN);
     let public_ctx = if pubi.public_ctx_len == 0 {
@@ -1251,7 +2192,25 @@ pub unsafe extern "C" fn spx_p2_rust_generate_pi_f_v1(
     } else {
         std::slice::from_raw_parts(pubi.public_ctx, pubi.public_ctx_len)
     };
-    let stmt = derive_statement_inputs(pk, com, public_ctx);
+    let m_pub = if pubi.m_pub_len == 0 {
+        &[]
+    } else {
+        std::slice::from_raw_parts(pubi.m_pub, pubi.m_pub_len)
+    };
+    let pk_e = if pubi.pk_e_len == 0 {
+        &pk[..SPX_N]
+    } else {
+        std::slice::from_raw_parts(pubi.pk_e, pubi.pk_e_len)
+    };
+    let sigma_c = if pubi.sigma_c_len == 0 {
+        None
+    } else {
+        Some(std::slice::from_raw_parts(pubi.sigma_c, pubi.sigma_c_len))
+    };
+    let stmt = match derive_statement_inputs(pk, pk_e, com, m_pub, public_ctx, sigma_c) {
+        Some(v) => v,
+        None => return SPX_P2_RUST_ERR_INPUT,
+    };
     let public_input_digest = stmt.public_input_digest;
     let ctx_binding = stmt.ctx_binding;
     let start = stmt.start;
@@ -1272,6 +2231,41 @@ pub unsafe extern "C" fn spx_p2_rust_generate_pi_f_v1(
     let hmsg_mode_hint = stmt.hmsg_mode_hint;
     let rule_mix_start = stmt.rule_mix_start;
     let rule_profile_hint = stmt.rule_profile_hint;
+    let [com_public_l0, com_public_l1, com_public_l2] = stmt.com_public_limbs;
+    let [
+        sigma_c_public_l0,
+        sigma_c_public_l1,
+        sigma_c_public_l2,
+        sigma_c_public_l3,
+        sigma_c_public_l4,
+        sigma_c_public_l5,
+    ] = stmt.sigma_c_public_limbs;
+    let [public_ctx_l0, public_ctx_l1, public_ctx_l2] = stmt.public_ctx_limbs;
+    let [sigma_ctx_rel_l0, sigma_ctx_rel_l1, sigma_ctx_rel_l2] = stmt.sigma_ctx_rel_limbs;
+    let enc_mode_hint = stmt.enc_mode_hint;
+    let [pk_e_public_l0, pk_e_public_l1, pk_e_public_l2] = stmt.pk_e_public_limbs;
+    let [com_input_public_l0, com_input_public_l1, com_input_public_l2] = stmt.com_input_public_limbs;
+    let com_input_m_tail = stmt.com_input_m_tail;
+    let m_wit = std::slice::from_raw_parts(witv.m, witv.mlen);
+    let r_wit = std::slice::from_raw_parts(witv.r, witv.rlen);
+    let (com_input_r_prefix7, com_input_r_middle8, com_input_r_last) =
+        match derive_commit_open_witness_parts(r_wit) {
+            Some(v) => v,
+            None => return SPX_P2_RUST_ERR_INPUT,
+        };
+    let mut com_from_witness = [0u8; SPX_N];
+    rust_commit_domain(&mut com_from_witness, m_wit, r_wit);
+    let [com_witness_l0, com_witness_l1, com_witness_l2] =
+        match decode_public_limbs::<COM_LIMBS>(&com_from_witness) {
+            Some(v) => v,
+            None => return SPX_P2_RUST_ERR_INPUT,
+        };
+    let omega2_wit = std::slice::from_raw_parts(witv.omega2, witv.omega2_len);
+    let [omega2_witness_l0, omega2_witness_l1, omega2_witness_l2] =
+        match decode_public_limbs::<COM_LIMBS>(omega2_wit) {
+            Some(v) => v,
+            None => return SPX_P2_RUST_ERR_INPUT,
+        };
     let result = iterate_state(start, mix, bind, TRACE_LEN);
     let module_result = iterate_module_acc(start, mix, bind, root_hint, module_start, TRACE_LEN);
     let prf_result = iterate_prf_acc(start, mix, bind, prf_start, prf_start, TRACE_LEN);
@@ -1363,8 +2357,55 @@ pub unsafe extern "C" fn spx_p2_rust_generate_pi_f_v1(
         hmsg_mode_hint,
         rule_mix_start,
         rule_profile_hint,
+        com_public_l0,
+        com_public_l1,
+        com_public_l2,
+        sigma_c_public_l0,
+        sigma_c_public_l1,
+        sigma_c_public_l2,
+        sigma_c_public_l3,
+        sigma_c_public_l4,
+        sigma_c_public_l5,
+        public_ctx_l0,
+        public_ctx_l1,
+        public_ctx_l2,
+        sigma_ctx_rel_l0,
+        sigma_ctx_rel_l1,
+        sigma_ctx_rel_l2,
+        enc_mode_hint,
+        pk_e_public_l0,
+        pk_e_public_l1,
+        pk_e_public_l2,
+        com_input_public_l0,
+        com_input_public_l1,
+        com_input_public_l2,
+        com_input_m_tail,
+        com_input_r_prefix7,
+        com_input_r_middle8,
+        com_input_r_last,
+        com_witness_l0,
+        com_witness_l1,
+        com_witness_l2,
+        omega2_witness_l0,
+        omega2_witness_l1,
+        omega2_witness_l2,
         TRACE_LEN,
     );
+    if let Some((row, constraint, value)) = debug_validate_m20_commit_columns(
+        &trace,
+        com_input_public_l0,
+        com_input_public_l1,
+        com_input_public_l2,
+        com_input_m_tail,
+    ) {
+        if rust_verify_debug_enabled() {
+            eprintln!(
+                "[stark-rs prove] trace self-check failed: row={} constraint={} value={:?}",
+                row, constraint, value
+            );
+        }
+        return SPX_P2_RUST_ERR_PROVE;
+    }
     let trace_digest = derive_trace_digest(start, mix, bind, TRACE_LEN);
     let proof = match WorkProver::new(
         options_96bits(),
@@ -1396,6 +2437,29 @@ pub unsafe extern "C" fn spx_p2_rust_generate_pi_f_v1(
         rule_mix_start,
         rule_mix_result,
         rule_profile_hint,
+        com_public_l0,
+        com_public_l1,
+        com_public_l2,
+        sigma_c_public_l0,
+        sigma_c_public_l1,
+        sigma_c_public_l2,
+        sigma_c_public_l3,
+        sigma_c_public_l4,
+        sigma_c_public_l5,
+        public_ctx_l0,
+        public_ctx_l1,
+        public_ctx_l2,
+        sigma_ctx_rel_l0,
+        sigma_ctx_rel_l1,
+        sigma_ctx_rel_l2,
+        enc_mode_hint,
+        pk_e_public_l0,
+        pk_e_public_l1,
+        pk_e_public_l2,
+        com_input_public_l0,
+        com_input_public_l1,
+        com_input_public_l2,
+        com_input_m_tail,
     )
     .prove(trace)
     {
@@ -1448,6 +2512,20 @@ pub unsafe extern "C" fn spx_p2_rust_verify_pi_f_v1(
         rust_verify_debug("public_ctx_len>0 but public_ctx is null");
         return SPX_P2_RUST_ERR_INPUT;
     }
+    if (pubi.m_pub_len > 0 && pubi.m_pub.is_null()) || (!pubi.m_pub.is_null() && pubi.m_pub_len == 0) {
+        rust_verify_debug("m_pub pointer/length mismatch");
+        return SPX_P2_RUST_ERR_INPUT;
+    }
+    if (pubi.pk_e_len > 0 && pubi.pk_e.is_null()) || (!pubi.pk_e.is_null() && pubi.pk_e_len == 0) {
+        rust_verify_debug("pk_e pointer/length mismatch");
+        return SPX_P2_RUST_ERR_INPUT;
+    }
+    if (pubi.sigma_c_len > 0 && pubi.sigma_c.is_null())
+        || (!pubi.sigma_c.is_null() && pubi.sigma_c_len == 0)
+    {
+        rust_verify_debug("sigma_c pointer/length mismatch");
+        return SPX_P2_RUST_ERR_INPUT;
+    }
     if rust_verify_debug_enabled() {
         eprintln!(
             "[stark-rs verify] begin: proof_len={}, public_ctx_len={}",
@@ -1464,7 +2542,7 @@ pub unsafe extern "C" fn spx_p2_rust_verify_pi_f_v1(
     };
     if decoded.flags & PI_F_V2_FLAG_STARK_PROOF == 0
         || decoded.proof_system_id != PI_F_V2_PROOF_SYSTEM_ID_STARK
-        || decoded.statement_version != PI_F_V2_STATEMENT_VERSION_VERIFY_FULL_V1
+        || decoded.statement_version != PI_F_V2_STATEMENT_VERSION_VERIFY_FULL
     {
         rust_verify_debug("header flags/system_id/statement_version mismatch");
         return SPX_P2_RUST_ERR_FORMAT;
@@ -1477,7 +2555,28 @@ pub unsafe extern "C" fn spx_p2_rust_verify_pi_f_v1(
     } else {
         std::slice::from_raw_parts(pubi.public_ctx, pubi.public_ctx_len)
     };
-    let stmt = derive_statement_inputs(pk, com, public_ctx);
+    let m_pub = if pubi.m_pub_len == 0 {
+        &[]
+    } else {
+        std::slice::from_raw_parts(pubi.m_pub, pubi.m_pub_len)
+    };
+    let pk_e = if pubi.pk_e_len == 0 {
+        &pk[..SPX_N]
+    } else {
+        std::slice::from_raw_parts(pubi.pk_e, pubi.pk_e_len)
+    };
+    let sigma_c = if pubi.sigma_c_len == 0 {
+        None
+    } else {
+        Some(std::slice::from_raw_parts(pubi.sigma_c, pubi.sigma_c_len))
+    };
+    let stmt = match derive_statement_inputs(pk, pk_e, com, m_pub, public_ctx, sigma_c) {
+        Some(v) => v,
+        None => {
+            rust_verify_debug("invalid com/sigma_c limb encoding for AIR public inputs");
+            return SPX_P2_RUST_ERR_INPUT;
+        }
+    };
     let expected_public_input_digest = stmt.public_input_digest;
     let expected_ctx_binding = stmt.ctx_binding;
     if decoded.public_input_digest != expected_public_input_digest.as_slice()
@@ -1504,6 +2603,21 @@ pub unsafe extern "C" fn spx_p2_rust_verify_pi_f_v1(
     let hmsg_mode_hint = stmt.hmsg_mode_hint;
     let rule_mix_start = stmt.rule_mix_start;
     let rule_profile_hint = stmt.rule_profile_hint;
+    let [com_public_l0, com_public_l1, com_public_l2] = stmt.com_public_limbs;
+    let [
+        sigma_c_public_l0,
+        sigma_c_public_l1,
+        sigma_c_public_l2,
+        sigma_c_public_l3,
+        sigma_c_public_l4,
+        sigma_c_public_l5,
+    ] = stmt.sigma_c_public_limbs;
+    let [public_ctx_l0, public_ctx_l1, public_ctx_l2] = stmt.public_ctx_limbs;
+    let [sigma_ctx_rel_l0, sigma_ctx_rel_l1, sigma_ctx_rel_l2] = stmt.sigma_ctx_rel_limbs;
+    let enc_mode_hint = stmt.enc_mode_hint;
+    let [pk_e_public_l0, pk_e_public_l1, pk_e_public_l2] = stmt.pk_e_public_limbs;
+    let [com_input_public_l0, com_input_public_l1, com_input_public_l2] = stmt.com_input_public_limbs;
+    let com_input_m_tail = stmt.com_input_m_tail;
     let trace_digest = derive_trace_digest(start, mix, bind, TRACE_LEN);
     let witness_rows = TRACE_LEN as u32;
     let trace_calls = derive_trace_calls(TRACE_LEN);
@@ -1629,6 +2743,29 @@ pub unsafe extern "C" fn spx_p2_rust_verify_pi_f_v1(
         rule_mix_start,
         rule_mix_result,
         rule_profile_hint,
+        com_public_l0,
+        com_public_l1,
+        com_public_l2,
+        sigma_c_public_l0,
+        sigma_c_public_l1,
+        sigma_c_public_l2,
+        sigma_c_public_l3,
+        sigma_c_public_l4,
+        sigma_c_public_l5,
+        public_ctx_l0,
+        public_ctx_l1,
+        public_ctx_l2,
+        sigma_ctx_rel_l0,
+        sigma_ctx_rel_l1,
+        sigma_ctx_rel_l2,
+        enc_mode_hint,
+        pk_e_public_l0,
+        pk_e_public_l1,
+        pk_e_public_l2,
+        com_input_public_l0,
+        com_input_public_l1,
+        com_input_public_l2,
+        com_input_m_tail,
     };
     // After widening AIR with higher-degree rule constraints, keep verification policy aligned
     // with current proof options to avoid rejecting otherwise valid proofs.

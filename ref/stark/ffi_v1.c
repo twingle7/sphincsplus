@@ -2,12 +2,12 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
-#include "../hash_poseidon2_adapter.h"
 #include "ffi_v1.h"
-#include "air_verify_full.h"
 #include "pi_f_format_v1.h"
 #include "pi_f_format_v2.h"
+#include "relation_migration_v1.h"
 #include "verifier_v1.h"
 
 #ifdef SPX_P2_USE_RUST_STARK
@@ -88,50 +88,6 @@ static int spx_p2_debug_verify_enabled(void)
     return getenv("SPX_P2_DEBUG_VERIFY") != 0;
 }
 
-static int spx_p2_eval_verify_full_guard(const uint8_t *pk,
-                                         const uint8_t *com,
-                                         const uint8_t *sigma_com)
-{
-    spx_p2_trace replay;
-    spx_p2_witness_row_v1 *rows = 0;
-    size_t row_count = 0;
-    uint32_t constraints = 0;
-    uint32_t violations = 0;
-    int ret = -1;
-
-    if (spx_p2_trace_verify_com(&replay, pk, com, sigma_com) != 0)
-    {
-        return -1;
-    }
-    if (spx_p2_witness_count_rows_v1(&replay, &row_count) != 0)
-    {
-        return -1;
-    }
-    if (row_count == 0)
-    {
-        return -1;
-    }
-    rows = (spx_p2_witness_row_v1 *)malloc(row_count * sizeof(*rows));
-    if (rows == 0)
-    {
-        return -1;
-    }
-    if (spx_p2_witness_build_rows_v1(rows, row_count, &row_count, &replay) != 0)
-    {
-        goto done;
-    }
-    if (spx_p2_verify_full_air_eval_constraints_v1(pk, com, sigma_com, &replay,
-                                                   rows, row_count,
-                                                   &constraints, &violations) != 0)
-    {
-        goto done;
-    }
-    ret = (violations == 0) ? 0 : -1;
-done:
-    free(rows);
-    return ret;
-}
-
 int spx_p2_ffi_get_abi_version_v1(uint32_t *out_version)
 {
 #ifdef SPX_P2_USE_RUST_STARK
@@ -156,6 +112,21 @@ int spx_p2_ffi_generate_pi_f_v1(spx_p2_ffi_blob_v1 *out_proof,
     }
     if (out_proof->data == 0 || pub->pk == 0 || pub->com == 0 || wit->sigma_com == 0 ||
         (pub->public_ctx_len > 0 && pub->public_ctx == 0))
+    {
+        return SPX_P2_FFI_ERR_INPUT;
+    }
+    if ((pub->pk_e_len > 0 && pub->pk_e == 0) ||
+        (pub->pk_e != 0 && pub->pk_e_len == 0))
+    {
+        return SPX_P2_FFI_ERR_INPUT;
+    }
+    if ((pub->sigma_c_len > 0 && pub->sigma_c == 0) ||
+        (pub->sigma_c != 0 && pub->sigma_c_len == 0))
+    {
+        return SPX_P2_FFI_ERR_INPUT;
+    }
+    if ((wit->omega2_len > 0 && wit->omega2 == 0) ||
+        (wit->omega2 != 0 && wit->omega2_len == 0))
     {
         return SPX_P2_FFI_ERR_INPUT;
     }
@@ -193,6 +164,16 @@ int spx_p2_ffi_verify_pi_f_v1(const spx_p2_ffi_blob_v1 *proof,
     }
     if (proof->data == 0 || pub->pk == 0 || pub->com == 0 ||
         (pub->public_ctx_len > 0 && pub->public_ctx == 0))
+    {
+        return SPX_P2_FFI_ERR_INPUT;
+    }
+    if ((pub->pk_e_len > 0 && pub->pk_e == 0) ||
+        (pub->pk_e != 0 && pub->pk_e_len == 0))
+    {
+        return SPX_P2_FFI_ERR_INPUT;
+    }
+    if ((pub->sigma_c_len > 0 && pub->sigma_c == 0) ||
+        (pub->sigma_c != 0 && pub->sigma_c_len == 0))
     {
         return SPX_P2_FFI_ERR_INPUT;
     }
@@ -235,23 +216,14 @@ int spx_p2_ffi_generate_pi_f_v2_strict(spx_p2_ffi_blob_v1 *out_proof,
 {
     int ret;
     int ver;
-    if (out_proof == 0 || pub == 0 || wit == 0)
+    if (out_proof == 0)
     {
         return SPX_P2_FFI_ERR_NULL;
     }
-    if (pub->pk == 0 || pub->com == 0 || wit->sigma_com == 0)
+    ret = spx_p2_relation_validate_strict_prove_inputs_v1(pub, wit);
+    if (ret != SPX_P2_FFI_OK)
     {
-        return SPX_P2_FFI_ERR_INPUT;
-    }
-    /* Strict mode must prove existence of a valid signature witness before STARK proving. */
-    if (spx_p2_verify_com(pub->pk, pub->com, wit->sigma_com) != 0)
-    {
-        return SPX_P2_FFI_ERR_PROVE;
-    }
-    /* Additional guard: enforce C verify_full constraints before Rust STARK proving. */
-    if (spx_p2_eval_verify_full_guard(pub->pk, pub->com, wit->sigma_com) != 0)
-    {
-        return SPX_P2_FFI_ERR_PROVE;
+        return ret;
     }
     ret = spx_p2_ffi_generate_pi_f_v1(out_proof, pub, wit);
     if (ret != SPX_P2_FFI_OK)
@@ -270,9 +242,15 @@ int spx_p2_ffi_verify_pi_f_v2_strict(const spx_p2_ffi_blob_v1 *proof,
                                      const spx_p2_ffi_public_inputs_v1 *pub)
 {
     int ver;
+    int ret;
     if (proof == 0 || proof->data == 0)
     {
         return SPX_P2_FFI_ERR_NULL;
+    }
+    ret = spx_p2_relation_validate_strict_verify_inputs_v1(pub);
+    if (ret != SPX_P2_FFI_OK)
+    {
+        return ret;
     }
     ver = spx_p2_detect_pi_f_version(proof->data, proof->len);
     if (ver != 2)

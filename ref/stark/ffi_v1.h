@@ -9,7 +9,8 @@
 
 #define SPX_P2_STARK_FFI_ABI_VERSION_V1 1u
 
-typedef enum {
+typedef enum
+{
     SPX_P2_FFI_OK = 0,
     SPX_P2_FFI_ERR_NULL = -1,
     SPX_P2_FFI_ERR_INPUT = -2,
@@ -18,21 +19,41 @@ typedef enum {
     SPX_P2_FFI_ERR_VERIFY = -5
 } spx_p2_ffi_status_v1;
 
-typedef struct {
+typedef struct
+{
     uint8_t *data;
     size_t len;
     size_t cap;
 } spx_p2_ffi_blob_v1;
 
-typedef struct {
+typedef struct
+{
     const uint8_t *pk;
+    /* M19: explicit encryption public key input (pk_E). */
+    const uint8_t *pk_e;
+    size_t pk_e_len;
     const uint8_t *com;
+    /* M20-6: explicit public message input for Com relation binding. */
+    const uint8_t *m_pub;
+    size_t m_pub_len;
     const uint8_t *public_ctx;
     size_t public_ctx_len;
+    /* Optional statement extension for Sigma=(C,pi) binding. */
+    const uint8_t *sigma_c;
+    size_t sigma_c_len;
 } spx_p2_ffi_public_inputs_v1;
 
-typedef struct {
+typedef struct
+{
     const uint8_t *sigma_com;
+    /* M20-6: Com opening witness. */
+    const uint8_t *m;
+    size_t mlen;
+    const uint8_t *r;
+    size_t rlen;
+    /* M19: optional encryption randomness witness. */
+    const uint8_t *omega2;
+    size_t omega2_len;
 } spx_p2_ffi_private_witness_v1;
 
 #define spx_p2_ffi_get_abi_version_v1 SPX_NAMESPACE(spx_p2_ffi_get_abi_version_v1)

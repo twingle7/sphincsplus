@@ -80,6 +80,10 @@ int main(void)
 
     memcpy(cred.com, resp.com, SPX_N);
     memcpy(cred.sigma_com, resp.sig_com, SPX_BYTES);
+    memcpy(cred.m, m, sizeof(m));
+    cred.mlen = sizeof(m);
+    memcpy(cred.r, r, sizeof(r));
+    cred.rlen = sizeof(r);
 
     if (spx_p2_show_prove(&show_a, issuer_pk, &cred, public_ctx_a, sizeof(public_ctx_a)) != 0)
     {

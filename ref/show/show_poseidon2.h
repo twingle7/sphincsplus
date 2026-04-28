@@ -22,6 +22,40 @@ int spx_p2_show_prove(spx_p2_show *out,
 int spx_p2_show_verify(const spx_p2_show *show,
                        const uint8_t *pk);
 
+/* M19 explicit-input wrappers with separate pk_sig / pk_E. */
+#define spx_p2_show_prove_m19 SPX_NAMESPACE(spx_p2_show_prove_m19)
+int spx_p2_show_prove_m19(spx_p2_show *out,
+                          const uint8_t *pk_sig,
+                          const uint8_t *pk_e,
+                          size_t pk_e_len,
+                          const spx_p2_cred_internal *cred,
+                          const uint8_t *public_ctx,
+                          size_t public_ctx_len);
+
+#define spx_p2_show_prove_m20 SPX_NAMESPACE(spx_p2_show_prove_m20)
+int spx_p2_show_prove_m20(spx_p2_show *out,
+                          const uint8_t *pk_sig,
+                          const uint8_t *pk_e,
+                          size_t pk_e_len,
+                          const spx_p2_cred_internal *cred,
+                          const uint8_t *public_ctx,
+                          size_t public_ctx_len);
+
+#define spx_p2_show_verify_m19 SPX_NAMESPACE(spx_p2_show_verify_m19)
+int spx_p2_show_verify_m19(const spx_p2_show *show,
+                           const uint8_t *pk_sig,
+                           const uint8_t *pk_e,
+                           size_t pk_e_len);
+
+/* M20 strict verify wrapper with explicit m_pub input. */
+#define spx_p2_show_verify_m20 SPX_NAMESPACE(spx_p2_show_verify_m20)
+int spx_p2_show_verify_m20(const spx_p2_show *show,
+                           const uint8_t *pk_sig,
+                           const uint8_t *pk_e,
+                           size_t pk_e_len,
+                           const uint8_t *m_pub,
+                           size_t m_pub_len);
+
 /* Compatibility verification path kept for legacy proof objects. */
 #define spx_p2_show_verify_compat SPX_NAMESPACE(spx_p2_show_verify_compat)
 int spx_p2_show_verify_compat(const spx_p2_show *show,

@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "address.h"
+#include "hash_profile.h"
 #include "utils.h"
 #include "params.h"
 #include "hash.h"
@@ -27,6 +28,7 @@ void prf_addr(unsigned char *out, const spx_ctx *ctx,
     memcpy(buf + SPX_N + SPX_ADDR_BYTES, ctx->sk_seed, SPX_N);
 
     shake256(out, SPX_N, buf, 2*SPX_N + SPX_ADDR_BYTES);
+    spx_hash_profile_note_prf_addr(2u * SPX_N + SPX_ADDR_BYTES);
 }
 
 /**
@@ -47,6 +49,7 @@ void gen_message_random(unsigned char *R, const unsigned char *sk_prf,
     shake256_inc_absorb(s_inc, m, mlen);
     shake256_inc_finalize(s_inc);
     shake256_inc_squeeze(R, SPX_N, s_inc);
+    spx_hash_profile_note_gen_message_random((size_t)(2u * SPX_N) + (size_t)mlen, SPX_N);
 }
 
 /**
@@ -94,4 +97,7 @@ void hash_message(unsigned char *digest, uint64_t *tree, uint32_t *leaf_idx,
 
     *leaf_idx = (uint32_t)bytes_to_ull(bufp, SPX_LEAF_BYTES);
     *leaf_idx &= (~(uint32_t)0) >> (32 - SPX_LEAF_BITS);
+
+    spx_hash_profile_note_hash_message((size_t)SPX_N + (size_t)SPX_PK_BYTES + (size_t)mlen,
+                                       SPX_DGST_BYTES);
 }

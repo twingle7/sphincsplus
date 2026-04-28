@@ -49,4 +49,26 @@ int spx_p2_trace_verify_com(spx_p2_trace *trace,
                             const uint8_t *pk, const uint8_t *com,
                             const uint8_t *sigma_com);
 
+/*
+ * M19 helper: build Sigma.C = (c || EncTag), where EncTag binds
+ * (pk_E, c, sigma', omega2). If omega2 is absent, use deterministic fallback.
+ */
+#define spx_p2_build_sigma_c_m19 SPX_NAMESPACE(spx_p2_build_sigma_c_m19)
+int spx_p2_build_sigma_c_m19(uint8_t *out_sigma_c, size_t *out_sigma_c_len,
+                             const uint8_t *com,
+                             const uint8_t *sigma_com,
+                             const uint8_t *pk_e, size_t pk_e_len,
+                             const uint8_t *omega2, size_t omega2_len);
+
+/*
+ * M20 helper: build Sigma.C = (c || C_tail), where C_tail models
+ * Enc(pk_E, c || sigma', omega2) with explicit witness randomness omega2.
+ */
+#define spx_p2_build_sigma_c_m20_pke SPX_NAMESPACE(spx_p2_build_sigma_c_m20_pke)
+int spx_p2_build_sigma_c_m20_pke(uint8_t *out_sigma_c, size_t *out_sigma_c_len,
+                                 const uint8_t *com,
+                                 const uint8_t *sigma_com,
+                                 const uint8_t *pk_e, size_t pk_e_len,
+                                 const uint8_t *omega2, size_t omega2_len);
+
 #endif

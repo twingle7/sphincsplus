@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "address.h"
+#include "hash_profile.h"
 #include "utils.h"
 #include "params.h"
 #include "hash.h"
@@ -26,6 +27,7 @@ void prf_addr(unsigned char *out, const spx_ctx *ctx,
 
     poseidon2_hash_bytes_domain(out, SPX_N, SPX_P2_DOMAIN_PRF_ADDR,
                                 buf, sizeof(buf));
+    spx_hash_profile_note_prf_addr(sizeof(buf));
 }
 
 /**
@@ -45,6 +47,7 @@ void gen_message_random(unsigned char *R, const unsigned char *sk_prf,
     poseidon2_inc_absorb(&p2ctx, m, (size_t)mlen);
     poseidon2_inc_finalize(&p2ctx);
     poseidon2_inc_squeeze(R, SPX_N, &p2ctx);
+    spx_hash_profile_note_gen_message_random((size_t)(2u * SPX_N) + (size_t)mlen, SPX_N);
 }
 
 /**
@@ -91,4 +94,6 @@ void hash_message(unsigned char *digest, uint64_t *tree, uint32_t *leaf_idx,
 
     *leaf_idx = (uint32_t)bytes_to_ull(bufp, SPX_LEAF_BYTES);
     *leaf_idx &= (~(uint32_t)0) >> (32 - SPX_LEAF_BITS);
+    spx_hash_profile_note_hash_message((size_t)SPX_N + (size_t)SPX_PK_BYTES + (size_t)mlen,
+                                       SPX_DGST_BYTES);
 }
