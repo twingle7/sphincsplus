@@ -9,8 +9,14 @@ CFLAGS=-Wall -Wextra -Wpedantic -O3 -std=c99 -Wconversion -Wmissing-prototypes -
 RUST_STARK_LIB_DIR ?= $(CURDIR)/stark-rs/target/release
 RUST_STARK_STATIC_LIB = $(RUST_STARK_LIB_DIR)/libsphincsplus_stark_rs.a
 LINK_EXTRA_DEPS =
+RUST_STARK_LDLIBS = -lpthread -lm
+ifeq ($(OS),Windows_NT)
+	RUST_STARK_LDLIBS +=
+else
+	RUST_STARK_LDLIBS += -ldl
+endif
 ifneq (,$(findstring -DSPX_P2_USE_RUST_STARK,$(EXTRA_CFLAGS)))
-	LDLIBS += $(RUST_STARK_STATIC_LIB) -ldl -lpthread -lm
+	LDLIBS += $(RUST_STARK_STATIC_LIB) $(RUST_STARK_LDLIBS)
 	LINK_EXTRA_DEPS += $(RUST_STARK_STATIC_LIB)
 endif
 
@@ -35,7 +41,8 @@ endif
 ifneq (,$(findstring poseidon2,$(PARAMS)))
 	CFLAGS += -DSPX_BACKEND_POSEIDON2=1
 	SOURCES += fips202.c poseidon2.c hash_poseidon2.c thash_poseidon2_simple.c hash_poseidon2_adapter.c bsig_poseidon2_v0.c show/show_poseidon2_v1.c show/show_poseidon2.c show/protocol_poseidon2_v1.c stark/witness_builder.c stark/air_poseidon2_perm.c stark/air_poseidon2_sponge.c stark/air_hashcall.c stark/air_verify_minimal.c stark/air_verify_full.c stark/pi_f_format_v1.c stark/pi_f_format_v2.c stark/pi_f_format.c stark/prover_v1.c stark/verifier_v1.c stark/relation_migration_v1.c stark/ffi_v1.c stark/ffi.c stark/stats_v1.c stark/stats.c
-	HEADERS += fips202.h poseidon2.h poseidon2_params_goldilocks_profile.h hash_poseidon2_adapter.h bsig_poseidon2_v0.h show/show_poseidon2_v1.h show/show_poseidon2.h show/protocol_poseidon2_v1.h stark/witness_format.h stark/air_poseidon2_perm.h stark/air_poseidon2_sponge.h stark/air_hashcall.h stark/air_verify_minimal.h stark/air_verify_full.h stark/pi_f_format_v1.h stark/pi_f_format_v2.h stark/pi_f_format.h stark/prover_v1.h stark/verifier_v1.h stark/relation_migration_v1.h stark/ffi_v1.h stark/ffi.h stark/stats_v1.h stark/stats.h
+	SOURCES += stark/thash_bench.c
+	HEADERS += fips202.h poseidon2.h poseidon2_params_goldilocks_profile.h hash_poseidon2_adapter.h bsig_poseidon2_v0.h show/show_poseidon2_v1.h show/show_poseidon2.h show/protocol_poseidon2_v1.h stark/witness_format.h stark/air_poseidon2_perm.h stark/air_poseidon2_sponge.h stark/air_hashcall.h stark/air_verify_minimal.h stark/air_verify_full.h stark/pi_f_format_v1.h stark/pi_f_format_v2.h stark/pi_f_format.h stark/prover_v1.h stark/verifier_v1.h stark/relation_migration_v1.h stark/ffi_v1.h stark/ffi.h stark/stats_v1.h stark/stats.h stark/thash_bench.h
 endif
 
 DET_SOURCES = $(SOURCES:randombytes.%=rng.%)
@@ -76,7 +83,8 @@ POSEIDON2_TESTS = \
 		test/poseidon2_pi_f_format \
 		test/poseidon2_stark_ffi_v1 \
 		test/poseidon2_stark_strict_core_enforcement \
-		test/poseidon2_stark_stats
+		test/poseidon2_stark_stats \
+		test/thash_backend_stark_compare
 
 BENCHMARKS = test/benchmark
 POSEIDON2_BENCHMARKS = test/poseidon2_protocol_benchmark_v1
@@ -108,6 +116,9 @@ test/benchmark: test/benchmark.c test/cycles.c $(SOURCES) $(HEADERS) $(LINK_EXTR
 
 test/hash_profile_verify: test/hash_profile_verify.c test/hash_profile_randombytes.c $(filter-out randombytes.c,$(SOURCES)) $(HEADERS) $(LINK_EXTRA_DEPS)
 	$(CC) $(CFLAGS) -o $@ $(filter-out randombytes.c,$(SOURCES)) test/hash_profile_randombytes.c $< $(LDLIBS)
+
+test/thash_backend_stark_compare: test/thash_backend_stark_compare.c $(SOURCES) sha2.c $(HEADERS) sha2.h $(LINK_EXTRA_DEPS)
+	$(CC) $(CFLAGS) -DSPX_SHA2=1 -o $@ $(SOURCES) sha2.c $< $(LDLIBS)
 
 test/%: test/%.c $(SOURCES) $(HEADERS) $(LINK_EXTRA_DEPS)
 	$(CC) $(CFLAGS) -o $@ $(SOURCES) $< $(LDLIBS)

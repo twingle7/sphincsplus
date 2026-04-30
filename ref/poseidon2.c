@@ -44,14 +44,7 @@ static uint64_t p2_sub(uint64_t a, uint64_t b)
 static uint64_t p2_mul(uint64_t a, uint64_t b)
 {
     __uint128_t prod = ((__uint128_t)a) * ((__uint128_t)b);
-    uint64_t lo = (uint64_t)prod;
-    uint64_t hi = (uint64_t)(prod >> 64);
-
-    /* 2^64 == 2^32 - 1 mod p */
-    uint64_t hi_shift = (hi << 32);
-    uint64_t hi_fold = p2_sub(hi_shift, hi);
-    uint64_t acc = p2_add(lo, hi_fold);
-    return p2_mod_reduce_u64(acc);
+    return (uint64_t)(prod % ((__uint128_t)P2_GOLDILOCKS_PRIME));
 }
 
 static uint64_t p2_pow7(uint64_t x)

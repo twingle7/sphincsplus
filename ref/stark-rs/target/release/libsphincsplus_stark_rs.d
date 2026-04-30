@@ -1,1 +1,1 @@
-/mnt/d/Desktop/My_Sphincs+/sphincsplus/ref/stark-rs/target/release/libsphincsplus_stark_rs.a: /mnt/d/Desktop/My_Sphincs+/sphincsplus/ref/stark-rs/src/lib.rs
+/mnt/d/Desktop/My_Sphincs+/sphincsplus/ref/stark-rs/target/release/libsphincsplus_stark_rs.rlib: /mnt/d/Desktop/My_Sphincs+/sphincsplus/ref/stark-rs/src/lib.rs /mnt/d/Desktop/My_Sphincs+/sphincsplus/ref/stark-rs/src/thash_bench.rs /mnt/d/Desktop/My_Sphincs+/sphincsplus/ref/stark-rs/src/thash_poseidon2_exact.rs /mnt/d/Desktop/My_Sphincs+/sphincsplus/ref/stark-rs/src/thash_sha2_exact.rs

@@ -1,5 +1,9 @@
 #![allow(clippy::missing_safety_doc)]
 
+mod thash_bench;
+mod thash_poseidon2_exact;
+mod thash_sha2_exact;
+
 use winterfell::{
     crypto::{hashers::Blake3_256, DefaultRandomCoin, MerkleTree},
     math::{fields::f128::BaseElement, FieldElement, StarkField, ToElements},
@@ -64,19 +68,19 @@ fn debug_validate_m20_commit_columns(
         let c18 = trace.get(18, row);
         let c19 = trace.get(19, row);
         let c20 = trace.get(20, row);
-        let c24 = trace.get(24, row);
-        let c25 = trace.get(25, row);
-        let c26 = trace.get(26, row);
+        let _c24 = trace.get(24, row);
+        let _c25 = trace.get(25, row);
+        let _c26 = trace.get(26, row);
         let c27 = trace.get(27, row);
         let c34 = trace.get(34, row);
         let c35 = trace.get(35, row);
         let c36 = trace.get(36, row);
-        let c37 = trace.get(37, row);
-        let c38 = trace.get(38, row);
-        let c39 = trace.get(39, row);
-        let c40 = trace.get(40, row);
-        let c41 = trace.get(41, row);
-        let c42 = trace.get(42, row);
+        let _c37 = trace.get(37, row);
+        let _c38 = trace.get(38, row);
+        let _c39 = trace.get(39, row);
+        let _c40 = trace.get(40, row);
+        let _c41 = trace.get(41, row);
+        let _c42 = trace.get(42, row);
         let c43 = trace.get(43, row);
         let c44 = trace.get(44, row);
         let c45 = trace.get(45, row);
