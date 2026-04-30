@@ -7,6 +7,12 @@
 #include "../api.h"
 #include "show_poseidon2.h"
 
+/*
+ * Historical versioned protocol header.
+ * Prefer `protocol_poseidon2.h` in new code; this file remains as the stable
+ * backing definition for legacy names and older focused tests.
+ */
+
 typedef enum
 {
     SPX_P2_FLOW_OK = 0,
@@ -46,7 +52,7 @@ int spx_p2_unblind_v1(spx_p2_cred_internal *out_cred,
                       const uint8_t sigma_blind[SPX_BYTES], size_t sigma_blind_len,
                       const uint8_t *omega2, size_t omega2_len);
 
-/* Convenience orchestration for M20-1 skeleton. */
+/* Convenience orchestration for full issue+unblind flow. */
 #define spx_p2_issue_unblind_v1 SPX_NAMESPACE(spx_p2_issue_unblind_v1)
 int spx_p2_issue_unblind_v1(spx_p2_cred_internal *out_cred,
                             uint8_t out_com[SPX_N],
@@ -63,6 +69,16 @@ int spx_p2_protocol_show_v1(spx_p2_show *out_show,
                             const spx_p2_cred_internal *cred,
                             const uint8_t *public_ctx, size_t public_ctx_len);
 
+/* Descriptive alias: strict show path with explicit public statement fields. */
+#define spx_p2_protocol_show_strict_public_v1 SPX_NAMESPACE(spx_p2_protocol_show_strict_public_v1)
+int spx_p2_protocol_show_strict_public_v1(spx_p2_show *out_show,
+                                          const uint8_t *pk_sig,
+                                          const uint8_t *pk_e,
+                                          size_t pk_e_len,
+                                          const spx_p2_cred_internal *cred,
+                                          const uint8_t *public_ctx,
+                                          size_t public_ctx_len);
+
 #define spx_p2_protocol_show_m20_v1 SPX_NAMESPACE(spx_p2_protocol_show_m20_v1)
 int spx_p2_protocol_show_m20_v1(spx_p2_show *out_show,
                                 const uint8_t *pk_sig,
@@ -77,7 +93,15 @@ int spx_p2_protocol_verify_v1(const spx_p2_show *show,
                               const uint8_t *pk_sig,
                               const uint8_t *pk_e, size_t pk_e_len);
 
-/* M20-6 strict verify with explicit m_pub as public input. */
+/* Strict verify with explicit m_pub as public input. */
+#define spx_p2_protocol_verify_strict_public_v1 SPX_NAMESPACE(spx_p2_protocol_verify_strict_public_v1)
+int spx_p2_protocol_verify_strict_public_v1(const spx_p2_show *show,
+                                            const uint8_t *pk_sig,
+                                            const uint8_t *pk_e,
+                                            size_t pk_e_len,
+                                            const uint8_t *m_pub,
+                                            size_t m_pub_len);
+
 #define spx_p2_protocol_verify_m20_v1 SPX_NAMESPACE(spx_p2_protocol_verify_m20_v1)
 int spx_p2_protocol_verify_m20_v1(const spx_p2_show *show,
                                   const uint8_t *pk_sig,

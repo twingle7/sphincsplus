@@ -4,6 +4,7 @@
 
 #include "../api.h"
 #include "../hash_poseidon2_adapter.h"
+#include "../show/protocol_poseidon2.h"
 #include "../show/show_poseidon2.h"
 #include "../stark/pi_f_format.h"
 
@@ -46,12 +47,14 @@ int main(void)
     uint8_t issuer_sk[CRYPTO_SECRETKEYBYTES];
     uint8_t m[24];
     uint8_t r[16];
+    uint8_t omega2[SPX_N];
     uint8_t public_ctx_a[8] = {1, 2, 3, 4, 5, 6, 7, 8};
     uint8_t public_ctx_b[8] = {8, 7, 6, 5, 4, 3, 2, 1};
     size_t siglen = 0;
     blind_issue_request req;
     blind_issue_response resp;
     uint32_t magic;
+    size_t i;
 
     memset(m, 0x11, sizeof(m));
     memset(r, 0x22, sizeof(r));
@@ -61,6 +64,10 @@ int main(void)
     memset(&cred_bad, 0, sizeof(cred_bad));
     memset(&show_a, 0, sizeof(show_a));
     memset(&show_b, 0, sizeof(show_b));
+    for (i = 0; i < sizeof(omega2); i++)
+    {
+        omega2[i] = (uint8_t)(0x90u + (uint8_t)i);
+    }
     printf("INFO: final e2e start\n");
 
     spx_p2_commit(req.com, m, sizeof(m), r, sizeof(r));
@@ -78,8 +85,11 @@ int main(void)
         return 1;
     }
 
-    memcpy(cred.com, resp.com, SPX_N);
-    memcpy(cred.sigma_com, resp.sig_com, SPX_BYTES);
+    if (spx_p2_unblind(&cred, resp.com, resp.sig_com, siglen, omega2, sizeof(omega2)) != 0)
+    {
+        fail("holder_unblind");
+        return 1;
+    }
     memcpy(cred.m, m, sizeof(m));
     cred.mlen = sizeof(m);
     memcpy(cred.r, r, sizeof(r));

@@ -28,7 +28,7 @@
 | cross-backend | `./test/poseidon2_cross_backend_consistency` | 退出码 0，C/Rust 结论一致 | PASS（本地脚本回归） |
 
 ## 3.1 自动化入口
-- 回归脚本：`scripts/run_m17_regression.sh`
+- 回归脚本：`scripts/run_strict_regression.sh`
 - 指标采集：`scripts/collect_benchmark_v2.sh`
 - 本地采集产物：`logs/benchmark-stark-v2-local.md`
 

@@ -27,7 +27,7 @@
 
 ## 5. 测试与工具化完成项
 - 回归脚本：
-  - `scripts/run_m17_regression.sh`
+  - `scripts/run_strict_regression.sh`
   - `scripts/collect_benchmark_v2.sh`
 - 覆盖用例：
   - 角色交互 e2e；

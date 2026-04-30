@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "../api.h"
-#include "../show/protocol_poseidon2_v1.h"
+#include "../show/protocol_poseidon2.h"
 
 static void print_hex_prefix(const uint8_t *data, size_t len, size_t prefix_len)
 {
@@ -19,7 +19,7 @@ static void fail_step(const char *step, int status)
 {
     printf("[FAIL] %s: %s (%d)\n",
            step,
-           spx_p2_flow_status_to_string_v1(status),
+           spx_p2_flow_status_to_string(status),
            status);
 }
 
@@ -63,8 +63,8 @@ int main(void)
         omega2[i] = (uint8_t)(0xc0u + i);
     }
 
-    printf("=== Poseidon2 Fischlin Protocol Flow Demo (M20) ===\n");
-    printf("backend=%s\n", spx_p2_protocol_backend_mode_v1());
+    printf("=== Poseidon2 Fischlin Protocol Flow Demo (strict public-statement path) ===\n");
+    printf("backend=%s\n", spx_p2_protocol_backend_mode());
 
     if (crypto_sign_keypair(issuer_pk, issuer_sk) != 0)
     {
@@ -78,7 +78,7 @@ int main(void)
     print_hex_prefix(pk_e, sizeof(pk_e), 8);
     printf("\n");
 
-    ret = spx_p2_issue_request_v1(com, m, sizeof(m), r, sizeof(r));
+    ret = spx_p2_issue_request(com, m, sizeof(m), r, sizeof(r));
     if (ret != SPX_P2_FLOW_OK)
     {
         fail_step("Commit", ret);
@@ -90,7 +90,7 @@ int main(void)
            (unsigned long long)sizeof(m),
            (unsigned long long)sizeof(r));
 
-    ret = spx_p2_issue_sign_v1(sigma_blind, &sigma_blind_len, issuer_sk, com);
+    ret = spx_p2_issue_sign(sigma_blind, &sigma_blind_len, issuer_sk, com);
     if (ret != SPX_P2_FLOW_OK)
     {
         fail_step("Blind Sign", ret);
@@ -101,7 +101,7 @@ int main(void)
     print_hex_prefix(sigma_blind, sigma_blind_len, 8);
     printf("\n");
 
-    ret = spx_p2_unblind_v1(&cred, com, sigma_blind, sigma_blind_len, omega2, sizeof(omega2));
+    ret = spx_p2_unblind(&cred, com, sigma_blind, sigma_blind_len, omega2, sizeof(omega2));
     if (ret != SPX_P2_FLOW_OK)
     {
         fail_step("Unblind", ret);
@@ -116,12 +116,12 @@ int main(void)
     print_hex_prefix(cred.omega2, cred.omega2_len, 8);
     printf("\n");
 
-    ret = spx_p2_protocol_show_m20_v1(&show_obj, issuer_pk, pk_e, sizeof(pk_e),
-                                      &cred, public_ctx, sizeof(public_ctx));
+    ret = spx_p2_protocol_show_strict_public(&show_obj, issuer_pk, pk_e, sizeof(pk_e),
+                                             &cred, public_ctx, sizeof(public_ctx));
     if (ret != SPX_P2_FLOW_OK)
     {
         fail_step("Show", ret);
-        if (!spx_p2_protocol_has_rust_backend_v1())
+        if (!spx_p2_protocol_has_rust_backend())
         {
             printf("hint: compile with Rust STARK backend enabled\n");
         }
@@ -132,7 +132,7 @@ int main(void)
            (unsigned long long)show_obj.pi_f_len,
            (unsigned long long)show_obj.m_pub_len);
 
-    ret = spx_p2_protocol_verify_m20_v1(&show_obj, issuer_pk, pk_e, sizeof(pk_e), m, sizeof(m));
+    ret = spx_p2_protocol_verify_strict_public(&show_obj, issuer_pk, pk_e, sizeof(pk_e), m, sizeof(m));
     if (ret != SPX_P2_FLOW_OK)
     {
         fail_step("Verify", ret);
@@ -142,15 +142,15 @@ int main(void)
 
     memcpy(m_pub_bad, m, sizeof(m_pub_bad));
     m_pub_bad[0] ^= 1u;
-    ret = spx_p2_protocol_verify_m20_v1(&show_obj, issuer_pk, pk_e, sizeof(pk_e),
-                                        m_pub_bad, sizeof(m_pub_bad));
+    ret = spx_p2_protocol_verify_strict_public(&show_obj, issuer_pk, pk_e, sizeof(pk_e),
+                                               m_pub_bad, sizeof(m_pub_bad));
     if (ret == SPX_P2_FLOW_OK)
     {
         printf("[FAIL] negative test: tampered m_pub should reject\n");
         return 1;
     }
     printf("[Negative] tampered m_pub -> REJECT (%s)\n",
-           spx_p2_flow_status_to_string_v1(ret));
+           spx_p2_flow_status_to_string(ret));
 
     printf("demo result: OK\n");
     return 0;

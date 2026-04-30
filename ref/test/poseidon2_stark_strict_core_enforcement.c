@@ -6,7 +6,7 @@
 #include "../api.h"
 #include "../hash_poseidon2_adapter.h"
 #include "../randombytes.h"
-#include "../stark/ffi_v1.h"
+#include "../stark/ffi.h"
 #include "../stark/relation_migration_v1.h"
 
 static void fail(const char *name)
@@ -37,20 +37,20 @@ int main(void)
     uint8_t *proof_buf = 0;
     size_t sigma_len = 0;
     size_t sigma_c_len = 0;
-    spx_p2_ffi_blob_v1 proof;
-    spx_p2_ffi_public_inputs_v1 pub;
-    spx_p2_ffi_public_inputs_v1 pub_bad_pk_sig;
-    spx_p2_ffi_private_witness_v1 wit;
-    spx_p2_ffi_private_witness_v1 wit_bad_m;
-    spx_p2_ffi_private_witness_v1 wit_bad_r;
-    spx_p2_ffi_private_witness_v1 wit_bad_sig;
-    spx_p2_ffi_private_witness_v1 wit_bad_omega2;
-    spx_p2_ffi_private_witness_v1 wit_missing_omega2;
-    spx_p2_ffi_public_inputs_v1 pub_bad_sigma_c;
-    spx_p2_ffi_public_inputs_v1 pub_bad_pk_e;
-    spx_p2_ffi_public_inputs_v1 pub_bad_m_pub;
-    spx_p2_ffi_public_inputs_v1 pub_bad_public_ctx;
-    spx_p2_ffi_public_inputs_v1 pub_missing_m_pub;
+    spx_p2_ffi_blob proof;
+    spx_p2_ffi_public_inputs pub;
+    spx_p2_ffi_public_inputs pub_bad_pk_sig;
+    spx_p2_ffi_private_witness wit;
+    spx_p2_ffi_private_witness wit_bad_m;
+    spx_p2_ffi_private_witness wit_bad_r;
+    spx_p2_ffi_private_witness wit_bad_sig;
+    spx_p2_ffi_private_witness wit_bad_omega2;
+    spx_p2_ffi_private_witness wit_missing_omega2;
+    spx_p2_ffi_public_inputs pub_bad_sigma_c;
+    spx_p2_ffi_public_inputs pub_bad_pk_e;
+    spx_p2_ffi_public_inputs pub_bad_m_pub;
+    spx_p2_ffi_public_inputs pub_bad_public_ctx;
+    spx_p2_ffi_public_inputs pub_missing_m_pub;
     int ret;
 
     memset(m, 0x27, sizeof(m));

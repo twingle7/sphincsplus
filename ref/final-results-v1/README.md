@@ -53,7 +53,7 @@
 | `scripts/analyze_budget_degradation_poseidon2.py` | M6 预算退化计算 | 第6章 安全边界 | P18 备份页 |
 | `scripts/collect_benchmark_4way.sh` | 4way benchmark 采集 | 第5章 工程性能 | P9 备份页 |
 | `scripts/collect_benchmark_v2.sh` | STARK v2 benchmark 采集 | 第5章 工程性能 | P9 备份页 |
-| `scripts/run_m17_regression.sh` | M17 回归入口 | 第5章 工程验证 | P8 备份页 |
+| `scripts/run_strict_regression.sh` | strict 主回归入口 | 第5章 工程验证 | P8 备份页 |
 
 ## 4. 建议的答辩讲述顺序（20 页版本）
 1. P2-P5：项目目标、主线、验收边界（`project-final-summary` + `thesis-notes` + `release-checklist`）。

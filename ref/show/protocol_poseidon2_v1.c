@@ -219,6 +219,17 @@ int spx_p2_protocol_show_v1(spx_p2_show *out_show,
     return SPX_P2_FLOW_OK;
 }
 
+int spx_p2_protocol_show_strict_public_v1(spx_p2_show *out_show,
+                                          const uint8_t *pk_sig,
+                                          const uint8_t *pk_e,
+                                          size_t pk_e_len,
+                                          const spx_p2_cred_internal *cred,
+                                          const uint8_t *public_ctx,
+                                          size_t public_ctx_len)
+{
+    return spx_p2_protocol_show_m20_v1(out_show, pk_sig, pk_e, pk_e_len, cred, public_ctx, public_ctx_len);
+}
+
 int spx_p2_protocol_show_m20_v1(spx_p2_show *out_show,
                                 const uint8_t *pk_sig,
                                 const uint8_t *pk_e,
@@ -277,6 +288,16 @@ int spx_p2_protocol_verify_v1(const spx_p2_show *show,
 #endif
     }
     return SPX_P2_FLOW_OK;
+}
+
+int spx_p2_protocol_verify_strict_public_v1(const spx_p2_show *show,
+                                            const uint8_t *pk_sig,
+                                            const uint8_t *pk_e,
+                                            size_t pk_e_len,
+                                            const uint8_t *m_pub,
+                                            size_t m_pub_len)
+{
+    return spx_p2_protocol_verify_m20_v1(show, pk_sig, pk_e, pk_e_len, m_pub, m_pub_len);
 }
 
 int spx_p2_protocol_verify_m20_v1(const spx_p2_show *show,

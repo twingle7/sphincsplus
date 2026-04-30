@@ -6,6 +6,12 @@
 
 #include "ffi_v1.h"
 
+/*
+ * Public STARK FFI entrypoints.
+ * New code should include this header; the `_v1` header is retained only to
+ * preserve the historical ABI and low-level migration tests.
+ */
+
 typedef spx_p2_ffi_status_v1 spx_p2_ffi_status;
 typedef spx_p2_ffi_blob_v1 spx_p2_ffi_blob;
 typedef spx_p2_ffi_public_inputs_v1 spx_p2_ffi_public_inputs;

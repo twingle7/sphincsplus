@@ -100,6 +100,7 @@ script_files=(
   "scripts/analyze_budget_degradation_poseidon2.py"
   "scripts/collect_benchmark_4way.sh"
   "scripts/collect_benchmark_v2.sh"
+  "scripts/run_strict_regression.sh"
   "scripts/run_m17_regression.sh"
 )
 for f in "${script_files[@]}"; do

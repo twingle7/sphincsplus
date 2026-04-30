@@ -4,6 +4,7 @@
 
 #include "../api.h"
 #include "../hash_poseidon2_adapter.h"
+#include "../show/protocol_poseidon2.h"
 #include "../show/show_poseidon2.h"
 #include "../stark/pi_f_format.h"
 
@@ -29,28 +30,37 @@ int main(void)
 {
     static spx_p2_cred_internal cred;
     static spx_p2_show show_obj;
+    int ret = 0;
     uint8_t signer_pk[CRYPTO_PUBLICKEYBYTES];
     uint8_t signer_sk[CRYPTO_SECRETKEYBYTES];
+    uint8_t com[SPX_N];
     uint8_t m[24];
     uint8_t r[16];
+    uint8_t omega2[SPX_N];
+    uint8_t sigma_blind[SPX_BYTES];
     uint8_t public_ctx[12] = {'D', 'E', 'M', 'O', '-', 'F', 'I', 'N', 'A', 'L', 0, 0};
-    size_t siglen = 0;
+    size_t sigma_blind_len = 0;
     uint32_t magic = 0;
+    size_t i = 0;
 
     memset(&cred, 0, sizeof(cred));
     memset(&show_obj, 0, sizeof(show_obj));
     memset(m, 0x33, sizeof(m));
     memset(r, 0x44, sizeof(r));
+    for (i = 0; i < sizeof(omega2); i++)
+    {
+        omega2[i] = (uint8_t)(0x80u + i);
+    }
 
     printf("=== ROLE INTERACTION DEMO (FINAL) ===\n");
     printf("[User]    generate commitment com = Commit(m||r)\n");
-    spx_p2_commit(cred.com, m, sizeof(m), r, sizeof(r));
+    spx_p2_commit(com, m, sizeof(m), r, sizeof(r));
     memcpy(cred.m, m, sizeof(m));
     cred.mlen = sizeof(m);
     memcpy(cred.r, r, sizeof(r));
     cred.rlen = sizeof(r);
     printf("[User]    com[0..7]=0x");
-    print_hex_prefix(cred.com, SPX_N, 8);
+    print_hex_prefix(com, SPX_N, 8);
     printf("\n");
 
     printf("[Signer]  keygen and sign request(com)\n");
@@ -59,25 +69,49 @@ int main(void)
         printf("FAIL: signer_keygen\n");
         return 1;
     }
-    if (crypto_sign_signature(cred.sigma_com, &siglen, cred.com, SPX_N, signer_sk) != 0 || siglen != SPX_BYTES)
+    ret = spx_p2_issue_request(com, m, sizeof(m), r, sizeof(r));
+    if (ret != SPX_P2_FLOW_OK)
     {
-        printf("FAIL: signer_sign\n");
+        printf("FAIL: issue_request ret=%d\n", ret);
         return 1;
     }
-    printf("[Signer]  sig_com issued (%llu bytes)\n", (unsigned long long)siglen);
+    ret = spx_p2_issue_sign(sigma_blind, &sigma_blind_len, signer_sk, com);
+    if (ret != SPX_P2_FLOW_OK)
+    {
+        printf("FAIL: issue_sign ret=%d\n", ret);
+        return 1;
+    }
+    ret = spx_p2_unblind(&cred, com, sigma_blind, sigma_blind_len, omega2, sizeof(omega2));
+    if (ret != SPX_P2_FLOW_OK)
+    {
+        printf("FAIL: unblind ret=%d\n", ret);
+        return 1;
+    }
+    memcpy(cred.m, m, sizeof(m));
+    cred.mlen = sizeof(m);
+    memcpy(cred.r, r, sizeof(r));
+    cred.rlen = sizeof(r);
+    if (sigma_blind_len != SPX_BYTES)
+    {
+        printf("FAIL: signer_sign_len\n");
+        return 1;
+    }
+    printf("[Signer]  sig_com issued (%llu bytes)\n", (unsigned long long)sigma_blind_len);
 
     printf("[User]    run ShowProve(final)\n");
-    if (spx_p2_show_prove(&show_obj, signer_pk, &cred, public_ctx, sizeof(public_ctx)) != 0)
+    ret = spx_p2_show_prove(&show_obj, signer_pk, &cred, public_ctx, sizeof(public_ctx));
+    if (ret != 0)
     {
-        printf("FAIL: show_prove (final path requires Rust STARK backend: -DSPX_P2_USE_RUST_STARK)\n");
+        printf("FAIL: show_prove ret=%d\n", ret);
         return 1;
     }
     printf("[User]    show object built: pi_f_len=%llu\n", (unsigned long long)show_obj.pi_f_len);
 
     printf("[Verifier] run ShowVerify(final)\n");
-    if (spx_p2_show_verify(&show_obj, signer_pk) != 0)
+    ret = spx_p2_show_verify(&show_obj, signer_pk);
+    if (ret != 0)
     {
-        printf("FAIL: show_verify\n");
+        printf("FAIL: show_verify ret=%d\n", ret);
         return 1;
     }
     printf("[Verifier] ACCEPT\n");

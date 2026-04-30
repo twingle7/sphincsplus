@@ -4,10 +4,10 @@
 
 #include "../api.h"
 #include "../hash_poseidon2_adapter.h"
-#include "../show/protocol_poseidon2_v1.h"
-#include "../stark/ffi_v1.h"
+#include "../show/protocol_poseidon2.h"
+#include "../stark/ffi.h"
 #include "../stark/pi_f_format.h"
-#include "../stark/stats_v1.h"
+#include "../stark/stats.h"
 
 static void fail(const char *name)
 {
@@ -30,9 +30,9 @@ int main(void)
         'S', 'T', 'A', 'R', 'K', '-', 'S', 'T',
         'A', 'T', 'S', '-', 'M', '2', '0', '1'};
     size_t sigma_blind_len = 0;
-    spx_p2_stark_stats_v1 stats;
-    spx_p2_ffi_public_inputs_v1 pub;
-    spx_p2_ffi_private_witness_v1 wit;
+    spx_p2_stark_stats stats;
+    spx_p2_ffi_public_inputs pub;
+    spx_p2_ffi_private_witness wit;
     size_t i;
 
     memset(&cred, 0, sizeof(cred));
@@ -51,17 +51,17 @@ int main(void)
         fail("keypair");
         return 1;
     }
-    if (spx_p2_issue_request_v1(com, m, sizeof(m), r, sizeof(r)) != SPX_P2_FLOW_OK)
+    if (spx_p2_issue_request(com, m, sizeof(m), r, sizeof(r)) != SPX_P2_FLOW_OK)
     {
         fail("issue_request");
         return 1;
     }
-    if (spx_p2_issue_sign_v1(sigma_blind, &sigma_blind_len, sk_sig, com) != SPX_P2_FLOW_OK)
+    if (spx_p2_issue_sign(sigma_blind, &sigma_blind_len, sk_sig, com) != SPX_P2_FLOW_OK)
     {
         fail("issue_sign");
         return 1;
     }
-    if (spx_p2_unblind_v1(&cred, com, sigma_blind, sigma_blind_len, omega2, sizeof(omega2)) != SPX_P2_FLOW_OK)
+    if (spx_p2_unblind(&cred, com, sigma_blind, sigma_blind_len, omega2, sizeof(omega2)) != SPX_P2_FLOW_OK)
     {
         fail("unblind");
         return 1;
@@ -70,10 +70,10 @@ int main(void)
     cred.mlen = sizeof(m);
     memcpy(cred.r, r, sizeof(r));
     cred.rlen = sizeof(r);
-    if (spx_p2_protocol_show_m20_v1(&show_obj, pk_sig, pk_e, sizeof(pk_e),
-                                    &cred, public_ctx, sizeof(public_ctx)) != SPX_P2_FLOW_OK)
+    if (spx_p2_protocol_show_strict_public(&show_obj, pk_sig, pk_e, sizeof(pk_e),
+                                           &cred, public_ctx, sizeof(public_ctx)) != SPX_P2_FLOW_OK)
     {
-        fail("show_m20");
+        fail("show_strict_public");
         return 1;
     }
 
@@ -95,7 +95,7 @@ int main(void)
     wit.omega2 = cred.omega2;
     wit.omega2_len = cred.omega2_len;
 
-    if (spx_p2_stark_collect_ffi_stats_v1(&stats, &pub, &wit) != 0)
+    if (spx_p2_stark_collect_ffi_stats(&stats, &pub, &wit) != 0)
     {
         fail("collect_ffi_stats");
         return 1;

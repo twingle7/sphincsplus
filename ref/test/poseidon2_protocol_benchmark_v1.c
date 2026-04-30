@@ -13,9 +13,9 @@
 #endif
 
 #include "../api.h"
-#include "../show/protocol_poseidon2_v1.h"
-#include "../stark/ffi_v1.h"
-#include "../stark/stats_v1.h"
+#include "../show/protocol_poseidon2.h"
+#include "../stark/ffi.h"
+#include "../stark/stats.h"
 
 static double monotonic_ms(void)
 {
@@ -85,9 +85,9 @@ int main(void)
 {
     static spx_p2_cred_internal cred;
     static spx_p2_show show_obj;
-    spx_p2_stark_stats_v1 stats;
-    spx_p2_ffi_public_inputs_v1 pub;
-    spx_p2_ffi_private_witness_v1 wit;
+    spx_p2_stark_stats stats;
+    spx_p2_ffi_public_inputs pub;
+    spx_p2_ffi_private_witness wit;
     uint8_t issuer_pk[CRYPTO_PUBLICKEYBYTES];
     uint8_t issuer_sk[CRYPTO_SECRETKEYBYTES];
     uint8_t pk_e[SPX_N];
@@ -132,7 +132,7 @@ int main(void)
     keygen_ms = monotonic_ms() - t0;
 
     t0 = monotonic_ms();
-    ret = spx_p2_issue_request_v1(com, m, sizeof(m), r, sizeof(r));
+    ret = spx_p2_issue_request(com, m, sizeof(m), r, sizeof(r));
     commit_ms = monotonic_ms() - t0;
     if (ret != SPX_P2_FLOW_OK)
     {
@@ -141,7 +141,7 @@ int main(void)
     }
 
     t0 = monotonic_ms();
-    ret = spx_p2_issue_sign_v1(sigma_blind, &sigma_blind_len, issuer_sk, com);
+    ret = spx_p2_issue_sign(sigma_blind, &sigma_blind_len, issuer_sk, com);
     issue_ms = monotonic_ms() - t0;
     if (ret != SPX_P2_FLOW_OK)
     {
@@ -150,7 +150,7 @@ int main(void)
     }
 
     t0 = monotonic_ms();
-    ret = spx_p2_unblind_v1(&cred, com, sigma_blind, sigma_blind_len, omega2, sizeof(omega2));
+    ret = spx_p2_unblind(&cred, com, sigma_blind, sigma_blind_len, omega2, sizeof(omega2));
     unblind_ms = monotonic_ms() - t0;
     if (ret != SPX_P2_FLOW_OK)
     {
@@ -163,8 +163,8 @@ int main(void)
     cred.rlen = sizeof(r);
 
     t0 = monotonic_ms();
-    ret = spx_p2_protocol_show_m20_v1(&show_obj, issuer_pk, pk_e, sizeof(pk_e),
-                                      &cred, public_ctx, sizeof(public_ctx));
+    ret = spx_p2_protocol_show_strict_public(&show_obj, issuer_pk, pk_e, sizeof(pk_e),
+                                             &cred, public_ctx, sizeof(public_ctx));
     show_total_ms = monotonic_ms() - t0;
     if (ret != SPX_P2_FLOW_OK)
     {
@@ -173,7 +173,7 @@ int main(void)
     }
 
     t0 = monotonic_ms();
-    ret = spx_p2_protocol_verify_m20_v1(&show_obj, issuer_pk, pk_e, sizeof(pk_e), m, sizeof(m));
+    ret = spx_p2_protocol_verify_strict_public(&show_obj, issuer_pk, pk_e, sizeof(pk_e), m, sizeof(m));
     verify_total_ms = monotonic_ms() - t0;
     if (ret != SPX_P2_FLOW_OK)
     {
@@ -184,8 +184,8 @@ int main(void)
     memcpy(m_pub_bad, m, sizeof(m_pub_bad));
     m_pub_bad[0] ^= 1u;
     t0 = monotonic_ms();
-    ret = spx_p2_protocol_verify_m20_v1(&show_obj, issuer_pk, pk_e, sizeof(pk_e),
-                                        m_pub_bad, sizeof(m_pub_bad));
+    ret = spx_p2_protocol_verify_strict_public(&show_obj, issuer_pk, pk_e, sizeof(pk_e),
+                                               m_pub_bad, sizeof(m_pub_bad));
     negative_verify_ms = monotonic_ms() - t0;
     neg_ok = (ret != SPX_P2_FLOW_OK) ? 1 : 0;
 
@@ -207,15 +207,15 @@ int main(void)
     wit.omega2 = cred.omega2;
     wit.omega2_len = cred.omega2_len;
 
-    if (spx_p2_stark_collect_ffi_stats_v1(&stats, &pub, &wit) != 0)
+    if (spx_p2_stark_collect_ffi_stats(&stats, &pub, &wit) != 0)
     {
         printf("FAIL:stats\n");
         return 1;
     }
 
     print_header();
-    printf("%s,M20,%llu,%llu,%llu,%llu,%llu,%llu,",
-           spx_p2_protocol_backend_mode_v1(),
+    printf("%s,strict_public,%llu,%llu,%llu,%llu,%llu,%llu,",
+           spx_p2_protocol_backend_mode(),
            (unsigned long long)sizeof(m),
            (unsigned long long)sizeof(r),
            (unsigned long long)sizeof(public_ctx),

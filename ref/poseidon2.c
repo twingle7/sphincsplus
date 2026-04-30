@@ -33,14 +33,6 @@ static uint64_t p2_add(uint64_t a, uint64_t b)
     return sum;
 }
 
-static uint64_t p2_sub(uint64_t a, uint64_t b)
-{
-    if (a >= b) {
-        return a - b;
-    }
-    return P2_GOLDILOCKS_PRIME - (b - a);
-}
-
 static uint64_t p2_mul(uint64_t a, uint64_t b)
 {
     __uint128_t prod = ((__uint128_t)a) * ((__uint128_t)b);

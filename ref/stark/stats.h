@@ -6,7 +6,15 @@
 
 #include "stats_v1.h"
 
+/*
+ * Public stats entrypoints.
+ * Prefer this header in new code; the `_v1` header remains for ABI stability
+ * and older focused tests that still exercise versioned internals.
+ */
+
 typedef spx_p2_stark_stats_v1 spx_p2_stark_stats;
+
+#define spx_p2_stark_collect_ffi_stats spx_p2_stark_collect_ffi_stats_v1
 
 #define spx_p2_stark_collect_stats SPX_NAMESPACE(spx_p2_stark_collect_stats)
 int spx_p2_stark_collect_stats(spx_p2_stark_stats *out_stats,
