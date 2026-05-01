@@ -116,8 +116,8 @@ int main(void)
     print_hex_prefix(cred.omega2, cred.omega2_len, 8);
     printf("\n");
 
-    ret = spx_p2_protocol_show_strict_public(&show_obj, issuer_pk, pk_e, sizeof(pk_e),
-                                             &cred, public_ctx, sizeof(public_ctx));
+    ret = spx_p2_protocol_show_statement_bound(&show_obj, issuer_pk, pk_e, sizeof(pk_e),
+                                               &cred, public_ctx, sizeof(public_ctx));
     if (ret != SPX_P2_FLOW_OK)
     {
         fail_step("Show", ret);
@@ -132,7 +132,7 @@ int main(void)
            (unsigned long long)show_obj.pi_f_len,
            (unsigned long long)show_obj.m_pub_len);
 
-    ret = spx_p2_protocol_verify_strict_public(&show_obj, issuer_pk, pk_e, sizeof(pk_e), m, sizeof(m));
+    ret = spx_p2_protocol_verify_statement_bound(&show_obj, issuer_pk, pk_e, sizeof(pk_e), m, sizeof(m));
     if (ret != SPX_P2_FLOW_OK)
     {
         fail_step("Verify", ret);
@@ -142,8 +142,8 @@ int main(void)
 
     memcpy(m_pub_bad, m, sizeof(m_pub_bad));
     m_pub_bad[0] ^= 1u;
-    ret = spx_p2_protocol_verify_strict_public(&show_obj, issuer_pk, pk_e, sizeof(pk_e),
-                                               m_pub_bad, sizeof(m_pub_bad));
+    ret = spx_p2_protocol_verify_statement_bound(&show_obj, issuer_pk, pk_e, sizeof(pk_e),
+                                                 m_pub_bad, sizeof(m_pub_bad));
     if (ret == SPX_P2_FLOW_OK)
     {
         printf("[FAIL] negative test: tampered m_pub should reject\n");

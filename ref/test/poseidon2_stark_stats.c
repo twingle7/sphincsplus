@@ -70,10 +70,10 @@ int main(void)
     cred.mlen = sizeof(m);
     memcpy(cred.r, r, sizeof(r));
     cred.rlen = sizeof(r);
-    if (spx_p2_protocol_show_strict_public(&show_obj, pk_sig, pk_e, sizeof(pk_e),
-                                           &cred, public_ctx, sizeof(public_ctx)) != SPX_P2_FLOW_OK)
+    if (spx_p2_protocol_show_statement_bound(&show_obj, pk_sig, pk_e, sizeof(pk_e),
+                                             &cred, public_ctx, sizeof(public_ctx)) != SPX_P2_FLOW_OK)
     {
-        fail("show_strict_public");
+        fail("show_statement_bound");
         return 1;
     }
 

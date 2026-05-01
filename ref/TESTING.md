@@ -89,7 +89,7 @@ mingw32-make -B PARAMS=sphincs-poseidon2-192s THASH=simple CC=gcc `
   - 跑通支持的结论：适配层编码和 trace 记录机制是自洽的；承诺与 message/rand 绑定在当前实现里有效。
   - 跑通不支持的结论：不能单独说明 AIR 约束一定正确，也不能说明 strict STARK 主链正确。
 - `test/poseidon2_bsig_v0`
-  - 作用：验证较早期的 `bsig v0` 原型流程能完成 `issue/prove/verify`，并能拒绝 `sigma_com/pi_f` 篡改。
+  - 作用：验证较早期的 `bsig v0` 原型流程能完成 `issue/prove/verify`，并能拒绝 `sigma_com/show proof` 篡改。
   - 跑通支持的结论：仓库里早期 blind-sign 原型仍然可运行，且基本篡改守卫未坏。
   - 跑通不支持的结论：不能把它当作当前 final Fischlin-Strict 主链的直接证据；它更像原型回归测试。
 
@@ -138,31 +138,31 @@ WSL:
 make -B PARAMS=sphincs-poseidon2-192s THASH=simple CC=gcc \
   test/poseidon2_show_v1 \
   test/poseidon2_show_v1_boundary \
-  test/poseidon2_protocol_flow_strict_public \
-  test/poseidon2_fischlin_strict_public_spec
+  test/poseidon2_protocol_flow_statement_bound \
+  test/poseidon2_fischlin_statement_bound_spec
 
 ./test/poseidon2_show_v1
 ./test/poseidon2_show_v1_boundary
-./test/poseidon2_protocol_flow_strict_public
-./test/poseidon2_fischlin_strict_public_spec
+./test/poseidon2_protocol_flow_statement_bound
+./test/poseidon2_fischlin_statement_bound_spec
 ```
 
 测试说明：
 
 - `test/poseidon2_show_v1`
-  - 作用：验证较早期 `show` 对象的生成、验证和基础篡改拒绝，包括 `com/pi_f/public_ctx/header` 篡改。
+  - 作用：验证较早期 `show` 对象的生成、验证和基础篡改拒绝，包括 `com/show proof/public_ctx/header` 篡改。
   - 跑通支持的结论：show 对象的序列化/形状检查和基础篡改守卫没有坏。
   - 跑通不支持的结论：它更偏 legacy/compat 形态，不能单独证明 final strict public-statement 语义已闭环。
 - `test/poseidon2_show_v1_boundary`
-  - 作用：验证 `show` 对象最小形状守卫，例如 `pi_f` 为空必须拒绝。
+  - 作用：验证 `show` 对象最小形状守卫，例如 show proof 为空必须拒绝。
   - 跑通支持的结论：show 对象的基本边界检查仍有效。
   - 跑通不支持的结论：不能说明 proof 语义正确，只能说明形状守卫正确。
-- `test/poseidon2_protocol_flow_strict_public`
+- `test/poseidon2_protocol_flow_statement_bound`
   - 作用：跑一遍完整 `Commit -> Issue -> Unblind -> Show -> Verify`，并验证篡改 `m_pub` 会被拒绝。
-  - 跑通支持的结论：当前 strict public-statement 路径下，完整协议编排可以闭环；最终公开语句中的 `m_pub` 已参与验证。
+  - 跑通支持的结论：当前 statement-bound 路径下，完整协议编排可以闭环；最终公开语句中的 `m_pub` 已参与验证。
   - 跑通不支持的结论：不能直接推出所有 tamper 场景都覆盖，也不能代替更细粒度的 binding 测试。
-- `test/poseidon2_fischlin_strict_public_spec`
-  - 作用：检查 strict public-statement 语义口径，例如显式 `m_pub`、`pk_E`、`public_ctx` 的验证要求。
+- `test/poseidon2_fischlin_statement_bound_spec`
+  - 作用：检查 statement-bound 语义口径，例如显式 `m_pub`、`pk_E`、`public_ctx` 的验证要求。
   - 跑通支持的结论：当前“公开输入必须显式包含 `m_pub`”的接口语义是收紧且一致的；错 `m_pub`、错 `pk_E`、错 `ctx` 会拒绝。
   - 跑通不支持的结论：不能单独推出 proof 内部约束全部已经内生，只能说明对外语义和验证入口符合预期。
 
@@ -207,11 +207,11 @@ make -B PARAMS=sphincs-poseidon2-192s THASH=simple CC=gcc EXTRA_CFLAGS="-DSPX_P2
   - 跑通不支持的结论：不能推出“所有输入空间下都一致”，这里只是样本级一致性。
 - `test/poseidon2_statement_binding`
   - 作用：篡改 `statement_version`、`public_input_digest`、`m_pub`，验证 strict 路径都应拒绝。
-  - 跑通支持的结论：proof 绑定的公开语句没有只停留在对象外层，`pi_f` 中的语句摘要与 `m_pub` 已参与验证。
+  - 跑通支持的结论：proof 绑定的公开语句没有只停留在对象外层，show proof 中的语句摘要与 `m_pub` 已参与验证。
   - 跑通不支持的结论：不能单独证明每个公开量都完全内生到 AIR 主约束，但至少说明 verify 不会忽略这些字段。
 - `test/poseidon2_trace_replay_binding`
-  - 作用：篡改 `pi_f` 内的 commitment/proof 区域，验证 replay 或对象拼接会被拒绝。
-  - 跑通支持的结论：`pi_f` 并非“可替换壳子”，proof 字节和 commitment 绑定关系在验证时生效。
+  - 作用：篡改 show proof 内的 commitment/proof 区域，验证 replay 或对象拼接会被拒绝。
+  - 跑通支持的结论：show proof 并非“可替换壳子”，proof 字节和 commitment 绑定关系在验证时生效。
   - 跑通不支持的结论：不能单独证明所有序列化字段都不可重放，但能支持“关键 proof/commitment 字段已绑定”。
 - `test/poseidon2_roles_interaction`
   - 作用：以三角色视角演示 final 流程，验证 `User / Signer / Verifier` 交互闭环可跑通。
@@ -482,18 +482,37 @@ RUNS=20 bash scripts/collect_benchmark_4way.sh
 WSL:
 
 ```bash
-TOP_K=20 RUNS_SIGNVERIFY=1 RUNS_STARK=1 bash scripts/collect_benchmark_params.sh
+python3 scripts/search_params_poseidon2.py
+python3 scripts/eval_security_poseidon2.py
+
+# 全量 M4：先跑 STARK 指标
+TOP_K=0 ENABLE_STARK=1 ENABLE_SIGNVERIFY=0 RUNS_STARK=1 \
+  bash scripts/collect_benchmark_params.sh
+
+# 从全部 M4-ok 中抽取子集，再全量补跑 sign/verify，并做全局 Pareto
+bash scripts/run_param_signverify_global_pareto.sh
 ```
 
 输出：
 
-- `logs/params-benchmark-v1.csv`
+- `logs/params-benchmark-v1-full.csv`
+- `logs/params-m4-ok-for-signverify-v1.csv`
+- `logs/params-signverify-m4-ok-v1.csv`
+- `logs/params-m5-merged-v1.csv`
+- `logs/params-pareto-frontier-v1.csv`
+- `logs/params-final-candidates-v1.md`
 
 脚本说明：
 
 - `scripts/collect_benchmark_params.sh`
-  - 作用：给候选参数集做批量 benchmark。
+  - 作用：给候选参数集做批量 benchmark；当 `TOP_K=0` 时表示不截断，按输入 CSV 全量执行。
   - 跑通支持的结论：参数组之间的工程表现可以形成统一表格，适合后续排序和推荐。
+- `scripts/select_m4_ok_for_signverify.py`
+  - 作用：从全量 `M4` 结果中抽取全部 `status=ok` 候选，并回连到 `M3 security-pass` 的完整参数行。
+  - 跑通支持的结论：后续 `sign/verify` 补跑不再只针对少量 finalists，而是面向全部 `M4-ok` 候选。
+- `scripts/run_param_signverify_global_pareto.sh`
+  - 作用：串联“抽取全部 `M4-ok` 候选 -> 全量补跑 `sign/verify` -> 全局 Pareto”三步。
+  - 跑通支持的结论：`M5` 推荐结果来自 `M3 pass ∩ M4 ok ∩ sign/verify ok` 的全集，而不是入围子集。
 
 ## 推荐最小验收集合
 
@@ -506,12 +525,12 @@ make -B PARAMS=sphincs-poseidon2-192s THASH=simple CC=gcc \
   test/poseidon2_api \
   test/poseidon2_kat \
   test/poseidon2_adapter \
-  test/poseidon2_protocol_flow_strict_public
+  test/poseidon2_protocol_flow_statement_bound
 
 ./test/poseidon2_api
 ./test/poseidon2_kat
 ./test/poseidon2_adapter
-./test/poseidon2_protocol_flow_strict_public
+./test/poseidon2_protocol_flow_statement_bound
 ```
 
 这组最小集合跑通，支持的结论是：

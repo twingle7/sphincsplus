@@ -21,10 +21,20 @@ typedef spx_p2_flow_status_v1 spx_p2_flow_status;
 #define spx_p2_issue_unblind spx_p2_issue_unblind_v1
 
 #define spx_p2_protocol_show spx_p2_protocol_show_v1
-#define spx_p2_protocol_show_strict_public spx_p2_protocol_show_strict_public_v1
-#define spx_p2_protocol_show_m20 spx_p2_protocol_show_m20_v1
 #define spx_p2_protocol_verify spx_p2_protocol_verify_v1
-#define spx_p2_protocol_verify_strict_public spx_p2_protocol_verify_strict_public_v1
-#define spx_p2_protocol_verify_m20 spx_p2_protocol_verify_m20_v1
+
+/*
+ * Public semantic variants:
+ * - encryption_bound: binds pk_E separately
+ * - statement_bound: final path with explicit public statement inputs
+ */
+#define spx_p2_protocol_show_encryption_bound spx_p2_protocol_show_v1
+#define spx_p2_protocol_verify_encryption_bound spx_p2_protocol_verify_v1
+#define spx_p2_protocol_show_statement_bound spx_p2_protocol_show_strict_public_v1
+#define spx_p2_protocol_verify_statement_bound spx_p2_protocol_verify_strict_public_v1
+
+/* Compatibility aliases kept for already migrated code. */
+#define spx_p2_protocol_show_strict_public spx_p2_protocol_show_statement_bound
+#define spx_p2_protocol_verify_strict_public spx_p2_protocol_verify_statement_bound
 
 #endif

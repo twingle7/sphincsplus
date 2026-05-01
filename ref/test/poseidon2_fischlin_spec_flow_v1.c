@@ -64,37 +64,37 @@ int main(void)
         return 1;
     }
 
-    ret = spx_p2_protocol_verify_strict_public(&show_obj, issuer_pk, issuer_pk, SPX_N, cred.m, cred.mlen);
+    ret = spx_p2_protocol_verify_statement_bound(&show_obj, issuer_pk, issuer_pk, SPX_N, cred.m, cred.mlen);
     if (ret != SPX_P2_FLOW_OK)
     {
-        fail("verify_strict_public_good");
+        fail("verify_statement_bound_good");
         return 1;
     }
     if (spx_p2_protocol_verify(&show_obj, issuer_pk, issuer_pk, SPX_N) == SPX_P2_FLOW_OK)
     {
-        fail("verify_v1_should_require_explicit_m_pub_for_m20");
+        fail("verify_v1_should_require_explicit_m_pub_for_statement_bound");
         return 1;
     }
 
     memcpy(m_bad, cred.m, cred.mlen);
     m_bad[0] ^= 1u;
-    if (spx_p2_protocol_verify_strict_public(&show_obj, issuer_pk, issuer_pk, SPX_N, m_bad, cred.mlen) == SPX_P2_FLOW_OK)
+    if (spx_p2_protocol_verify_statement_bound(&show_obj, issuer_pk, issuer_pk, SPX_N, m_bad, cred.mlen) == SPX_P2_FLOW_OK)
     {
-        fail("verify_strict_public_should_reject_bad_m_pub");
+        fail("verify_statement_bound_should_reject_bad_m_pub");
         return 1;
     }
 
     issuer_pk_bad[0] ^= 1u;
-    if (spx_p2_protocol_verify_strict_public(&show_obj, issuer_pk, issuer_pk_bad, SPX_N, cred.m, cred.mlen) == SPX_P2_FLOW_OK)
+    if (spx_p2_protocol_verify_statement_bound(&show_obj, issuer_pk, issuer_pk_bad, SPX_N, cred.m, cred.mlen) == SPX_P2_FLOW_OK)
     {
-        fail("verify_strict_public_should_reject_bad_pk_e");
+        fail("verify_statement_bound_should_reject_bad_pk_e");
         return 1;
     }
 
     show_obj.public_ctx[0] ^= 1u;
-    if (spx_p2_protocol_verify_strict_public(&show_obj, issuer_pk, issuer_pk, SPX_N, cred.m, cred.mlen) == SPX_P2_FLOW_OK)
+    if (spx_p2_protocol_verify_statement_bound(&show_obj, issuer_pk, issuer_pk, SPX_N, cred.m, cred.mlen) == SPX_P2_FLOW_OK)
     {
-        fail("verify_strict_public_should_reject_bad_ctx");
+        fail("verify_statement_bound_should_reject_bad_ctx");
         return 1;
     }
 

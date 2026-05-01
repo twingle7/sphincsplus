@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""M5: Pareto frontier and final recommendation generator.
+"""M5: global Pareto frontier and final recommendation generator.
 
 Inputs:
 - logs/params-security-pass-v1.csv
 - logs/params-benchmark-v1-full.csv          (STARK metrics)
-- logs/params-signverify-finalists.csv       (sign/verify metrics)
+- logs/params-signverify-m4-ok-v1.csv        (full M4-ok sign/verify metrics)
 
 Outputs:
 - logs/params-m5-merged-v1.csv
@@ -114,10 +114,10 @@ def build_markdown_table(rows: List[Dict[str, str]]) -> List[str]:
 
 
 def parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="M5 Pareto frontier and recommendations")
+    p = argparse.ArgumentParser(description="M5 global Pareto frontier and recommendations")
     p.add_argument("--security-csv", default="logs/params-security-pass-v1.csv")
     p.add_argument("--stark-csv", default="logs/params-benchmark-v1-full.csv")
-    p.add_argument("--signverify-csv", default="logs/params-signverify-finalists.csv")
+    p.add_argument("--signverify-csv", default="logs/params-signverify-m4-ok-v1.csv")
     p.add_argument("--merged-csv", default="logs/params-m5-merged-v1.csv")
     p.add_argument("--frontier-csv", default="logs/params-pareto-frontier-v1.csv")
     p.add_argument("--nonfrontier-csv", default="logs/params-pareto-nonfrontier-v1.csv")
@@ -149,14 +149,16 @@ def main() -> None:
 
     merged: List[Dict[str, str]] = []
     dropped: List[Dict[str, str]] = []
-    for cid, sign in sorted(sign_ok.items(), key=lambda kv: int(kv[0])):
-        if cid not in security_pass:
-            dropped.append({"candidate_id": cid, "drop_reason": "security_not_pass"})
-            continue
-        if cid not in stark_ok:
-            dropped.append({"candidate_id": cid, "drop_reason": "stark_missing_or_not_ok"})
+    candidate_ids = sorted(
+        [cid for cid in security_pass if cid in stark_ok],
+        key=int,
+    )
+    for cid in candidate_ids:
+        if cid not in sign_ok:
+            dropped.append({"candidate_id": cid, "drop_reason": "signverify_missing_or_not_ok"})
             continue
 
+        sign = sign_ok[cid]
         stark = stark_ok[cid]
         sign_us = parse_float(sign.get("sign_us_median", ""))
         verify_us = parse_float(sign.get("verify_us_median", ""))
@@ -315,12 +317,12 @@ def main() -> None:
     balanced = choose_distinct(frontier_rows, balanced_key, used)
 
     pareto_lines: List[str] = []
-    pareto_lines.append("# M5 Pareto 前沿结果 v1")
+    pareto_lines.append("# M5 全局 Pareto 前沿结果 v1")
     pareto_lines.append("")
     pareto_lines.append("## 1. 输入与筛选")
     pareto_lines.append(f"- 安全通过候选数（M3）：{len(security_pass)}")
     pareto_lines.append(f"- 全量 STARK 可用候选数（M4）：{len(stark_ok)}")
-    pareto_lines.append(f"- sign/verify 补跑可用候选数：{len(sign_ok)}")
+    pareto_lines.append(f"- 全量 sign/verify 补跑可用候选数（M4-ok 子集）：{len(sign_ok)}")
     pareto_lines.append(f"- 合并后有效候选数：{len(merged)}")
     pareto_lines.append(f"- Pareto 前沿候选数：{len(frontier_rows)}")
     pareto_lines.append("")
@@ -364,7 +366,7 @@ def main() -> None:
             )
     final_lines.append("")
     final_lines.append("## 3. 说明")
-    final_lines.append("- 推荐候选均来自 Pareto 前沿，并且满足 M3 安全通过 + M4 实测可用。")
+    final_lines.append("- 推荐候选均来自全局 Pareto 前沿，并且满足 M3 安全通过 + M4 实测可用 + sign/verify 补跑可用。")
     final_lines.append("- 详细候选与淘汰原因见配套 CSV 与 Pareto 文档。")
     final_md.parent.mkdir(parents=True, exist_ok=True)
     final_md.write_text("\n".join(final_lines) + "\n", encoding="utf-8")

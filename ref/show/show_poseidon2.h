@@ -28,45 +28,48 @@ int spx_p2_show_prove(spx_p2_show *out,
 int spx_p2_show_verify(const spx_p2_show *show,
                        const uint8_t *pk);
 
-/* Explicit pk_E wrappers with separate pk_sig / pk_E. */
-#define spx_p2_show_prove_m19 SPX_NAMESPACE(spx_p2_show_prove_m19)
-int spx_p2_show_prove_m19(spx_p2_show *out,
-                          const uint8_t *pk_sig,
-                          const uint8_t *pk_e,
-                          size_t pk_e_len,
-                          const spx_p2_cred_internal *cred,
-                          const uint8_t *public_ctx,
-                          size_t public_ctx_len);
+/*
+ * Public semantic variants:
+ * - encryption_bound: binds the encryption public key separately
+ * - statement_bound: final path with explicit public statement inputs
+ */
+#define spx_p2_show_prove_encryption_bound SPX_NAMESPACE(spx_p2_show_prove_encryption_bound)
+int spx_p2_show_prove_encryption_bound(spx_p2_show *out,
+                                       const uint8_t *pk_sig,
+                                       const uint8_t *pk_e,
+                                       size_t pk_e_len,
+                                       const spx_p2_cred_internal *cred,
+                                       const uint8_t *public_ctx,
+                                       size_t public_ctx_len);
 
-#define spx_p2_show_prove_m20 SPX_NAMESPACE(spx_p2_show_prove_m20)
-int spx_p2_show_prove_m20(spx_p2_show *out,
-                          const uint8_t *pk_sig,
-                          const uint8_t *pk_e,
-                          size_t pk_e_len,
-                          const spx_p2_cred_internal *cred,
-                          const uint8_t *public_ctx,
-                          size_t public_ctx_len);
+#define spx_p2_show_verify_encryption_bound SPX_NAMESPACE(spx_p2_show_verify_encryption_bound)
+int spx_p2_show_verify_encryption_bound(const spx_p2_show *show,
+                                        const uint8_t *pk_sig,
+                                        const uint8_t *pk_e,
+                                        size_t pk_e_len);
 
-#define spx_p2_show_verify_m19 SPX_NAMESPACE(spx_p2_show_verify_m19)
-int spx_p2_show_verify_m19(const spx_p2_show *show,
-                           const uint8_t *pk_sig,
-                           const uint8_t *pk_e,
-                           size_t pk_e_len);
+#define spx_p2_show_prove_statement_bound SPX_NAMESPACE(spx_p2_show_prove_statement_bound)
+int spx_p2_show_prove_statement_bound(spx_p2_show *out,
+                                      const uint8_t *pk_sig,
+                                      const uint8_t *pk_e,
+                                      size_t pk_e_len,
+                                      const spx_p2_cred_internal *cred,
+                                      const uint8_t *public_ctx,
+                                      size_t public_ctx_len);
 
-/* Strict verify wrapper with explicit m_pub input. */
-#define spx_p2_show_verify_m20 SPX_NAMESPACE(spx_p2_show_verify_m20)
-int spx_p2_show_verify_m20(const spx_p2_show *show,
-                           const uint8_t *pk_sig,
-                           const uint8_t *pk_e,
-                           size_t pk_e_len,
-                           const uint8_t *m_pub,
-                           size_t m_pub_len);
+#define spx_p2_show_verify_statement_bound SPX_NAMESPACE(spx_p2_show_verify_statement_bound)
+int spx_p2_show_verify_statement_bound(const spx_p2_show *show,
+                                       const uint8_t *pk_sig,
+                                       const uint8_t *pk_e,
+                                       size_t pk_e_len,
+                                       const uint8_t *m_pub,
+                                       size_t m_pub_len);
 
-/* Preferred descriptive aliases for explicit public-statement strict path. */
-#define spx_p2_show_prove_explicit_pk_e spx_p2_show_prove_m19
-#define spx_p2_show_verify_explicit_pk_e spx_p2_show_verify_m19
-#define spx_p2_show_prove_strict_public spx_p2_show_prove_m20
-#define spx_p2_show_verify_strict_public spx_p2_show_verify_m20
+/* Compatibility aliases kept for already migrated external callers. */
+#define spx_p2_show_prove_explicit_pk_e spx_p2_show_prove_encryption_bound
+#define spx_p2_show_verify_explicit_pk_e spx_p2_show_verify_encryption_bound
+#define spx_p2_show_prove_strict_public spx_p2_show_prove_statement_bound
+#define spx_p2_show_verify_strict_public spx_p2_show_verify_statement_bound
 
 /* Compatibility verification path kept for legacy proof objects. */
 #define spx_p2_show_verify_compat SPX_NAMESPACE(spx_p2_show_verify_compat)

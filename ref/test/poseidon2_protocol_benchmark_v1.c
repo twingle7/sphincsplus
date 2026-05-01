@@ -163,8 +163,8 @@ int main(void)
     cred.rlen = sizeof(r);
 
     t0 = monotonic_ms();
-    ret = spx_p2_protocol_show_strict_public(&show_obj, issuer_pk, pk_e, sizeof(pk_e),
-                                             &cred, public_ctx, sizeof(public_ctx));
+    ret = spx_p2_protocol_show_statement_bound(&show_obj, issuer_pk, pk_e, sizeof(pk_e),
+                                               &cred, public_ctx, sizeof(public_ctx));
     show_total_ms = monotonic_ms() - t0;
     if (ret != SPX_P2_FLOW_OK)
     {
@@ -173,7 +173,7 @@ int main(void)
     }
 
     t0 = monotonic_ms();
-    ret = spx_p2_protocol_verify_strict_public(&show_obj, issuer_pk, pk_e, sizeof(pk_e), m, sizeof(m));
+    ret = spx_p2_protocol_verify_statement_bound(&show_obj, issuer_pk, pk_e, sizeof(pk_e), m, sizeof(m));
     verify_total_ms = monotonic_ms() - t0;
     if (ret != SPX_P2_FLOW_OK)
     {
@@ -184,8 +184,8 @@ int main(void)
     memcpy(m_pub_bad, m, sizeof(m_pub_bad));
     m_pub_bad[0] ^= 1u;
     t0 = monotonic_ms();
-    ret = spx_p2_protocol_verify_strict_public(&show_obj, issuer_pk, pk_e, sizeof(pk_e),
-                                               m_pub_bad, sizeof(m_pub_bad));
+    ret = spx_p2_protocol_verify_statement_bound(&show_obj, issuer_pk, pk_e, sizeof(pk_e),
+                                                 m_pub_bad, sizeof(m_pub_bad));
     negative_verify_ms = monotonic_ms() - t0;
     neg_ok = (ret != SPX_P2_FLOW_OK) ? 1 : 0;
 
@@ -214,7 +214,7 @@ int main(void)
     }
 
     print_header();
-    printf("%s,strict_public,%llu,%llu,%llu,%llu,%llu,%llu,",
+    printf("%s,statement_bound,%llu,%llu,%llu,%llu,%llu,%llu,",
            spx_p2_protocol_backend_mode(),
            (unsigned long long)sizeof(m),
            (unsigned long long)sizeof(r),

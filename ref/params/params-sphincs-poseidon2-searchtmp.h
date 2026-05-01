@@ -6,12 +6,12 @@
 /* Hash output length in bytes. */
 #define SPX_N 16
 /* Height of the hypertree. */
-#define SPX_FULL_HEIGHT 66
+#define SPX_FULL_HEIGHT 60
 /* Number of subtree layer. */
 #define SPX_D 6
 /* FORS tree dimensions. */
-#define SPX_FORS_HEIGHT 8
-#define SPX_FORS_TREES 33
+#define SPX_FORS_HEIGHT 10
+#define SPX_FORS_TREES 14
 /* Winternitz parameter. */
 #define SPX_WOTS_W 16
 
@@ -30,7 +30,7 @@
 #define SPX_WOTS_PK_BYTES SPX_WOTS_BYTES
 
 /* Subtree size. */
-#define SPX_TREE_HEIGHT 11
+#define SPX_TREE_HEIGHT 10
 
 #if SPX_TREE_HEIGHT * SPX_D != SPX_FULL_HEIGHT
 #error SPX_D should always divide SPX_FULL_HEIGHT

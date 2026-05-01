@@ -1756,6 +1756,9 @@ pub unsafe extern "C" fn spx_p2_rust_run_sha2_thash_exact_v1(
     }
 
     let inst_ref = &*inst;
+    if inst_ref.inblocks == 1 {
+        return crate::thash_sha2_f_exact::run_sha2_f_exact(out_stats, inst);
+    }
     if inst_ref.backend_id != SPX_THASH_BENCH_BACKEND_SHA2_V1
         || inst_ref.mode != SPX_THASH_BENCH_MODE_SHA2_EXACT_V1
         || inst_ref.inblocks != 2

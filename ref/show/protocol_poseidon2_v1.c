@@ -208,7 +208,7 @@ int spx_p2_protocol_show_v1(spx_p2_show *out_show,
     {
         return SPX_P2_FLOW_ERR_INPUT;
     }
-    if (spx_p2_show_prove_m20(out_show, pk_sig, pk_e, pk_e_len, cred, public_ctx, public_ctx_len) != 0)
+    if (spx_p2_show_prove_statement_bound(out_show, pk_sig, pk_e, pk_e_len, cred, public_ctx, public_ctx_len) != 0)
     {
 #ifndef SPX_P2_USE_RUST_STARK
         return SPX_P2_FLOW_ERR_BACKEND;
@@ -246,7 +246,7 @@ int spx_p2_protocol_show_m20_v1(spx_p2_show *out_show,
     {
         return SPX_P2_FLOW_ERR_INPUT;
     }
-    if (spx_p2_show_prove_m20(out_show, pk_sig, pk_e, pk_e_len, cred, public_ctx, public_ctx_len) != 0)
+    if (spx_p2_show_prove_statement_bound(out_show, pk_sig, pk_e, pk_e_len, cred, public_ctx, public_ctx_len) != 0)
     {
 #ifndef SPX_P2_USE_RUST_STARK
         return SPX_P2_FLOW_ERR_BACKEND;
@@ -275,11 +275,11 @@ int spx_p2_protocol_verify_v1(const spx_p2_show *show,
     }
     if (show->m_pub_len > 0)
     {
-        /* M20 final statement is x=(pk_sig, pk_E, m_pub, ctx_pub). */
-        /* Generic verify_v1 has no explicit m_pub input, so callers must use verify_m20_v1. */
+        /* Final statement-bound path is x=(pk_sig, pk_E, m_pub, ctx_pub). */
+        /* Generic verify_v1 has no explicit m_pub input, so callers must use the statement-bound verify entrypoint. */
         return SPX_P2_FLOW_ERR_INPUT;
     }
-    if (spx_p2_show_verify_m19(show, pk_sig, pk_e, pk_e_len) != 0)
+    if (spx_p2_show_verify_encryption_bound(show, pk_sig, pk_e, pk_e_len) != 0)
     {
 #ifndef SPX_P2_USE_RUST_STARK
         return SPX_P2_FLOW_ERR_BACKEND;
@@ -319,7 +319,7 @@ int spx_p2_protocol_verify_m20_v1(const spx_p2_show *show,
     {
         return SPX_P2_FLOW_ERR_INPUT;
     }
-    if (spx_p2_show_verify_m20(show, pk_sig, pk_e, pk_e_len, m_pub, m_pub_len) != 0)
+    if (spx_p2_show_verify_statement_bound(show, pk_sig, pk_e, pk_e_len, m_pub, m_pub_len) != 0)
     {
 #ifndef SPX_P2_USE_RUST_STARK
         return SPX_P2_FLOW_ERR_BACKEND;

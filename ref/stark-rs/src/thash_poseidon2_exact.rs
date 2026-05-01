@@ -29,9 +29,6 @@ const POSEIDON2_TRACE_WIDTH: usize = 15;
 const POSEIDON2_TRANSITION_CONSTRAINTS: usize = 17;
 const POSEIDON2_BOUNDARY_ASSERTIONS: usize = 21;
 const POSEIDON2_PERIOD: usize = 32;
-const POSEIDON2_REQUIRED_ROWS: usize = 96;
-const POSEIDON2_OUTPUT_ROW: usize = 95;
-const POSEIDON2_DONE_ROW: usize = POSEIDON2_OUTPUT_ROW;
 const GOLDILOCKS_HALF: u64 = 0x7fffffff80000001;
 const GOLDILOCKS_P: u64 = 0xffffffff00000001;
 
@@ -123,6 +120,7 @@ struct Poseidon2ExactPublicInputs {
     input_mix: BaseElement,
     output_mix: BaseElement,
     output_row: BaseElement,
+    final_perm_idx: BaseElement,
     initial_state: [BaseElement; POSEIDON2_T],
     block2: [BaseElement; POSEIDON2_RATE_WORDS],
     block3: [BaseElement; POSEIDON2_RATE_WORDS],
@@ -131,7 +129,7 @@ struct Poseidon2ExactPublicInputs {
 
 impl ToElements<BaseElement> for Poseidon2ExactPublicInputs {
     fn to_elements(&self) -> Vec<BaseElement> {
-        let mut out = vec![self.input_mix, self.output_mix, self.output_row];
+        let mut out = vec![self.input_mix, self.output_mix, self.output_row, self.final_perm_idx];
         out.extend_from_slice(&self.initial_state);
         out.extend_from_slice(&self.block2);
         out.extend_from_slice(&self.block3);
@@ -143,6 +141,7 @@ impl ToElements<BaseElement> for Poseidon2ExactPublicInputs {
 struct Poseidon2ExactAir {
     context: AirContext<BaseElement>,
     output_row: usize,
+    final_perm_idx: BaseElement,
     initial_state: [BaseElement; POSEIDON2_T],
     block2: [BaseElement; POSEIDON2_RATE_WORDS],
     block3: [BaseElement; POSEIDON2_RATE_WORDS],
@@ -232,8 +231,21 @@ fn poseidon2_round(state: &mut [BaseElement; POSEIDON2_T], round: usize) {
     }
 }
 
-fn poseidon2_exact_work_units() -> (u32, u32) {
-    (3, 90)
+fn poseidon2_required_rows(final_perm_idx: usize) -> usize {
+    32 * (final_perm_idx + 1)
+}
+
+fn poseidon2_done_row(final_perm_idx: usize) -> usize {
+    poseidon2_required_rows(final_perm_idx) - 1
+}
+
+fn poseidon2_output_row(final_perm_idx: usize) -> usize {
+    poseidon2_done_row(final_perm_idx)
+}
+
+fn poseidon2_exact_work_units(final_perm_idx: usize) -> (u32, u32) {
+    let primitive_calls = (final_perm_idx + 1) as u32;
+    (primitive_calls, primitive_calls * POSEIDON2_ROUNDS as u32)
 }
 
 fn gold_add_u64(a: u64, b: u64) -> u64 {
@@ -282,8 +294,9 @@ fn poseidon2_round_u64(state: &mut [u64; POSEIDON2_T], round: usize) {
     }
 }
 
-fn reference_states(pub_inputs: &Poseidon2ExactPublicInputs) -> [[u64; POSEIDON2_T]; 3] {
-    let mut out = [[0u64; POSEIDON2_T]; 3];
+fn reference_states(pub_inputs: &Poseidon2ExactPublicInputs) -> Vec<[u64; POSEIDON2_T]> {
+    let perm_count = pub_inputs.final_perm_idx.as_int() as usize + 1;
+    let mut out = vec![[0u64; POSEIDON2_T]; perm_count];
     let mut state = [0u64; POSEIDON2_T];
     for i in 0..POSEIDON2_RATE_WORDS {
         state[i] = pub_inputs.initial_state[i].as_int();
@@ -292,25 +305,30 @@ fn reference_states(pub_inputs: &Poseidon2ExactPublicInputs) -> [[u64; POSEIDON2
         poseidon2_permute_c(state.as_mut_ptr());
     }
     out[0] = state;
-    for i in 0..POSEIDON2_RATE_WORDS {
-        state[i] = gold_add_u64(state[i], pub_inputs.block2[i].as_int());
+    if perm_count >= 2 {
+        for i in 0..POSEIDON2_RATE_WORDS {
+            state[i] = gold_add_u64(state[i], pub_inputs.block2[i].as_int());
+        }
+        unsafe {
+            poseidon2_permute_c(state.as_mut_ptr());
+        }
+        out[1] = state;
     }
-    unsafe {
-        poseidon2_permute_c(state.as_mut_ptr());
+    if perm_count >= 3 {
+        for i in 0..POSEIDON2_RATE_WORDS {
+            state[i] = gold_add_u64(state[i], pub_inputs.block3[i].as_int());
+        }
+        unsafe {
+            poseidon2_permute_c(state.as_mut_ptr());
+        }
+        out[2] = state;
     }
-    out[1] = state;
-    for i in 0..POSEIDON2_RATE_WORDS {
-        state[i] = gold_add_u64(state[i], pub_inputs.block3[i].as_int());
-    }
-    unsafe {
-        poseidon2_permute_c(state.as_mut_ptr());
-    }
-    out[2] = state;
     out
 }
 
-fn model_states_u64(pub_inputs: &Poseidon2ExactPublicInputs) -> [[u64; POSEIDON2_T]; 3] {
-    let mut out = [[0u64; POSEIDON2_T]; 3];
+fn model_states_u64(pub_inputs: &Poseidon2ExactPublicInputs) -> Vec<[u64; POSEIDON2_T]> {
+    let perm_count = pub_inputs.final_perm_idx.as_int() as usize + 1;
+    let mut out = vec![[0u64; POSEIDON2_T]; perm_count];
     let mut state = [0u64; POSEIDON2_T];
     for i in 0..POSEIDON2_RATE_WORDS {
         state[i] = pub_inputs.initial_state[i].as_int();
@@ -319,25 +337,30 @@ fn model_states_u64(pub_inputs: &Poseidon2ExactPublicInputs) -> [[u64; POSEIDON2
         poseidon2_round_u64(&mut state, round);
     }
     out[0] = state;
-    for i in 0..POSEIDON2_RATE_WORDS {
-        state[i] = gold_add_u64(state[i], pub_inputs.block2[i].as_int());
+    if perm_count >= 2 {
+        for i in 0..POSEIDON2_RATE_WORDS {
+            state[i] = gold_add_u64(state[i], pub_inputs.block2[i].as_int());
+        }
+        for round in 0..POSEIDON2_ROUNDS {
+            poseidon2_round_u64(&mut state, round);
+        }
+        out[1] = state;
     }
-    for round in 0..POSEIDON2_ROUNDS {
-        poseidon2_round_u64(&mut state, round);
+    if perm_count >= 3 {
+        for i in 0..POSEIDON2_RATE_WORDS {
+            state[i] = gold_add_u64(state[i], pub_inputs.block3[i].as_int());
+        }
+        for round in 0..POSEIDON2_ROUNDS {
+            poseidon2_round_u64(&mut state, round);
+        }
+        out[2] = state;
     }
-    out[1] = state;
-    for i in 0..POSEIDON2_RATE_WORDS {
-        state[i] = gold_add_u64(state[i], pub_inputs.block3[i].as_int());
-    }
-    for round in 0..POSEIDON2_ROUNDS {
-        poseidon2_round_u64(&mut state, round);
-    }
-    out[2] = state;
     out
 }
 
-fn model_states_field(pub_inputs: &Poseidon2ExactPublicInputs) -> [[u64; POSEIDON2_T]; 3] {
-    let mut out = [[0u64; POSEIDON2_T]; 3];
+fn model_states_field(pub_inputs: &Poseidon2ExactPublicInputs) -> Vec<[u64; POSEIDON2_T]> {
+    let perm_count = pub_inputs.final_perm_idx.as_int() as usize + 1;
+    let mut out = vec![[0u64; POSEIDON2_T]; perm_count];
     let mut state = [BaseElement::ZERO; POSEIDON2_T];
     state[..POSEIDON2_RATE_WORDS].copy_from_slice(&pub_inputs.initial_state[..POSEIDON2_RATE_WORDS]);
     for round in 0..POSEIDON2_ROUNDS {
@@ -346,23 +369,27 @@ fn model_states_field(pub_inputs: &Poseidon2ExactPublicInputs) -> [[u64; POSEIDO
     for i in 0..POSEIDON2_T {
         out[0][i] = state[i].as_int();
     }
-    for i in 0..POSEIDON2_RATE_WORDS {
-        state[i] += pub_inputs.block2[i];
+    if perm_count >= 2 {
+        for i in 0..POSEIDON2_RATE_WORDS {
+            state[i] += pub_inputs.block2[i];
+        }
+        for round in 0..POSEIDON2_ROUNDS {
+            poseidon2_round(&mut state, round);
+        }
+        for i in 0..POSEIDON2_T {
+            out[1][i] = state[i].as_int();
+        }
     }
-    for round in 0..POSEIDON2_ROUNDS {
-        poseidon2_round(&mut state, round);
-    }
-    for i in 0..POSEIDON2_T {
-        out[1][i] = state[i].as_int();
-    }
-    for i in 0..POSEIDON2_RATE_WORDS {
-        state[i] += pub_inputs.block3[i];
-    }
-    for round in 0..POSEIDON2_ROUNDS {
-        poseidon2_round(&mut state, round);
-    }
-    for i in 0..POSEIDON2_T {
-        out[2][i] = state[i].as_int();
+    if perm_count >= 3 {
+        for i in 0..POSEIDON2_RATE_WORDS {
+            state[i] += pub_inputs.block3[i];
+        }
+        for round in 0..POSEIDON2_ROUNDS {
+            poseidon2_round(&mut state, round);
+        }
+        for i in 0..POSEIDON2_T {
+            out[2][i] = state[i].as_int();
+        }
     }
     out
 }
@@ -370,13 +397,12 @@ fn model_states_field(pub_inputs: &Poseidon2ExactPublicInputs) -> [[u64; POSEIDO
 fn derive_public_inputs(inst: &SpxThashBenchInstanceRawV1) -> Option<Poseidon2ExactPublicInputs> {
     if inst.backend_id != SPX_THASH_BENCH_BACKEND_POSEIDON2_V1 ||
         inst.mode != SPX_THASH_BENCH_MODE_POSEIDON2_EXACT_V1 ||
-        inst.inblocks != 2 ||
+        !(inst.inblocks == 1 || inst.inblocks == 2) ||
         inst.pub_seed.is_null() ||
         inst.addr.is_null() ||
         inst.input.is_null() ||
         inst.expected_output.is_null() ||
-        inst.input_len != 2 * SPX_N ||
-        inst.rounds < POSEIDON2_REQUIRED_ROWS as u32 ||
+        inst.input_len != inst.inblocks as usize * SPX_N ||
         !inst.rounds.is_power_of_two()
     {
         return None;
@@ -389,7 +415,11 @@ fn derive_public_inputs(inst: &SpxThashBenchInstanceRawV1) -> Option<Poseidon2Ex
     let addr_bytes = u32_words_as_bytes(addr_words);
 
     let mut stream = Vec::with_capacity(1 + SPX_N + SPX_ADDR_BYTES + inst.input_len);
-    stream.push(0x12);
+    stream.push(match inst.inblocks {
+        1 => 0x11,
+        2 => 0x12,
+        _ => return None,
+    });
     stream.extend_from_slice(pub_seed);
     stream.extend_from_slice(&addr_bytes);
     stream.extend_from_slice(input);
@@ -417,12 +447,22 @@ fn derive_public_inputs(inst: &SpxThashBenchInstanceRawV1) -> Option<Poseidon2Ex
     }
     blocks.push(padded);
 
-    if blocks.len() != 3 {
+    if !(blocks.len() == 2 || blocks.len() == 3) {
+        return None;
+    }
+    let final_perm_idx = blocks.len() - 1;
+    if inst.rounds < poseidon2_required_rows(final_perm_idx) as u32 {
         return None;
     }
 
     let mut initial_state = [BaseElement::ZERO; POSEIDON2_T];
     initial_state[..POSEIDON2_RATE_WORDS].copy_from_slice(&blocks[0]);
+    let block2 = blocks[1];
+    let block3 = if blocks.len() == 3 {
+        blocks[2]
+    } else {
+        [BaseElement::ZERO; POSEIDON2_RATE_WORDS]
+    };
 
     let mut output_lanes = [BaseElement::ZERO; 3];
     for lane in 0..3 {
@@ -432,10 +472,11 @@ fn derive_public_inputs(inst: &SpxThashBenchInstanceRawV1) -> Option<Poseidon2Ex
     Some(Poseidon2ExactPublicInputs {
         input_mix: mix_bytes(&[input]),
         output_mix: mix_bytes(&[expected_output]),
-        output_row: BaseElement::new(POSEIDON2_OUTPUT_ROW as u64),
+        output_row: BaseElement::new(poseidon2_output_row(final_perm_idx) as u64),
+        final_perm_idx: BaseElement::new(final_perm_idx as u64),
         initial_state,
-        block2: blocks[1],
-        block3: blocks[2],
+        block2,
+        block3,
         output_lanes,
     })
 }
@@ -454,6 +495,7 @@ fn build_trace(pub_inputs: &Poseidon2ExactPublicInputs, trace_len: usize) -> Tra
                 return;
             }
             let phase = state[13].as_int() as usize;
+            let final_perm_idx = pub_inputs.final_perm_idx.as_int();
             if phase < POSEIDON2_ROUNDS {
                 let mut lanes = [BaseElement::ZERO; POSEIDON2_T];
                 lanes.copy_from_slice(&state[..POSEIDON2_T]);
@@ -466,7 +508,7 @@ fn build_trace(pub_inputs: &Poseidon2ExactPublicInputs, trace_len: usize) -> Tra
                         state[lane] += pub_inputs.block2[lane];
                     }
                     state[12] = BaseElement::ONE;
-                } else if state[12] == BaseElement::ONE {
+                } else if state[12] == BaseElement::ONE && final_perm_idx == 2 {
                     for lane in 0..POSEIDON2_RATE_WORDS {
                         state[lane] += pub_inputs.block3[lane];
                     }
@@ -484,11 +526,14 @@ fn build_trace(pub_inputs: &Poseidon2ExactPublicInputs, trace_len: usize) -> Tra
 }
 
 fn validate_trace(trace: &TraceTable<BaseElement>, pub_inputs: &Poseidon2ExactPublicInputs) -> Result<(), String> {
-    if trace.length() <= POSEIDON2_OUTPUT_ROW {
+    let output_row = pub_inputs.output_row.as_int() as usize;
+    let final_perm_idx = pub_inputs.final_perm_idx.as_int() as usize;
+    let done_row = poseidon2_done_row(final_perm_idx);
+    if trace.length() <= output_row {
         return Err(format!(
             "trace too short: len={} output_row={}",
             trace.length(),
-            POSEIDON2_OUTPUT_ROW
+            output_row
         ));
     }
 
@@ -508,31 +553,33 @@ fn validate_trace(trace: &TraceTable<BaseElement>, pub_inputs: &Poseidon2ExactPu
     if trace.get(14, 0) != BaseElement::ZERO {
         return Err(format!("boundary init done mismatch got={}", trace.get(14, 0)));
     }
-    if trace.get(12, POSEIDON2_OUTPUT_ROW) != BaseElement::new(2) {
+    if trace.get(12, output_row) != pub_inputs.final_perm_idx {
         return Err(format!(
             "boundary output perm_idx mismatch row={} got={}",
-            POSEIDON2_OUTPUT_ROW,
-            trace.get(12, POSEIDON2_OUTPUT_ROW)
+            output_row,
+            trace.get(12, output_row)
         ));
     }
-    if trace.get(13, POSEIDON2_OUTPUT_ROW) != BaseElement::new(31) {
+    if trace.get(13, output_row) != BaseElement::new(31) {
         return Err(format!(
             "boundary output phase mismatch row={} got={}",
-            POSEIDON2_OUTPUT_ROW,
-            trace.get(13, POSEIDON2_OUTPUT_ROW)
+            output_row,
+            trace.get(13, output_row)
         ));
     }
-    if trace.get(14, POSEIDON2_DONE_ROW) != BaseElement::ONE {
+    if trace.get(14, done_row) != BaseElement::ONE {
         return Err(format!(
             "boundary done mismatch row={} got={}",
-            POSEIDON2_DONE_ROW,
-            trace.get(14, POSEIDON2_DONE_ROW)
+            done_row,
+            trace.get(14, done_row)
         ));
     }
     let ref_states = reference_states(pub_inputs);
     let model_states = model_states_u64(pub_inputs);
     let field_states = model_states_field(pub_inputs);
-    let ref_rows = [30usize, 62usize, 94usize];
+    let ref_rows = (0..=final_perm_idx)
+        .map(|perm_idx| 30usize + perm_idx * 32usize)
+        .collect::<Vec<_>>();
     for (perm_idx, _) in ref_rows.iter().enumerate() {
         for lane in 0..POSEIDON2_T {
             if model_states[perm_idx][lane] != ref_states[perm_idx][lane] {
@@ -573,12 +620,12 @@ fn validate_trace(trace: &TraceTable<BaseElement>, pub_inputs: &Poseidon2ExactPu
     }
 
     for lane in 0..3 {
-        let got = trace.get(lane, POSEIDON2_OUTPUT_ROW);
+        let got = trace.get(lane, output_row);
         let want = pub_inputs.output_lanes[lane];
         if got != want {
             return Err(format!(
                 "boundary output mismatch lane={} row={} got={} want={}",
-                lane, POSEIDON2_OUTPUT_ROW, got, want
+                lane, output_row, got, want
             ));
         }
     }
@@ -590,7 +637,8 @@ fn validate_trace(trace: &TraceTable<BaseElement>, pub_inputs: &Poseidon2ExactPu
             POSEIDON2_BOUNDARY_ASSERTIONS,
             proof_options(),
         ),
-        output_row: POSEIDON2_OUTPUT_ROW,
+        output_row,
+        final_perm_idx: pub_inputs.final_perm_idx,
         initial_state: pub_inputs.initial_state,
         block2: pub_inputs.block2,
         block3: pub_inputs.block3,
@@ -613,6 +661,13 @@ fn validate_trace(trace: &TraceTable<BaseElement>, pub_inputs: &Poseidon2ExactPu
         let sel0 = (perm - one) * (perm - two) * half;
         let sel1 = BaseElement::ZERO - perm * (perm - two);
         let sel2 = perm * (perm - one) * half;
+        let use_block3 = if final_perm_idx == 2 {
+            BaseElement::ONE
+        } else {
+            BaseElement::ZERO
+        };
+        let absorb_increment = sel0 + use_block3 * sel1;
+        let done_selector = sel2 + (BaseElement::ONE - use_block3) * sel1;
 
         for lane in 0..POSEIDON2_T {
             let cur = trace.get(lane, row);
@@ -653,7 +708,7 @@ fn validate_trace(trace: &TraceTable<BaseElement>, pub_inputs: &Poseidon2ExactPu
         }
 
         let next_perm = trace.get(12, row + 1);
-        let expect_perm = done * perm + (one - done) * (perm + absorb_flag * (sel0 + sel1));
+        let expect_perm = done * perm + (one - done) * (perm + absorb_flag * absorb_increment);
         if next_perm != expect_perm {
             return Err(format!(
                 "perm_idx mismatch row={} got={} want={} absorb_flag={} perm={} done={}",
@@ -677,7 +732,7 @@ fn validate_trace(trace: &TraceTable<BaseElement>, pub_inputs: &Poseidon2ExactPu
                 row, next_phase, expect_phase, full_flag, internal_flag, absorb_flag, done
             ));
         }
-        let expect_done = done + (one - done) * absorb_flag * sel2;
+        let expect_done = done + (one - done) * absorb_flag * done_selector;
         if next_done != expect_done {
             return Err(format!(
                 "done mismatch row={} got={} want={} absorb_flag={} perm={}",
@@ -721,6 +776,7 @@ impl Air for Poseidon2ExactAir {
         Self {
             context: AirContext::new(trace_info, degrees, POSEIDON2_BOUNDARY_ASSERTIONS, options),
             output_row: pub_inputs.output_row.as_int() as usize,
+            final_perm_idx: pub_inputs.final_perm_idx,
             initial_state: pub_inputs.initial_state,
             block2: pub_inputs.block2,
             block3: pub_inputs.block3,
@@ -743,6 +799,7 @@ impl Air for Poseidon2ExactAir {
         let one = E::ONE;
         let two = E::from(BaseElement::new(2));
         let half = E::from(BaseElement::new(GOLDILOCKS_HALF));
+        let use_block3 = E::from(self.final_perm_idx - BaseElement::ONE);
         let perm = current[12];
         let phase = current[13];
         let done = current[14];
@@ -773,7 +830,7 @@ impl Air for Poseidon2ExactAir {
             let full_next = full_sum + full_s[i];
             let internal_next = internal_sum + periodic_values[15 + i] * internal_s[i];
             let absorb_delta = if i < POSEIDON2_RATE_WORDS {
-                sel0 * E::from(self.block2[i]) + sel1 * E::from(self.block3[i])
+                sel0 * E::from(self.block2[i]) + use_block3 * sel1 * E::from(self.block3[i])
             } else {
                 E::ZERO
             };
@@ -785,26 +842,29 @@ impl Air for Poseidon2ExactAir {
             result[i] = done * (next[i] - current[i]) + (E::ONE - done) * (next[i] - normal);
         }
 
+        let absorb_increment = sel0 + use_block3 * sel1;
+        let done_selector = sel2 + (E::ONE - use_block3) * sel1;
         result[12] = done * (next[12] - perm)
-            + (E::ONE - done) * (next[12] - (perm + absorb_flag * (sel0 + sel1)));
+            + (E::ONE - done) * (next[12] - (perm + absorb_flag * absorb_increment));
         result[13] = perm * (perm - one) * (perm - two);
         let normal_phase = idle_flag * E::ZERO + (E::ONE - idle_flag) * (phase + E::ONE);
         result[14] = done * (next[13] - phase) + (E::ONE - done) * (next[13] - normal_phase);
-        result[15] = next[14] - (done + (E::ONE - done) * absorb_flag * sel2);
+        result[15] = next[14] - (done + (E::ONE - done) * absorb_flag * done_selector);
         result[16] = done * (done - one);
     }
 
     fn get_assertions(&self) -> Vec<Assertion<Self::BaseField>> {
+        let done_row = poseidon2_done_row(self.final_perm_idx.as_int() as usize);
         let mut assertions = Vec::new();
         for lane in 0..POSEIDON2_T {
             assertions.push(Assertion::single(lane, 0, self.initial_state[lane]));
         }
         assertions.push(Assertion::single(12, 0, BaseElement::ZERO));
-        assertions.push(Assertion::single(12, self.output_row, BaseElement::new(2)));
+        assertions.push(Assertion::single(12, self.output_row, self.final_perm_idx));
         assertions.push(Assertion::single(13, 0, BaseElement::ZERO));
         assertions.push(Assertion::single(13, self.output_row, BaseElement::new(31)));
         assertions.push(Assertion::single(14, 0, BaseElement::ZERO));
-        assertions.push(Assertion::single(14, POSEIDON2_DONE_ROW, BaseElement::ONE));
+        assertions.push(Assertion::single(14, done_row, BaseElement::ONE));
         assertions.push(Assertion::single(0, self.output_row, self.output_lanes[0]));
         assertions.push(Assertion::single(1, self.output_row, self.output_lanes[1]));
         assertions.push(Assertion::single(2, self.output_row, self.output_lanes[2]));
@@ -954,7 +1014,8 @@ pub unsafe extern "C" fn spx_p2_rust_run_poseidon2_thash_exact_v1(
     }
     let verify_ms = verify_begin.elapsed().as_secs_f64() * 1000.0;
     let stats = &mut *out_stats;
-    let (exact_primitive_calls, exact_round_rows) = poseidon2_exact_work_units();
+    let (exact_primitive_calls, exact_round_rows) =
+        poseidon2_exact_work_units(pub_inputs.final_perm_idx.as_int() as usize);
 
     *stats = SpxThashBenchStatsV1 {
         backend_id: inst_ref.backend_id,

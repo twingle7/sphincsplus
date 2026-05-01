@@ -41,7 +41,7 @@ endif
 ifneq (,$(findstring poseidon2,$(PARAMS)))
 	CFLAGS += -DSPX_BACKEND_POSEIDON2=1
 	SOURCES += fips202.c poseidon2.c hash_poseidon2.c thash_poseidon2_simple.c hash_poseidon2_adapter.c bsig_poseidon2_v0.c show/show_poseidon2_v1.c show/show_poseidon2.c show/protocol_poseidon2_v1.c stark/witness_builder.c stark/air_poseidon2_perm.c stark/air_poseidon2_sponge.c stark/air_hashcall.c stark/air_verify_minimal.c stark/air_verify_full.c stark/pi_f_format_v1.c stark/pi_f_format_v2.c stark/pi_f_format.c stark/prover_v1.c stark/verifier_v1.c stark/relation_migration_v1.c stark/ffi_v1.c stark/ffi.c stark/stats_v1.c stark/stats.c
-	HEADERS += fips202.h poseidon2.h poseidon2_params_goldilocks_profile.h hash_poseidon2_adapter.h bsig_poseidon2_v0.h show/show_poseidon2_v1.h show/show_poseidon2.h show/protocol_poseidon2_v1.h show/protocol_poseidon2.h stark/witness_format.h stark/air_poseidon2_perm.h stark/air_poseidon2_sponge.h stark/air_hashcall.h stark/air_verify_minimal.h stark/air_verify_full.h stark/pi_f_format_v1.h stark/pi_f_format_v2.h stark/pi_f_format.h stark/prover_v1.h stark/verifier_v1.h stark/relation_migration_v1.h stark/ffi_v1.h stark/ffi.h stark/stats_v1.h stark/stats.h stark/thash_bench.h
+	HEADERS += fips202.h poseidon2.h poseidon2_params_goldilocks_profile.h hash_poseidon2_adapter.h bsig_poseidon2_v0.h show/show_poseidon2_v1.h show/show_poseidon2.h show/protocol_poseidon2_v1.h show/protocol_poseidon2.h stark/witness_format.h stark/air_poseidon2_perm.h stark/air_poseidon2_sponge.h stark/air_hashcall.h stark/air_verify_minimal.h stark/air_verify_full.h stark/pi_f_format_v1.h stark/pi_f_format_v2.h stark/pi_f_format.h stark/show_proof_format.h stark/prover_v1.h stark/verifier_v1.h stark/relation_migration_v1.h stark/ffi_v1.h stark/ffi.h stark/stats_v1.h stark/stats.h stark/thash_bench.h
 endif
 
 DET_SOURCES = $(SOURCES:randombytes.%=rng.%)
@@ -65,23 +65,22 @@ POSEIDON2_TESTS = \
 		test/poseidon2_show_v1 \
 		test/poseidon2_fischlin_blind_e2e \
 		test/poseidon2_fischlin_spec_flow_v1 \
-		test/poseidon2_fischlin_strict_public_spec \
+		test/poseidon2_fischlin_statement_bound_spec \
 		test/poseidon2_protocol_flow_demo_v1 \
-		test/poseidon2_protocol_flow_strict_public \
+		test/poseidon2_protocol_flow_statement_bound \
 		test/poseidon2_roles_interaction \
 		test/poseidon2_show_m18_route_isolation \
 		test/poseidon2_trace_replay_binding \
 		test/poseidon2_statement_binding \
 		test/poseidon2_verify_full_guard \
 		test/poseidon2_cross_backend_consistency \
-		test/poseidon2_pi_f_format \
+		test/poseidon2_show_proof_format \
 		test/poseidon2_stark_ffi_v1 \
 		test/poseidon2_stark_strict_core_enforcement \
 		test/poseidon2_stark_stats \
 		test/thash_backend_stark_compare
 
-BENCHMARKS = test/benchmark
-POSEIDON2_BENCHMARKS = test/poseidon2_protocol_benchmark_v1 test/poseidon2_protocol_benchmark_strict_public
+POSEIDON2_BENCHMARKS = test/poseidon2_protocol_benchmark_v1 test/poseidon2_protocol_benchmark_statement_bound
 
 ifneq (,$(findstring poseidon2,$(PARAMS)))
 	TESTS += $(POSEIDON2_TESTS)
@@ -120,7 +119,19 @@ test/poseidon2_protocol_flow_strict_public: test/poseidon2_protocol_flow_demo_v1
 test/poseidon2_fischlin_strict_public_spec: test/poseidon2_fischlin_spec_flow_v1.c $(SOURCES) $(HEADERS) $(LINK_EXTRA_DEPS)
 	$(CC) $(CFLAGS) -o $@ $(SOURCES) $< $(LDLIBS)
 
+test/poseidon2_fischlin_statement_bound_spec: test/poseidon2_fischlin_spec_flow_v1.c $(SOURCES) $(HEADERS) $(LINK_EXTRA_DEPS)
+	$(CC) $(CFLAGS) -o $@ $(SOURCES) $< $(LDLIBS)
+
 test/poseidon2_protocol_benchmark_strict_public: test/poseidon2_protocol_benchmark_v1.c $(SOURCES) $(HEADERS) $(LINK_EXTRA_DEPS)
+	$(CC) $(CFLAGS) -o $@ $(SOURCES) $< $(LDLIBS)
+
+test/poseidon2_protocol_benchmark_statement_bound: test/poseidon2_protocol_benchmark_v1.c $(SOURCES) $(HEADERS) $(LINK_EXTRA_DEPS)
+	$(CC) $(CFLAGS) -o $@ $(SOURCES) $< $(LDLIBS)
+
+test/poseidon2_protocol_flow_statement_bound: test/poseidon2_protocol_flow_demo_v1.c $(SOURCES) $(HEADERS) $(LINK_EXTRA_DEPS)
+	$(CC) $(CFLAGS) -o $@ $(SOURCES) $< $(LDLIBS)
+
+test/poseidon2_show_proof_format: test/poseidon2_pi_f_format.c $(SOURCES) $(HEADERS) $(LINK_EXTRA_DEPS)
 	$(CC) $(CFLAGS) -o $@ $(SOURCES) $< $(LDLIBS)
 
 test/%: test/%.c $(SOURCES) $(HEADERS) $(LINK_EXTRA_DEPS)

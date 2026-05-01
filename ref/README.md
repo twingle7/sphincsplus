@@ -14,7 +14,7 @@
   - C 侧 witness、格式、FFI、统计与兼容校验层。
   - 新代码优先包含：
     - `stark/ffi.h`
-    - `stark/pi_f_format.h`
+    - `stark/show_proof_format.h`
     - `stark/stats.h`
 - `stark-rs/`
   - Rust STARK 后端，实现当前 strict 主链使用的真实 prove/verify。
@@ -48,14 +48,20 @@
 - Show:
   - `spx_p2_show_prove()`
   - `spx_p2_show_verify()`
+  - `spx_p2_show_prove_encryption_bound()`
+  - `spx_p2_show_verify_encryption_bound()`
+  - `spx_p2_show_prove_statement_bound()`
+  - `spx_p2_show_verify_statement_bound()`
 - Protocol flow:
   - `spx_p2_issue_request()`
   - `spx_p2_issue_sign()`
   - `spx_p2_unblind()`
   - `spx_p2_protocol_show()`
   - `spx_p2_protocol_verify()`
-  - `spx_p2_protocol_show_strict_public()`
-  - `spx_p2_protocol_verify_strict_public()`
+  - `spx_p2_protocol_show_encryption_bound()`
+  - `spx_p2_protocol_verify_encryption_bound()`
+  - `spx_p2_protocol_show_statement_bound()`
+  - `spx_p2_protocol_verify_statement_bound()`
 - STARK FFI:
   - `spx_p2_ffi_generate_pi_f()`
   - `spx_p2_ffi_verify_pi_f()`

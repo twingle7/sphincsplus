@@ -6,7 +6,7 @@
 #include "../hash_poseidon2_adapter.h"
 #include "../show/protocol_poseidon2.h"
 #include "../show/show_poseidon2.h"
-#include "../stark/pi_f_format.h"
+#include "../stark/show_proof_format.h"
 
 static uint32_t load_u32_le(const uint8_t in[4])
 {
@@ -122,12 +122,12 @@ int main(void)
         return 1;
     }
     magic = load_u32_le(show_obj.pi_f);
-    if (magic != SPX_P2_PI_F_MAGIC)
+    if (magic != SPX_P2_SHOW_PROOF_MAGIC)
     {
-        printf("FAIL: proof is not final pi_F format\n");
+        printf("FAIL: proof is not final show-proof format\n");
         return 1;
     }
-    printf("[Verifier] proof format: final(pi_F_v2)\n");
+    printf("[Verifier] proof format: final(show_proof)\n");
 
     printf("[Verifier] negative test: tamper public_ctx then verify should reject\n");
     show_obj.public_ctx[0] ^= 1u;

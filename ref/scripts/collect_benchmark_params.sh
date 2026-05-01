@@ -23,8 +23,8 @@ RUNS_SIGNVERIFY="${RUNS_SIGNVERIFY:-1}"
 RUNS_STARK="${RUNS_STARK:-1}"
 ENABLE_STARK="${ENABLE_STARK:-1}"
 ENABLE_SIGNVERIFY="${ENABLE_SIGNVERIFY:-1}"
-BENCH_TIMEOUT_SEC="${BENCH_TIMEOUT_SEC:-900}"
-STARK_TIMEOUT_SEC="${STARK_TIMEOUT_SEC:-300}"
+BENCH_TIMEOUT_SEC="${BENCH_TIMEOUT_SEC:-1800}"
+STARK_TIMEOUT_SEC="${STARK_TIMEOUT_SEC:-1800}"
 HEARTBEAT_SEC="${HEARTBEAT_SEC:-15}"
 PARAMS_NAME="sphincs-poseidon2-searchtmp"
 
@@ -224,7 +224,11 @@ if [[ "$ENABLE_STARK" == "1" ]]; then
 fi
 
 echo "[M4] collecting benchmarks from: $INPUT_CSV"
-echo "[M4] top_k=$TOP_K sign_runs=$RUNS_SIGNVERIFY stark_runs=$RUNS_STARK enable_stark=$ENABLE_STARK enable_signverify=$ENABLE_SIGNVERIFY"
+if [[ "${TOP_K}" =~ ^[0-9]+$ ]] && [[ "${TOP_K}" -eq 0 ]]; then
+  echo "[M4] top_k=ALL sign_runs=$RUNS_SIGNVERIFY stark_runs=$RUNS_STARK enable_stark=$ENABLE_STARK enable_signverify=$ENABLE_SIGNVERIFY"
+else
+  echo "[M4] top_k=$TOP_K sign_runs=$RUNS_SIGNVERIFY stark_runs=$RUNS_STARK enable_stark=$ENABLE_STARK enable_signverify=$ENABLE_SIGNVERIFY"
+fi
 echo "[M4] timeout(benchmark/stark)=${BENCH_TIMEOUT_SEC}s/${STARK_TIMEOUT_SEC}s heartbeat=${HEARTBEAT_SEC}s"
 
 line_no=0
@@ -236,7 +240,7 @@ while IFS=, read -r candidate_id n h d k a w q tree_height tree_bits leaf_bits w
   if [[ -z "${candidate_id:-}" ]]; then
     continue
   fi
-  if [[ "$line_no" -gt $((TOP_K + 1)) ]]; then
+  if [[ "${TOP_K}" =~ ^[0-9]+$ ]] && [[ "${TOP_K}" -gt 0 ]] && [[ "$line_no" -gt $((TOP_K + 1)) ]]; then
     break
   fi
 

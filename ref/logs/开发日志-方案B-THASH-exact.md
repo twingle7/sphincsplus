@@ -4,7 +4,7 @@
 
 ## 说明
 - 本支线使用独立 round 编号，不与主项目主线轮次合并计数。
-- 当前完整收录范围为 `2026-04-28 第 30 轮` 到 `2026-04-29 第 68 轮`。
+- 当前完整收录范围为 `2026-04-28 第 30 轮` 到 `2026-05-01 第 69 轮`。
 
 ## 2026-04-28 第 30 轮：新增 verify 路径哈希画像与跨后端约束估算对比模块
 - 改动文件：
@@ -1556,6 +1556,127 @@
 - 影响与说明：
   - 现在 Rust 后端证明与验证在 `PublicInputs` 上保持一致，`v2-strict` 路径可以验证自己生成的 proof。
   - 该修复不会改变 `pi_F_v2` 字节级格式，仅修复 prover/verify 语句不一致问题。
+
+## 2026-05-01 第 69 轮：补齐 `thash(inblocks=1)` 的 F exact 对照，并统计 `SPHINCS+` 中 `F/H` 占比
+- 改动文件：
+  - `stark-rs/src/thash_poseidon2_exact.rs`
+  - `stark-rs/src/thash_sha2_f_exact.rs`
+  - `stark-rs/src/thash_sha2_exact.rs`
+  - `stark-rs/src/lib.rs`
+  - `logs/开发日志-方案B-THASH-exact.md`
+- 改动目的：
+  - 按用户要求，优先补齐 `thash(inblocks=1)`，即 `F` 的双方 exact STARK 电路对照。
+  - 回答“`inblocks=1` 好不好做”的实现难度问题。
+  - 在同一轮中顺带统计 `SPHINCS+` 中 `F/H` 在总 `Thash` 调用里的占比，并与现有 `hash_profile_verify` 输出对齐。
+- 具体实现：
+  - `Poseidon2 F exact`：
+    - 将原先只支持 `inblocks=2` 的 `thash_poseidon2_exact.rs` 扩展为同时支持 `inblocks=1/2`。
+    - `derive_public_inputs()` 中按 `inblocks` 区分 domain tag：
+      - `1 -> 0x11 (THASH_F)`
+      - `2 -> 0x12 (THASH_H)`
+    - 将 permutation 次数从固定 `3` 次改为按 absorb block 动态决定：
+      - `F` 对应 `2` 次 permutation
+      - `H` 对应 `3` 次 permutation
+    - 修正 `output_row` 绑定到真实 done 行，避免 `F` 场景下输出边界与 phase/done 行错位。
+    - 修正 trace 本地验证中 `perm_idx / done` 的选择器公式，使其与 AIR 中 `use_block3` 分支保持一致。
+  - `SHA2 F exact`：
+    - 新增独立文件 `stark-rs/src/thash_sha2_f_exact.rs`，实现 `inblocks=1` 对应的 `SHA-256` exact 电路。
+    - 该电路采用 `4` 个 micro-step/round 的窄列设计，固定参数为：
+      - `trace_width = 65`
+      - `trace_length = 512`
+      - `transition_constraints = 112`
+      - `boundary_assertions = 3998`
+    - 新增 `prepare_sha256_f_thash_192s_inblocks1(...)`
+    - 新增 `build_sha256_f_trace_skeleton_192s_inblocks1(...)`
+    - 新增 `run_sha2_f_exact(...)`
+  - `SHA2 exact` 统一入口：
+    - 在 `thash_sha2_exact.rs` 中增加分发：
+      - `inblocks == 1 -> run_sha2_f_exact(...)`
+      - `inblocks == 2 -> 继续走原有 SHA-512 exact V2`
+  - `stark-rs/src/lib.rs`：
+    - 注册新模块 `thash_sha2_f_exact`
+- 实现难度结论：
+  - `Poseidon2 F`：
+    - 难度较低。
+    - 原因是它与现有 `Poseidon2 H exact` 共享同一套 sponge/AIR 结构，本质上只是：
+      - absorb block 数减少
+      - domain tag 改为 `F`
+      - 输出/停机边界重新对齐
+  - `SHA2 F`：
+    - 难度明显高于 `Poseidon2 F`。
+    - 原因是仓库中：
+      - `inblocks=1` 走 `SHA-256`
+      - `inblocks=2` 走 `SHA-512`
+    - 因此 `SHA2 F` 不是“改个参数”即可复用 `H` 的 exact AIR，而是需要新开一条独立的 32-bit exact 证明路径。
+- WSL 验证命令：
+  - 重新编译 Rust 库：
+    - `cd /mnt/d/Desktop/My_Sphincs+/sphincsplus/ref/stark-rs && cargo build --release`
+  - 重新链接对比程序：
+    - `cd /mnt/d/Desktop/My_Sphincs+/sphincsplus/ref && make -B PARAMS=sphincs-poseidon2-192s THASH=simple CC=gcc EXTRA_CFLAGS=-DSPX_P2_USE_RUST_STARK test/thash_backend_stark_compare`
+  - 运行 `SHA2 F exact`：
+    - `cd /mnt/d/Desktop/My_Sphincs+/sphincsplus/ref && SPX_THASH_BENCH_MODE=sha2_exact SPX_THASH_BENCH_INBLOCKS=1 SPX_THASH_BENCH_ROUNDS=64 ./test/thash_backend_stark_compare`
+  - 运行 `Poseidon2 F exact`：
+    - `cd /mnt/d/Desktop/My_Sphincs+/sphincsplus/ref && SPX_THASH_BENCH_MODE=poseidon2_exact SPX_THASH_BENCH_INBLOCKS=1 SPX_THASH_BENCH_ROUNDS=64 ./test/thash_backend_stark_compare`
+  - 补跑 `H` 基线：
+    - `cd /mnt/d/Desktop/My_Sphincs+/sphincsplus/ref && SPX_THASH_BENCH_MODE=sha2_exact SPX_THASH_BENCH_INBLOCKS=2 SPX_THASH_BENCH_ROUNDS=128 ./test/thash_backend_stark_compare`
+    - `cd /mnt/d/Desktop/My_Sphincs+/sphincsplus/ref && SPX_THASH_BENCH_MODE=poseidon2_exact SPX_THASH_BENCH_INBLOCKS=2 SPX_THASH_BENCH_ROUNDS=128 ./test/thash_backend_stark_compare`
+  - 运行 `verify` 路径画像统计：
+    - `cd /mnt/d/Desktop/My_Sphincs+/sphincsplus/ref && make -B PARAMS=sphincs-poseidon2-192s THASH=simple CC=gcc test/hash_profile_verify`
+    - `cd /mnt/d/Desktop/My_Sphincs+/sphincsplus/ref && ./test/hash_profile_verify`
+- 实测结果：`F(inblocks=1)` 优先对照
+  - `sha2_exact`：
+    - `backend=sha2 mode=sha2_exact inblocks=1 rounds=64 trace_width=65 trace_length=512 constraints=112 assertions=3998 constraint_eval_total=57344 proof_bytes=67921 prove_ms=436.598 verify_ms=24.476 exact_primitive_calls=1 exact_round_rows=256`
+  - `poseidon2_exact`：
+    - `backend=poseidon2 mode=poseidon2_exact inblocks=1 rounds=60 trace_width=15 trace_length=64 constraints=17 assertions=21 constraint_eval_total=1092 proof_bytes=27203 prove_ms=23.623 verify_ms=3.788 exact_primitive_calls=2 exact_round_rows=60`
+- 同版代码下补跑的 `H(inblocks=2)` 基线：
+  - `sha2_exact`：
+    - `backend=sha2 mode=sha2_exact inblocks=2 rounds=80 trace_width=65 trace_length=1024 constraints=139 assertions=7550 constraint_eval_total=142336 proof_bytes=72119 prove_ms=1599.820 verify_ms=69.147 exact_primitive_calls=1 exact_round_rows=640`
+  - `poseidon2_exact`：
+    - `backend=poseidon2 mode=poseidon2_exact inblocks=2 rounds=90 trace_width=15 trace_length=128 constraints=17 assertions=21 constraint_eval_total=2180 proof_bytes=30949 prove_ms=45.407 verify_ms=4.753 exact_primitive_calls=3 exact_round_rows=90`
+- 本轮对比结论：
+  - `F` 场景下，`Poseidon2 exact` 明显比 `SHA2 exact` 更轻：
+    - 列宽更小：`15 vs 65`
+    - 长度更短：`64 vs 512`
+    - 过渡约束更少：`17 vs 112`
+    - 边界断言更少：`21 vs 3998`
+    - 证明字节更小：`27203 vs 67921`
+    - 证明与验证耗时也显著更低。
+  - `Poseidon2 F` 相对 `Poseidon2 H` 的缩放关系也较平滑，说明这条 exact AIR 更适合继续扩到完整 `thash` 家族比较。
+  - `SHA2 F` 虽然已经跑通，但它与 `SHA2 H` 不是同一 primitive；后续论文或报告中应明确：
+    - `F` 比的是 `SHA-256 exact`
+    - `H` 比的是 `SHA-512 exact`
+- `SPHINCS+` 中 `F/H` 占总 `Thash` 的比例：
+  - `verify` 路径使用仓库现有 `hash_profile_verify` 实测，输出为：
+    - `thash_hist=1:2807,2:301,17:1,51:7`
+  - 对应比例为：
+    - `F(inblocks=1) = 2807 / 3116 = 90.08%`
+    - `H(inblocks=2) = 301 / 3116 = 9.66%`
+    - 其余 `T_l = 8 / 3116 = 0.26%`
+  - 同时按调用图静态展开可得到：
+    - `sign` 路径：
+      - `F = 3020288`
+      - `H = 282088`
+      - `T_l = 3585`
+      - 比例分别为 `91.36% / 8.53% / 0.11%`
+    - `keygen` 路径：
+      - `F = 391680`
+      - `H = 511`
+      - `T_l = 512`
+      - 比例分别为 `99.74% / 0.13% / 0.13%`
+- 调用关系解释：
+  - `F` 占比高的根因在于 WOTS 链步大量调用 `thash(..., 1)`，主要热点位于：
+    - `wots.c`
+    - `wotsx1.c`
+  - `H` 主要来自 FORS / Merkle 内部节点压缩，对应：
+    - `utils.c`
+    - `utilsx1.c`
+  - `T_l` 数量极少，主要来自：
+    - `WOTS pk` 横向压缩
+    - `FORS roots` 横向压缩
+- 兼容性与备注：
+  - 本轮未修改 C 侧 `thash` 语义，只是在 Rust exact 证明侧补齐 `F` 分支。
+  - `hash_profile_verify` 统计的是 `verify` 实测直方图；`sign/keygen` 的比例为按当前参数集与调用图精确展开得到。
+  - 当前 `thash(inblocks=1)` 的双方 exact 对照已具备复现实验条件，后续若要继续扩展，优先建议补一个 `sign` 专用 profile 程序，把静态推导也变成实测一行输出。
 - 验证命令（本地执行）：
   - 重新构建 Rust 库：
     - `cd ref/stark-rs && cargo build --release`

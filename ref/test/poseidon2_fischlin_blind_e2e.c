@@ -6,7 +6,7 @@
 #include "../hash_poseidon2_adapter.h"
 #include "../show/protocol_poseidon2.h"
 #include "../show/show_poseidon2.h"
-#include "../stark/pi_f_format.h"
+#include "../stark/show_proof_format.h"
 
 typedef struct
 {
@@ -131,9 +131,9 @@ int main(void)
         return 1;
     }
     magic = load_u32_le(show_a.pi_f);
-    if (magic != SPX_P2_PI_F_MAGIC)
+    if (magic != SPX_P2_SHOW_PROOF_MAGIC)
     {
-        fail("final_requires_pi_f_v2");
+        fail("final_requires_show_proof");
         return 1;
     }
 
