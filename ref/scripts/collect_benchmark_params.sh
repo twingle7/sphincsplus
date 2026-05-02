@@ -26,6 +26,7 @@ ENABLE_SIGNVERIFY="${ENABLE_SIGNVERIFY:-1}"
 BENCH_TIMEOUT_SEC="${BENCH_TIMEOUT_SEC:-1800}"
 STARK_TIMEOUT_SEC="${STARK_TIMEOUT_SEC:-1800}"
 HEARTBEAT_SEC="${HEARTBEAT_SEC:-15}"
+RESUME="${RESUME:-0}"
 PARAMS_NAME="sphincs-poseidon2-searchtmp"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -209,9 +210,24 @@ extract_stats_value() {
   echo "$line" | sed -n "s/.*${key}=\\([^ ]*\\).*/\\1/p"
 }
 
-cat > "$OUT_CSV" <<EOF
+CSV_HEADER="candidate_id,n,h,d,k,a,w,q,keygen_us_median,keygen_us_p95,keygen_us_stddev,sign_us_median,sign_us_p95,sign_us_stddev,verify_us_median,verify_us_p95,verify_us_stddev,pk_bytes,sk_bytes,sig_bytes,trace_calls,trace_lanes,witness_rows,proof_bytes,proof_magic,proof_version,preprocess_ms_median,preprocess_ms_p95,preprocess_ms_stddev,prove_core_ms_median,prove_core_ms_p95,prove_core_ms_stddev,prove_e2e_ms_median,prove_e2e_ms_p95,prove_e2e_ms_stddev,stark_verify_ms_median,stark_verify_ms_p95,stark_verify_ms_stddev,status,error"
+
+declare -A done_ids=()
+done_count=0
+
+if [[ "$RESUME" == "1" && -f "$OUT_CSV" ]]; then
+  while IFS=, read -r done_candidate_id _; do
+    if [[ "$done_candidate_id" == "candidate_id" || -z "${done_candidate_id:-}" ]]; then
+      continue
+    fi
+    done_ids["$done_candidate_id"]=1
+    done_count=$((done_count + 1))
+  done < "$OUT_CSV"
+else
+  cat > "$OUT_CSV" <<EOF
 candidate_id,n,h,d,k,a,w,q,keygen_us_median,keygen_us_p95,keygen_us_stddev,sign_us_median,sign_us_p95,sign_us_stddev,verify_us_median,verify_us_p95,verify_us_stddev,pk_bytes,sk_bytes,sig_bytes,trace_calls,trace_lanes,witness_rows,proof_bytes,proof_magic,proof_version,preprocess_ms_median,preprocess_ms_p95,preprocess_ms_stddev,prove_core_ms_median,prove_core_ms_p95,prove_core_ms_stddev,prove_e2e_ms_median,prove_e2e_ms_p95,prove_e2e_ms_stddev,stark_verify_ms_median,stark_verify_ms_p95,stark_verify_ms_stddev,status,error
 EOF
+fi
 
 if [[ ! -f "$INPUT_CSV" ]]; then
   echo "[M4] input csv not found: $INPUT_CSV" >&2
@@ -230,6 +246,9 @@ else
   echo "[M4] top_k=$TOP_K sign_runs=$RUNS_SIGNVERIFY stark_runs=$RUNS_STARK enable_stark=$ENABLE_STARK enable_signverify=$ENABLE_SIGNVERIFY"
 fi
 echo "[M4] timeout(benchmark/stark)=${BENCH_TIMEOUT_SEC}s/${STARK_TIMEOUT_SEC}s heartbeat=${HEARTBEAT_SEC}s"
+if [[ "$RESUME" == "1" ]]; then
+  echo "[M4] resume=1 existing_rows=$done_count out_csv=$OUT_CSV"
+fi
 
 line_no=0
 while IFS=, read -r candidate_id n h d k a w q tree_height tree_bits leaf_bits wots_logw wots_len1 wots_len2 wots_len fors_msg_bits fors_msg_bytes hmsg_needed_bytes pk_ref sk_ref sig_ref struct_pass reject_reason security_model target_bits poseidon2_floor_bits q_reference comb_security_bits budget_penalty_bits budget_security_bits poseidon2_security_bits claimed_security_bits security_pass security_reject_reason; do
@@ -238,6 +257,10 @@ while IFS=, read -r candidate_id n h d k a w q tree_height tree_bits leaf_bits w
     continue
   fi
   if [[ -z "${candidate_id:-}" ]]; then
+    continue
+  fi
+  if [[ "$RESUME" == "1" && -n "${done_ids[$candidate_id]:-}" ]]; then
+    echo "[M4][$candidate_id] skip existing row in $OUT_CSV"
     continue
   fi
   if [[ "${TOP_K}" =~ ^[0-9]+$ ]] && [[ "${TOP_K}" -gt 0 ]] && [[ "$line_no" -gt $((TOP_K + 1)) ]]; then

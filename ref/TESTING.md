@@ -493,6 +493,18 @@ TOP_K=0 ENABLE_STARK=1 ENABLE_SIGNVERIFY=0 RUNS_STARK=1 \
 bash scripts/run_param_signverify_global_pareto.sh
 ```
 
+若批量任务中途中断，可直接断点续跑：
+
+```bash
+# 继续 M4 全量 STARK
+bash scripts/resume_param_search.sh stark
+
+# 继续 M4-ok 的 sign/verify 补跑
+bash scripts/resume_param_search.sh signverify
+```
+
+其中 `signverify` 续跑完成后会默认自动刷新一次全局 Pareto 结果；如只想补跑、不立即分析，可设置 `RUN_PARETO_AFTER=0`。
+
 输出：
 
 - `logs/params-benchmark-v1-full.csv`
@@ -513,6 +525,12 @@ bash scripts/run_param_signverify_global_pareto.sh
 - `scripts/run_param_signverify_global_pareto.sh`
   - 作用：串联“抽取全部 `M4-ok` 候选 -> 全量补跑 `sign/verify` -> 全局 Pareto”三步。
   - 跑通支持的结论：`M5` 推荐结果来自 `M3 pass ∩ M4 ok ∩ sign/verify ok` 的全集，而不是入围子集。
+- `scripts/report_resume_progress.py`
+  - 作用：对比输入候选集与当前输出 CSV，报告已完成与剩余候选数，并可导出剩余候选清单。
+  - 跑通支持的结论：可以可靠识别长时间批量任务的断点位置与剩余工作量。
+- `scripts/resume_param_search.sh`
+  - 作用：基于已有落盘结果执行断点续跑，跳过已经写入 `OUT_CSV` 的 `candidate_id`；`signverify` 模式下默认自动刷新全局 Pareto。
+  - 跑通支持的结论：中断后可继续完成 `M4 STARK` 或 `M4-ok sign/verify` 批量任务，而无需从头重跑。
 
 ## 推荐最小验收集合
 

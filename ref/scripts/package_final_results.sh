@@ -98,6 +98,8 @@ script_files=(
   "scripts/eval_security_poseidon2.py"
   "scripts/collect_benchmark_params.sh"
   "scripts/select_m4_ok_for_signverify.py"
+  "scripts/report_resume_progress.py"
+  "scripts/resume_param_search.sh"
   "scripts/analyze_pareto_poseidon2.py"
   "scripts/run_param_signverify_global_pareto.sh"
   "scripts/plot_param_comparison.py"

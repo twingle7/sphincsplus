@@ -4,16 +4,16 @@
 #define SPX_NAMESPACE(s) SPX_##s
 
 /* Hash output length in bytes. */
-#define SPX_N 16
+#define SPX_N 24
 /* Height of the hypertree. */
 #define SPX_FULL_HEIGHT 60
 /* Number of subtree layer. */
 #define SPX_D 6
 /* FORS tree dimensions. */
-#define SPX_FORS_HEIGHT 10
+#define SPX_FORS_HEIGHT 12
 #define SPX_FORS_TREES 14
 /* Winternitz parameter. */
-#define SPX_WOTS_W 16
+#define SPX_WOTS_W 256
 
 /* Poseidon2 backend flag. */
 #define SPX_POSEIDON2 1
@@ -22,9 +22,9 @@
 #define SPX_ADDR_BYTES 32
 
 /* WOTS parameters (frozen from M2 derived metrics). */
-#define SPX_WOTS_LOGW 4
-#define SPX_WOTS_LEN1 32
-#define SPX_WOTS_LEN2 3
+#define SPX_WOTS_LOGW 8
+#define SPX_WOTS_LEN1 24
+#define SPX_WOTS_LEN2 2
 #define SPX_WOTS_LEN (SPX_WOTS_LEN1 + SPX_WOTS_LEN2)
 #define SPX_WOTS_BYTES (SPX_WOTS_LEN * SPX_N)
 #define SPX_WOTS_PK_BYTES SPX_WOTS_BYTES
