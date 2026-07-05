@@ -3,6 +3,9 @@
 本目录在原始 `SPHINCS+` reference implementation 的基础上，承载当前正在维护的
 `Poseidon2 + show/verify + STARK` 主链实现。
 
+为保持主线目录干净，论文材料、历史日志、阶段性结果和非主线资产已迁移到仓库根目录
+`_archive/` 下分类归档。
+
 ## 当前应关注的目录
 
 - `show/`
@@ -23,45 +26,37 @@
 - `scripts/`
   - 参数搜索、benchmark、结果打包脚本。
 
-## 历史兼容层
+## 当前约定
 
-- 文件名带 `_v1` 的头文件或源码仍然保留，但定位为：
-  - 历史 ABI 兼容；
-  - 低层迁移测试；
-  - 版本化格式或阶段性实验的维护入口。
-- 新增代码默认不要直接依赖这些 `_v1` 头文件，除非你明确在做：
-  - 旧 proof 格式兼容；
-  - 版本化接口回归；
-  - 低层迁移调试。
+- `show/` 与 `stark/` 下的无版本头文件是当前唯一正式入口。
+- 若某些源码文件名仍带 `_v1`，它们只表示仓库内部实现文件尚未重命名，不再代表对外版本化接口。
+- 新增代码不要再依赖已删除的 `v0` 原型或 `show_v1` 骨架测试。
 
-## 文档与结果
+## 归档位置
 
-- `logs/`
-  - 开发日志、设计说明、规范草案与阶段性实验记录。
-  - 这是“工作记录区”，不是对外 API 的真源文档。
-- `final-results-v1/`
-  - 已归档的发布材料与结果快照。
-  - 这是“交付产物区”，不是当前开发应优先修改的目录。
+- `_archive/experiment-results/logs/`
+  - 原 `ref/logs/` 的开发日志、实验日志、规范草案与阶段性结果。
+- `_archive/experiment-results/final-results-v1/`
+  - 原 `ref/final-results-v1/` 的交付快照与归档材料。
+- `_archive/paper-materials/`
+  - 原根目录论文草稿与 `ref/毕设材料/`。
+
+这些内容保留供回溯和写作使用，但都不是当前开发应优先修改的主线目录。
 
 ## 当前正式入口
 
 - Show:
   - `spx_p2_show_prove()`
   - `spx_p2_show_verify()`
-  - `spx_p2_show_prove_encryption_bound()`
-  - `spx_p2_show_verify_encryption_bound()`
   - `spx_p2_show_prove_statement_bound()`
   - `spx_p2_show_verify_statement_bound()`
 - Protocol flow:
-  - `spx_p2_issue_request()`
-  - `spx_p2_issue_sign()`
-  - `spx_p2_unblind()`
+  - `spx_p2_prepare_issue_request()`
+  - `spx_p2_issue_respond()`
+  - `spx_p2_finalize_credential()`
+  - `spx_p2_issue_finalize()`
   - `spx_p2_protocol_show()`
   - `spx_p2_protocol_verify()`
-  - `spx_p2_protocol_show_encryption_bound()`
-  - `spx_p2_protocol_verify_encryption_bound()`
-  - `spx_p2_protocol_show_statement_bound()`
-  - `spx_p2_protocol_verify_statement_bound()`
 - STARK FFI:
   - `spx_p2_ffi_generate_pi_f()`
   - `spx_p2_ffi_verify_pi_f()`
@@ -71,5 +66,8 @@
 
 ## 不再保留的内容
 
-- 早期 `deprecated/` 目录中的旧版本演示测试已经移除。
-- 若需要回溯历史演化，请查看 `logs/开发日志.md`。
+- `bsig_poseidon2_v0.*`
+- `test/poseidon2_bsig_v0.c`
+- `test/poseidon2_show_v1.c`
+- `test/poseidon2_show_v1_boundary.c`
+- 若需要回溯历史演化，请查看 `_archive/experiment-results/logs/开发日志.md`。

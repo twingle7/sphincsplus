@@ -23,7 +23,7 @@
 #include "stats_v1.h"
 #include "witness_format.h"
 
-#define SPX_P2_STATS_PI_F_MAX_BYTES (64u * 1024u)
+#define SPX_P2_STATS_PI_F_MAX_BYTES (128u * 1024u)
 
 #ifdef SPX_P2_USE_RUST_STARK
 #define SPX_P2_RUST_TRACE_WIDTH 52u

@@ -27,11 +27,11 @@ int main(void)
 {
     static spx_p2_cred_internal cred;
     static spx_p2_show show_obj;
+    spx_p2_issue_request_obj req;
+    spx_p2_issue_response_obj resp;
     uint8_t issuer_pk[CRYPTO_PUBLICKEYBYTES];
     uint8_t issuer_sk[CRYPTO_SECRETKEYBYTES];
     uint8_t pk_e[SPX_N];
-    uint8_t com[SPX_N];
-    uint8_t sigma_blind[SPX_BYTES];
     uint8_t m[24];
     uint8_t r[16];
     uint8_t omega2[SPX_N];
@@ -39,12 +39,13 @@ int main(void)
         'F', 'I', 'S', 'C', 'H', 'L', 'I', 'N',
         '-', 'D', 'E', 'M', 'O', '-', '2', '0'};
     uint8_t m_pub_bad[24];
-    size_t sigma_blind_len = 0;
     int ret;
     size_t i;
 
     memset(&cred, 0, sizeof(cred));
     memset(&show_obj, 0, sizeof(show_obj));
+    memset(&req, 0, sizeof(req));
+    memset(&resp, 0, sizeof(resp));
 
     for (i = 0; i < sizeof(m); i++)
     {
@@ -63,7 +64,7 @@ int main(void)
         omega2[i] = (uint8_t)(0xc0u + i);
     }
 
-    printf("=== Poseidon2 Fischlin Protocol Flow Demo (strict public-statement path) ===\n");
+    printf("=== Poseidon2 Fischlin Protocol Flow Demo (final statement-bound path) ===\n");
     printf("backend=%s\n", spx_p2_protocol_backend_mode());
 
     if (crypto_sign_keypair(issuer_pk, issuer_sk) != 0)
@@ -78,46 +79,42 @@ int main(void)
     print_hex_prefix(pk_e, sizeof(pk_e), 8);
     printf("\n");
 
-    ret = spx_p2_issue_request(com, m, sizeof(m), r, sizeof(r));
+    ret = spx_p2_prepare_issue_request(&req, m, sizeof(m), r, sizeof(r));
     if (ret != SPX_P2_FLOW_OK)
     {
         fail_step("Commit", ret);
         return 1;
     }
     printf("[Commit] com[0..7]=0x");
-    print_hex_prefix(com, sizeof(com), 8);
+    print_hex_prefix(req.c, sizeof(req.c), 8);
     printf(" | m_len=%llu r_len=%llu\n",
            (unsigned long long)sizeof(m),
            (unsigned long long)sizeof(r));
 
-    ret = spx_p2_issue_sign(sigma_blind, &sigma_blind_len, issuer_sk, com);
+    ret = spx_p2_issue_respond(&resp, issuer_sk, &req);
     if (ret != SPX_P2_FLOW_OK)
     {
         fail_step("Blind Sign", ret);
         return 1;
     }
     printf("[Issue] sigma_blind_len=%llu sigma_blind[0..7]=0x",
-           (unsigned long long)sigma_blind_len);
-    print_hex_prefix(sigma_blind, sigma_blind_len, 8);
+           (unsigned long long)resp.sigma_prime_len);
+    print_hex_prefix(resp.sigma_prime, resp.sigma_prime_len, 8);
     printf("\n");
 
-    ret = spx_p2_unblind(&cred, com, sigma_blind, sigma_blind_len, omega2, sizeof(omega2));
+    ret = spx_p2_finalize_credential(&cred, &req, &resp, m, sizeof(m), r, sizeof(r), omega2, sizeof(omega2));
     if (ret != SPX_P2_FLOW_OK)
     {
-        fail_step("Unblind", ret);
+        fail_step("FinalizeCredential", ret);
         return 1;
     }
-    memcpy(cred.m, m, sizeof(m));
-    cred.mlen = sizeof(m);
-    memcpy(cred.r, r, sizeof(r));
-    cred.rlen = sizeof(r);
-    printf("[Unblind] omega2_len=%llu omega2[0..7]=0x",
+    printf("[FinalizeCredential] omega2_len=%llu omega2[0..7]=0x",
            (unsigned long long)cred.omega2_len);
     print_hex_prefix(cred.omega2, cred.omega2_len, 8);
     printf("\n");
 
-    ret = spx_p2_protocol_show_statement_bound(&show_obj, issuer_pk, pk_e, sizeof(pk_e),
-                                               &cred, public_ctx, sizeof(public_ctx));
+    ret = spx_p2_protocol_show(&show_obj, issuer_pk, pk_e, sizeof(pk_e),
+                               &cred, public_ctx, sizeof(public_ctx));
     if (ret != SPX_P2_FLOW_OK)
     {
         fail_step("Show", ret);
@@ -132,7 +129,7 @@ int main(void)
            (unsigned long long)show_obj.pi_f_len,
            (unsigned long long)show_obj.m_pub_len);
 
-    ret = spx_p2_protocol_verify_statement_bound(&show_obj, issuer_pk, pk_e, sizeof(pk_e), m, sizeof(m));
+    ret = spx_p2_protocol_verify(&show_obj, issuer_pk, pk_e, sizeof(pk_e), m, sizeof(m));
     if (ret != SPX_P2_FLOW_OK)
     {
         fail_step("Verify", ret);
@@ -142,8 +139,8 @@ int main(void)
 
     memcpy(m_pub_bad, m, sizeof(m_pub_bad));
     m_pub_bad[0] ^= 1u;
-    ret = spx_p2_protocol_verify_statement_bound(&show_obj, issuer_pk, pk_e, sizeof(pk_e),
-                                                 m_pub_bad, sizeof(m_pub_bad));
+    ret = spx_p2_protocol_verify(&show_obj, issuer_pk, pk_e, sizeof(pk_e),
+                                 m_pub_bad, sizeof(m_pub_bad));
     if (ret == SPX_P2_FLOW_OK)
     {
         printf("[FAIL] negative test: tampered m_pub should reject\n");

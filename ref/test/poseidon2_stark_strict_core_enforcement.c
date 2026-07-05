@@ -7,7 +7,7 @@
 #include "../hash_poseidon2_adapter.h"
 #include "../randombytes.h"
 #include "../stark/ffi.h"
-#include "../stark/relation_migration_v1.h"
+#include "../stark/relation_migration.h"
 
 static void fail(const char *name)
 {
@@ -80,10 +80,10 @@ int main(void)
         return 1;
     }
     randombytes(omega2, SPX_N);
-    if (spx_p2_build_sigma_c_m20_pke(sigma_c, &sigma_c_len,
-                                     com, sigma_com,
-                                     pk, SPX_N,
-                                     omega2, sizeof(omega2)) != 0 ||
+    if (spx_p2_build_sigma_c_ciphertext(sigma_c, &sigma_c_len,
+                                        com, sigma_com,
+                                        pk, SPX_N,
+                                        omega2, sizeof(omega2)) != 0 ||
         sigma_c_len != 2u * SPX_N)
     {
         fail("build_sigma_c");
@@ -146,62 +146,62 @@ int main(void)
     r_bad[0] ^= 1u;
     wit_bad_r.r = r_bad;
 
-    if (spx_p2_relation_validate_strict_prove_inputs_v1(&pub, &wit) != SPX_P2_FFI_OK)
+    if (spx_p2_relation_validate_strict_prove_inputs(&pub, &wit) != SPX_P2_FFI_STATUS_OK)
     {
         fail("strict_prove_inputs_baseline");
         free(proof_buf);
         return 1;
     }
-    if (spx_p2_relation_validate_strict_verify_inputs_v1(&pub) != SPX_P2_FFI_OK)
+    if (spx_p2_relation_validate_strict_verify_inputs(&pub) != SPX_P2_FFI_STATUS_OK)
     {
         fail("strict_verify_inputs_baseline");
         free(proof_buf);
         return 1;
     }
-    if (spx_p2_relation_precheck_strict_prove_witness_v1(&pub, &wit) != SPX_P2_FFI_OK)
+    if (spx_p2_relation_precheck_strict_prove_witness(&pub, &wit) != SPX_P2_FFI_STATUS_OK)
     {
         fail("strict_prove_witness_baseline");
         free(proof_buf);
         return 1;
     }
 
-    ret = spx_p2_ffi_generate_pi_f_v1(&proof, &pub, &wit);
-    if (ret != SPX_P2_FFI_OK)
+    ret = spx_p2_ffi_generate_pi_f(&proof, &pub, &wit);
+    if (ret != SPX_P2_FFI_STATUS_OK)
     {
         printf("INFO: generate ret=%d\n", ret);
-        fail("generate_v1_with_strict_inputs");
+        fail("generate_with_strict_inputs");
         free(proof_buf);
         return 1;
     }
-    if (spx_p2_ffi_verify_pi_f_v1(&proof, &pub) != SPX_P2_FFI_OK)
+    if (spx_p2_ffi_verify_pi_f(&proof, &pub) != SPX_P2_FFI_STATUS_OK)
     {
-        fail("verify_v1_with_strict_inputs");
+        fail("verify_with_strict_inputs");
         free(proof_buf);
         return 1;
     }
 
     /* G1: Com(m_pub; r) must be bound to the prove witness. */
-    if (spx_p2_relation_validate_strict_prove_inputs_v1(&pub, &wit_bad_m) == SPX_P2_FFI_OK)
+    if (spx_p2_relation_validate_strict_prove_inputs(&pub, &wit_bad_m) == SPX_P2_FFI_STATUS_OK)
     {
         fail("g1_bad_m_should_reject_prove_inputs");
         free(proof_buf);
         return 1;
     }
-    ret = spx_p2_ffi_generate_pi_f_v1(&proof, &pub, &wit_bad_m);
-    if (ret == SPX_P2_FFI_OK)
+    ret = spx_p2_ffi_generate_pi_f(&proof, &pub, &wit_bad_m);
+    if (ret == SPX_P2_FFI_STATUS_OK)
     {
         fail("g1_bad_m_should_reject_prove");
         free(proof_buf);
         return 1;
     }
-    if (spx_p2_relation_precheck_strict_prove_witness_v1(&pub, &wit_bad_r) == SPX_P2_FFI_OK)
+    if (spx_p2_relation_precheck_strict_prove_witness(&pub, &wit_bad_r) == SPX_P2_FFI_STATUS_OK)
     {
         fail("g1_bad_r_should_reject_witness");
         free(proof_buf);
         return 1;
     }
-    ret = spx_p2_ffi_generate_pi_f_v1(&proof, &pub, &wit_bad_r);
-    if (ret == SPX_P2_FFI_OK)
+    ret = spx_p2_ffi_generate_pi_f(&proof, &pub, &wit_bad_r);
+    if (ret == SPX_P2_FFI_STATUS_OK)
     {
         fail("g1_bad_r_should_reject_prove");
         free(proof_buf);
@@ -209,43 +209,43 @@ int main(void)
     }
 
     /* G2: Verify(pk, c, sigma') must stay bound to issuer public key and blind signature. */
-    if (spx_p2_relation_precheck_strict_prove_witness_v1(&pub_bad_pk_sig, &wit) == SPX_P2_FFI_OK)
+    if (spx_p2_relation_precheck_strict_prove_witness(&pub_bad_pk_sig, &wit) == SPX_P2_FFI_STATUS_OK)
     {
         fail("g2_bad_pk_sig_should_reject_witness");
         free(proof_buf);
         return 1;
     }
-    if (spx_p2_ffi_verify_pi_f_v1(&proof, &pub_bad_pk_sig) == SPX_P2_FFI_OK)
+    if (spx_p2_ffi_verify_pi_f(&proof, &pub_bad_pk_sig) == SPX_P2_FFI_STATUS_OK)
     {
         fail("verify_tamper_pk_sig_should_reject");
         free(proof_buf);
         return 1;
     }
-    ret = spx_p2_ffi_generate_pi_f_v1(&proof, &pub_bad_pk_sig, &wit);
-    if (ret == SPX_P2_FFI_OK &&
-        spx_p2_ffi_verify_pi_f_v1(&proof, &pub_bad_pk_sig) == SPX_P2_FFI_OK)
+    ret = spx_p2_ffi_generate_pi_f(&proof, &pub_bad_pk_sig, &wit);
+    if (ret == SPX_P2_FFI_STATUS_OK &&
+        spx_p2_ffi_verify_pi_f(&proof, &pub_bad_pk_sig) == SPX_P2_FFI_STATUS_OK)
     {
         fail("g2_bad_pk_sig_should_fail_prove_or_verify");
         free(proof_buf);
         return 1;
     }
 
-    ret = spx_p2_ffi_generate_pi_f_v1(&proof, &pub, &wit_missing_omega2);
-    if (ret == SPX_P2_FFI_OK)
+    ret = spx_p2_ffi_generate_pi_f(&proof, &pub, &wit_missing_omega2);
+    if (ret == SPX_P2_FFI_STATUS_OK)
     {
-        fail("generate_v1_without_omega2_should_reject");
+        fail("generate_without_omega2_should_reject");
         free(proof_buf);
         return 1;
     }
 
     /* G4: final public statement must stay explicit in public_ctx and m_pub. */
-    if (spx_p2_ffi_verify_pi_f_v1(&proof, &pub_bad_public_ctx) == SPX_P2_FFI_OK)
+    if (spx_p2_ffi_verify_pi_f(&proof, &pub_bad_public_ctx) == SPX_P2_FFI_STATUS_OK)
     {
         fail("verify_tamper_public_ctx_should_reject");
         free(proof_buf);
         return 1;
     }
-    if (spx_p2_ffi_verify_pi_f_v1(&proof, &pub_missing_m_pub) == SPX_P2_FFI_OK)
+    if (spx_p2_ffi_verify_pi_f(&proof, &pub_missing_m_pub) == SPX_P2_FFI_STATUS_OK)
     {
         fail("verify_missing_m_pub_should_reject");
         free(proof_buf);
@@ -255,7 +255,7 @@ int main(void)
     memcpy(sigma_c_bad, sigma_c, sizeof(sigma_c_bad));
     sigma_c_bad[SPX_N] ^= 1u;
     pub_bad_sigma_c.sigma_c = sigma_c_bad;
-    if (spx_p2_ffi_verify_pi_f_v1(&proof, &pub_bad_sigma_c) == SPX_P2_FFI_OK)
+    if (spx_p2_ffi_verify_pi_f(&proof, &pub_bad_sigma_c) == SPX_P2_FFI_STATUS_OK)
     {
         fail("verify_tamper_sigma_c_should_reject");
         free(proof_buf);
@@ -265,7 +265,7 @@ int main(void)
     memcpy(m_pub_bad, m, sizeof(m_pub_bad));
     m_pub_bad[0] ^= 1u;
     pub_bad_m_pub.m_pub = m_pub_bad;
-    if (spx_p2_ffi_verify_pi_f_v1(&proof, &pub_bad_m_pub) == SPX_P2_FFI_OK)
+    if (spx_p2_ffi_verify_pi_f(&proof, &pub_bad_m_pub) == SPX_P2_FFI_STATUS_OK)
     {
         fail("verify_tamper_m_pub_should_reject");
         free(proof_buf);
@@ -275,7 +275,7 @@ int main(void)
     memcpy(pk_e_bad, pk, sizeof(pk_e_bad));
     pk_e_bad[0] ^= 1u;
     pub_bad_pk_e.pk_e = pk_e_bad;
-    if (spx_p2_ffi_verify_pi_f_v1(&proof, &pub_bad_pk_e) == SPX_P2_FFI_OK)
+    if (spx_p2_ffi_verify_pi_f(&proof, &pub_bad_pk_e) == SPX_P2_FFI_STATUS_OK)
     {
         fail("verify_tamper_pk_e_should_reject");
         free(proof_buf);
@@ -286,9 +286,9 @@ int main(void)
     memcpy(sigma_com_bad, sigma_com, sizeof(sigma_com_bad));
     sigma_com_bad[0] ^= 1u;
     wit_bad_sig.sigma_com = sigma_com_bad;
-    ret = spx_p2_ffi_generate_pi_f_v1(&proof, &pub, &wit_bad_sig);
-    if (ret == SPX_P2_FFI_OK &&
-        spx_p2_ffi_verify_pi_f_v1(&proof, &pub) == SPX_P2_FFI_OK)
+    ret = spx_p2_ffi_generate_pi_f(&proof, &pub, &wit_bad_sig);
+    if (ret == SPX_P2_FFI_STATUS_OK &&
+        spx_p2_ffi_verify_pi_f(&proof, &pub) == SPX_P2_FFI_STATUS_OK)
     {
         fail("tamper_sigma_com_should_fail_prove_or_verify");
         free(proof_buf);
@@ -299,26 +299,26 @@ int main(void)
     memcpy(omega2_bad, omega2, sizeof(omega2_bad));
     omega2_bad[0] ^= 1u;
     wit_bad_omega2.omega2 = omega2_bad;
-    ret = spx_p2_ffi_generate_pi_f_v1(&proof, &pub, &wit_bad_omega2);
-    if (ret == SPX_P2_FFI_OK &&
-        spx_p2_ffi_verify_pi_f_v1(&proof, &pub) == SPX_P2_FFI_OK)
+    ret = spx_p2_ffi_generate_pi_f(&proof, &pub, &wit_bad_omega2);
+    if (ret == SPX_P2_FFI_STATUS_OK &&
+        spx_p2_ffi_verify_pi_f(&proof, &pub) == SPX_P2_FFI_STATUS_OK)
     {
         fail("tamper_omega2_should_fail_prove_or_verify");
         free(proof_buf);
         return 1;
     }
 
-    ret = spx_p2_ffi_generate_pi_f_v1(&proof, &pub_bad_sigma_c, &wit);
-    if (ret == SPX_P2_FFI_OK &&
-        spx_p2_ffi_verify_pi_f_v1(&proof, &pub_bad_sigma_c) == SPX_P2_FFI_OK)
+    ret = spx_p2_ffi_generate_pi_f(&proof, &pub_bad_sigma_c, &wit);
+    if (ret == SPX_P2_FFI_STATUS_OK &&
+        spx_p2_ffi_verify_pi_f(&proof, &pub_bad_sigma_c) == SPX_P2_FFI_STATUS_OK)
     {
         fail("tamper_sigma_c_should_fail_prove_or_verify");
         free(proof_buf);
         return 1;
     }
-    ret = spx_p2_ffi_generate_pi_f_v1(&proof, &pub_bad_pk_e, &wit);
-    if (ret == SPX_P2_FFI_OK &&
-        spx_p2_ffi_verify_pi_f_v1(&proof, &pub_bad_pk_e) == SPX_P2_FFI_OK)
+    ret = spx_p2_ffi_generate_pi_f(&proof, &pub_bad_pk_e, &wit);
+    if (ret == SPX_P2_FFI_STATUS_OK &&
+        spx_p2_ffi_verify_pi_f(&proof, &pub_bad_pk_e) == SPX_P2_FFI_STATUS_OK)
     {
         fail("tamper_pk_e_should_fail_prove_or_verify");
         free(proof_buf);

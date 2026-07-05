@@ -1,0 +1,32 @@
+# Mainline-only workspace
+
+# Archived materials
+/_archive/
+
+# Keep placeholder READMEs only; archive contents live under _archive/
+/ref/logs/*
+!/ref/logs/README.md
+/ref/final-results-v1/*
+!/ref/final-results-v1/README.md
+/ref/毕设材料/*
+!/ref/毕设材料/README.md
+
+# Build outputs and caches
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.obj
+*.o
+*.so
+*.a
+*.rlib
+*.dll
+*.exe
+
+# Rust / C generated outputs
+/ref/stark-rs/target/
+/ref/params/params-sphincs-poseidon2-searchtmp.h
+/ref/PQCgenKAT_sign
+/ref/PQCsignKAT_*.rsp
+/ref/PQCsignKAT_*.req

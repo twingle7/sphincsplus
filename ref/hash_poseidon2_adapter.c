@@ -208,11 +208,11 @@ int spx_p2_build_sigma_c_m19(uint8_t *out_sigma_c, size_t *out_sigma_c_len,
     return 0;
 }
 
-int spx_p2_build_sigma_c_m20_pke(uint8_t *out_sigma_c, size_t *out_sigma_c_len,
-                                 const uint8_t *com,
-                                 const uint8_t *sigma_com,
-                                 const uint8_t *pk_e, size_t pk_e_len,
-                                 const uint8_t *omega2, size_t omega2_len)
+int spx_p2_build_sigma_c_ciphertext(uint8_t *out_sigma_c, size_t *out_sigma_c_len,
+                                    const uint8_t *com,
+                                    const uint8_t *sigma_com,
+                                    const uint8_t *pk_e, size_t pk_e_len,
+                                    const uint8_t *omega2, size_t omega2_len)
 {
     static const uint8_t lbl_pke_ct[] = "m20-pke-ct-v1";
     spx_poseidon2_inc_ctx ctx;
@@ -239,4 +239,16 @@ int spx_p2_build_sigma_c_m20_pke(uint8_t *out_sigma_c, size_t *out_sigma_c_len,
     memcpy(out_sigma_c, com, SPX_N);
     *out_sigma_c_len = 2u * SPX_N;
     return 0;
+}
+
+int spx_p2_build_sigma_c_m20_pke(uint8_t *out_sigma_c, size_t *out_sigma_c_len,
+                                 const uint8_t *com,
+                                 const uint8_t *sigma_com,
+                                 const uint8_t *pk_e, size_t pk_e_len,
+                                 const uint8_t *omega2, size_t omega2_len)
+{
+    return spx_p2_build_sigma_c_ciphertext(out_sigma_c, out_sigma_c_len,
+                                           com, sigma_com,
+                                           pk_e, pk_e_len,
+                                           omega2, omega2_len);
 }

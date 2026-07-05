@@ -13,6 +13,8 @@ echo "[strict] build rust backend"
 
 echo "[strict] build regression tests"
 make PARAMS="$PARAMS" THASH="$THASH" CC="$CC_BIN" EXTRA_CFLAGS="-DSPX_P2_USE_RUST_STARK" \
+  test/poseidon2_protocol_flow \
+  test/poseidon2_fischlin_statement_spec \
   test/poseidon2_verify_full_guard \
   test/poseidon2_cross_backend_consistency \
   test/poseidon2_statement_binding \
@@ -22,6 +24,8 @@ make PARAMS="$PARAMS" THASH="$THASH" CC="$CC_BIN" EXTRA_CFLAGS="-DSPX_P2_USE_RUS
   test/poseidon2_stark_stats
 
 echo "[strict] run regression tests"
+./test/poseidon2_protocol_flow
+./test/poseidon2_fischlin_statement_spec
 ./test/poseidon2_verify_full_guard
 ./test/poseidon2_cross_backend_consistency
 ./test/poseidon2_statement_binding

@@ -267,7 +267,7 @@ fn gold_pow7_u64(x: u64) -> u64 {
     gold_mul_u64(gold_mul_u64(x4, x2), x)
 }
 
-fn poseidon2_round_u64(state: &mut [u64; POSEIDON2_T], round: usize) {
+pub(crate) fn poseidon2_round_u64(state: &mut [u64; POSEIDON2_T], round: usize) {
     let mut tmp = [0u64; POSEIDON2_T];
     for i in 0..POSEIDON2_T {
         tmp[i] = gold_add_u64(state[i], P2_ROUND_CONSTANTS[round][i]);

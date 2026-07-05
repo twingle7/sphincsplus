@@ -13,6 +13,8 @@
 #define SPX_P2_PI_F_V2_STATEMENT_VERSION_VERIFY_FULL_V2 2u
 #define SPX_P2_PI_F_V2_STATEMENT_VERSION_VERIFY_FULL SPX_P2_PI_F_V2_STATEMENT_VERSION_VERIFY_FULL_V2
 #define SPX_P2_PI_F_V2_PROOF_SYSTEM_ID_STARK 2u
+#define SPX_P2_PI_F_V2_FRAMEWORK_ID_FISCHLIN_STRICT 1u
+#define SPX_P2_PI_F_V2_SIGNATURE_SYSTEM_ID_SPHINCSPLUS_POSEIDON2 1u
 
 #define SPX_P2_PI_F_V2_FIXED_HEADER_U32 7u
 #define SPX_P2_PI_F_V2_RESERVED_U32 2u
@@ -26,6 +28,8 @@ typedef struct
     uint32_t flags;
     uint32_t proof_system_id;
     uint32_t statement_version;
+    uint32_t framework_id;
+    uint32_t signature_system_id;
     uint8_t public_input_digest[SPX_N];
     uint8_t ctx_binding[SPX_N];
     uint8_t commitment[SPX_N];

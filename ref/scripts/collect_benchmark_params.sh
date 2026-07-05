@@ -23,6 +23,7 @@ RUNS_SIGNVERIFY="${RUNS_SIGNVERIFY:-1}"
 RUNS_STARK="${RUNS_STARK:-1}"
 ENABLE_STARK="${ENABLE_STARK:-1}"
 ENABLE_SIGNVERIFY="${ENABLE_SIGNVERIFY:-1}"
+BENCH_INNER_NTESTS="${BENCH_INNER_NTESTS:-10}"
 BENCH_TIMEOUT_SEC="${BENCH_TIMEOUT_SEC:-1800}"
 STARK_TIMEOUT_SEC="${STARK_TIMEOUT_SEC:-1800}"
 HEARTBEAT_SEC="${HEARTBEAT_SEC:-15}"
@@ -241,9 +242,9 @@ fi
 
 echo "[M4] collecting benchmarks from: $INPUT_CSV"
 if [[ "${TOP_K}" =~ ^[0-9]+$ ]] && [[ "${TOP_K}" -eq 0 ]]; then
-  echo "[M4] top_k=ALL sign_runs=$RUNS_SIGNVERIFY stark_runs=$RUNS_STARK enable_stark=$ENABLE_STARK enable_signverify=$ENABLE_SIGNVERIFY"
+  echo "[M4] top_k=ALL sign_runs=$RUNS_SIGNVERIFY stark_runs=$RUNS_STARK enable_stark=$ENABLE_STARK enable_signverify=$ENABLE_SIGNVERIFY bench_inner_ntests=$BENCH_INNER_NTESTS"
 else
-  echo "[M4] top_k=$TOP_K sign_runs=$RUNS_SIGNVERIFY stark_runs=$RUNS_STARK enable_stark=$ENABLE_STARK enable_signverify=$ENABLE_SIGNVERIFY"
+  echo "[M4] top_k=$TOP_K sign_runs=$RUNS_SIGNVERIFY stark_runs=$RUNS_STARK enable_stark=$ENABLE_STARK enable_signverify=$ENABLE_SIGNVERIFY bench_inner_ntests=$BENCH_INNER_NTESTS"
 fi
 echo "[M4] timeout(benchmark/stark)=${BENCH_TIMEOUT_SEC}s/${STARK_TIMEOUT_SEC}s heartbeat=${HEARTBEAT_SEC}s"
 if [[ "$RESUME" == "1" ]]; then
@@ -288,7 +289,7 @@ while IFS=, read -r candidate_id n h d k a w q tree_height tree_bits leaf_bits w
   fi
 
   if [[ "$status" == "ok" && "$ENABLE_SIGNVERIFY" == "1" ]]; then
-    if ! make -B PARAMS="$PARAMS_NAME" THASH="$THASH" CC="$CC_BIN" test/benchmark >/dev/null 2>&1; then
+    if ! make -B PARAMS="$PARAMS_NAME" THASH="$THASH" CC="$CC_BIN" EXTRA_CFLAGS="-DSPX_BENCH_NTESTS=$BENCH_INNER_NTESTS" test/benchmark >/dev/null 2>&1; then
       status="fail"
       err="build_benchmark_failed"
     fi

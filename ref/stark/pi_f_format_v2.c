@@ -73,9 +73,10 @@ int spx_p2_pi_f_v2_encode(uint8_t *out, size_t *out_len, size_t max_out_len,
         memcpy(out + off, view->proof_bytes, view->proof_len);
         off += view->proof_len;
     }
-
-    memset(out + off, 0, SPX_P2_PI_F_V2_RESERVED_BYTES);
-    off += SPX_P2_PI_F_V2_RESERVED_BYTES;
+    store_u32_le(out + off, view->framework_id);
+    off += 4u;
+    store_u32_le(out + off, view->signature_system_id);
+    off += 4u;
 
     *out_len = off;
     return 0;
@@ -145,15 +146,13 @@ int spx_p2_pi_f_v2_decode(spx_p2_pi_f_v2_view *out_view,
     out_view->proof_bytes = in + off;
     off += proof_len;
 
+    out_view->framework_id = load_u32_le(in + off);
+    off += 4u;
+    out_view->signature_system_id = load_u32_le(in + off);
+    if (out_view->framework_id != SPX_P2_PI_F_V2_FRAMEWORK_ID_FISCHLIN_STRICT ||
+        out_view->signature_system_id != SPX_P2_PI_F_V2_SIGNATURE_SYSTEM_ID_SPHINCSPLUS_POSEIDON2)
     {
-        size_t i;
-        for (i = 0; i < SPX_P2_PI_F_V2_RESERVED_BYTES; i++)
-        {
-            if (in[off + i] != 0u)
-            {
-                return -1;
-            }
-        }
+        return -1;
     }
     return 0;
 }

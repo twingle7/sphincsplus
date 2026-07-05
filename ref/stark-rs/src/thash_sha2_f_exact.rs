@@ -644,7 +644,6 @@ fn eval_transition<E: FieldElement + From<BaseElement>>(
     result: &mut [E],
 ) {
     let one = E::ONE;
-    let zero = E::ZERO;
     let active = current[COL_ACTIVE];
     let inactive = one - active;
     let last_micro = periodic_values[0];

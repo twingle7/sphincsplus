@@ -74,7 +74,7 @@ static void print_header(void)
     printf("backend,flow,m_len,r_len,public_ctx_len,omega2_len,sigma_c_len,pi_f_len,");
     printf("trace_calls,trace_lanes,witness_rows,row_bytes,trace_width,trace_length,");
     printf("transition_constraints,boundary_assertions,constraint_eval_total,constraint_violations,");
-    printf("keygen_ms,commit_ms,issue_ms,unblind_ms,show_total_ms,verify_total_ms,negative_verify_ms,");
+    printf("keygen_ms,commit_ms,issue_ms,finalize_ms,show_total_ms,verify_total_ms,negative_verify_ms,");
     printf("trace_replay_ms,witness_count_ms,witness_build_ms,constraint_eval_ms,preprocess_ms,");
     printf("prove_ms,prove_e2e_ms,verify_ms,");
     printf("rss_before_kb,rss_after_prove_kb,rss_after_verify_kb,peak_rss_kb,");
@@ -85,14 +85,14 @@ int main(void)
 {
     static spx_p2_cred_internal cred;
     static spx_p2_show show_obj;
+    spx_p2_issue_request_obj req;
+    spx_p2_issue_response_obj resp;
     spx_p2_stark_stats stats;
     spx_p2_ffi_public_inputs pub;
     spx_p2_ffi_private_witness wit;
     uint8_t issuer_pk[CRYPTO_PUBLICKEYBYTES];
     uint8_t issuer_sk[CRYPTO_SECRETKEYBYTES];
     uint8_t pk_e[SPX_N];
-    uint8_t com[SPX_N];
-    uint8_t sigma_blind[SPX_BYTES];
     uint8_t m[24];
     uint8_t r[16];
     uint8_t omega2[SPX_N];
@@ -100,12 +100,11 @@ int main(void)
         'F', 'I', 'S', 'C', 'H', 'L', 'I', 'N',
         '-', 'B', 'E', 'N', 'C', 'H', '2', '0'};
     uint8_t m_pub_bad[24];
-    size_t sigma_blind_len = 0;
     double t0;
     double keygen_ms;
     double commit_ms;
     double issue_ms;
-    double unblind_ms;
+    double finalize_ms;
     double show_total_ms;
     double verify_total_ms;
     double negative_verify_ms;
@@ -114,6 +113,8 @@ int main(void)
 
     memset(&cred, 0, sizeof(cred));
     memset(&show_obj, 0, sizeof(show_obj));
+    memset(&req, 0, sizeof(req));
+    memset(&resp, 0, sizeof(resp));
     memset(&stats, 0, sizeof(stats));
     memset(&pub, 0, sizeof(pub));
     memset(&wit, 0, sizeof(wit));
@@ -132,7 +133,7 @@ int main(void)
     keygen_ms = monotonic_ms() - t0;
 
     t0 = monotonic_ms();
-    ret = spx_p2_issue_request(com, m, sizeof(m), r, sizeof(r));
+    ret = spx_p2_prepare_issue_request(&req, m, sizeof(m), r, sizeof(r));
     commit_ms = monotonic_ms() - t0;
     if (ret != SPX_P2_FLOW_OK)
     {
@@ -141,7 +142,7 @@ int main(void)
     }
 
     t0 = monotonic_ms();
-    ret = spx_p2_issue_sign(sigma_blind, &sigma_blind_len, issuer_sk, com);
+    ret = spx_p2_issue_respond(&resp, issuer_sk, &req);
     issue_ms = monotonic_ms() - t0;
     if (ret != SPX_P2_FLOW_OK)
     {
@@ -150,21 +151,19 @@ int main(void)
     }
 
     t0 = monotonic_ms();
-    ret = spx_p2_unblind(&cred, com, sigma_blind, sigma_blind_len, omega2, sizeof(omega2));
-    unblind_ms = monotonic_ms() - t0;
+    ret = spx_p2_finalize_credential(&cred, &req, &resp,
+                                     m, sizeof(m), r, sizeof(r),
+                                     omega2, sizeof(omega2));
+    finalize_ms = monotonic_ms() - t0;
     if (ret != SPX_P2_FLOW_OK)
     {
-        printf("FAIL:unblind\n");
+        printf("FAIL:finalize\n");
         return 1;
     }
-    memcpy(cred.m, m, sizeof(m));
-    cred.mlen = sizeof(m);
-    memcpy(cred.r, r, sizeof(r));
-    cred.rlen = sizeof(r);
 
     t0 = monotonic_ms();
-    ret = spx_p2_protocol_show_statement_bound(&show_obj, issuer_pk, pk_e, sizeof(pk_e),
-                                               &cred, public_ctx, sizeof(public_ctx));
+    ret = spx_p2_protocol_show(&show_obj, issuer_pk, pk_e, sizeof(pk_e),
+                               &cred, public_ctx, sizeof(public_ctx));
     show_total_ms = monotonic_ms() - t0;
     if (ret != SPX_P2_FLOW_OK)
     {
@@ -173,7 +172,7 @@ int main(void)
     }
 
     t0 = monotonic_ms();
-    ret = spx_p2_protocol_verify_statement_bound(&show_obj, issuer_pk, pk_e, sizeof(pk_e), m, sizeof(m));
+    ret = spx_p2_protocol_verify(&show_obj, issuer_pk, pk_e, sizeof(pk_e), m, sizeof(m));
     verify_total_ms = monotonic_ms() - t0;
     if (ret != SPX_P2_FLOW_OK)
     {
@@ -184,15 +183,15 @@ int main(void)
     memcpy(m_pub_bad, m, sizeof(m_pub_bad));
     m_pub_bad[0] ^= 1u;
     t0 = monotonic_ms();
-    ret = spx_p2_protocol_verify_statement_bound(&show_obj, issuer_pk, pk_e, sizeof(pk_e),
-                                                 m_pub_bad, sizeof(m_pub_bad));
+    ret = spx_p2_protocol_verify(&show_obj, issuer_pk, pk_e, sizeof(pk_e),
+                                 m_pub_bad, sizeof(m_pub_bad));
     negative_verify_ms = monotonic_ms() - t0;
     neg_ok = (ret != SPX_P2_FLOW_OK) ? 1 : 0;
 
     pub.pk = issuer_pk;
     pub.pk_e = pk_e;
     pub.pk_e_len = sizeof(pk_e);
-    pub.com = show_obj.com;
+    pub.com = show_obj.sigma_C;
     pub.m_pub = show_obj.m_pub;
     pub.m_pub_len = show_obj.m_pub_len;
     pub.public_ctx = show_obj.public_ctx;
@@ -238,7 +237,7 @@ int main(void)
            keygen_ms,
            commit_ms,
            issue_ms,
-           unblind_ms,
+           finalize_ms,
            show_total_ms,
            verify_total_ms,
            negative_verify_ms);

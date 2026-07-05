@@ -7,7 +7,7 @@ mod thash_sha2_exact;
 
 use winterfell::{
     crypto::{hashers::Blake3_256, DefaultRandomCoin, MerkleTree},
-    math::{fields::f128::BaseElement, FieldElement, StarkField, ToElements},
+    math::{fields::f64::BaseElement, FieldElement, ToElements},
     matrix::ColMatrix,
     AcceptableOptions, Air, AirContext, Assertion, BatchingMethod, CompositionPoly,
     CompositionPolyTrace, DefaultConstraintCommitment, DefaultConstraintEvaluator, DefaultTraceLde,
@@ -32,7 +32,24 @@ const SPX_N: usize = 24;
 const SPX_SIGMA_COM_LEN: usize = 16224;
 const COM_LIMBS: usize = 3;
 const SIGMA_C_LIMBS: usize = 6;
-const TRACE_WIDTH: usize = 52;
+const POSEIDON2_T: usize = 12;
+#[cfg(test)]
+const POSEIDON2_ROUNDS: usize = 30;
+const POSEIDON2_RATE_BYTES: usize = 48;
+const POSEIDON2_RATE_LANES: usize = POSEIDON2_RATE_BYTES / 8;
+// Winterfell 0.13 limits total trace columns to 255. With the current
+// per-block lane/state layout, 4 suffix blocks keeps TRACE_WIDTH at 231.
+const CIPHERTEXT_SUFFIX_BLOCK_COUNT: usize = 4;
+const CIPHERTEXT_SUFFIX_OLDER_BLOCK_COUNT: usize = CIPHERTEXT_SUFFIX_BLOCK_COUNT - 3;
+const CIPHERTEXT_FINAL_BLOCK_COL_START: usize = 75;
+const CIPHERTEXT_PREV_BLOCK_COL_START: usize = CIPHERTEXT_FINAL_BLOCK_COL_START + POSEIDON2_RATE_LANES;
+const CIPHERTEXT_PREV_PREV_BLOCK_COL_START: usize = CIPHERTEXT_PREV_BLOCK_COL_START + POSEIDON2_RATE_LANES;
+const CIPHERTEXT_OLDER_BLOCK_COL_START: usize = CIPHERTEXT_PREV_PREV_BLOCK_COL_START + POSEIDON2_RATE_LANES;
+const CIPHERTEXT_SUFFIX_STATE_COL_START: usize =
+    CIPHERTEXT_OLDER_BLOCK_COL_START + CIPHERTEXT_SUFFIX_OLDER_BLOCK_COUNT * POSEIDON2_RATE_LANES;
+const CIPHERTEXT_SUFFIX_CHAIN_COLS: usize =
+    POSEIDON2_T + CIPHERTEXT_SUFFIX_BLOCK_COUNT * (2 * POSEIDON2_T + POSEIDON2_RATE_LANES);
+const TRACE_WIDTH: usize = CIPHERTEXT_SUFFIX_STATE_COL_START + CIPHERTEXT_SUFFIX_CHAIN_COLS;
 
 const PI_F_V2_MAGIC: u32 = 0x32504650; // "PFP2"
 const PI_F_V2_VERSION: u32 = 2;
@@ -41,8 +58,20 @@ const PI_F_V2_PROOF_SYSTEM_ID_STARK: u32 = 2;
 const PI_F_V2_STATEMENT_VERSION_VERIFY_FULL_V1: u32 = 1;
 const PI_F_V2_STATEMENT_VERSION_VERIFY_FULL_V2: u32 = 2;
 const PI_F_V2_STATEMENT_VERSION_VERIFY_FULL: u32 = PI_F_V2_STATEMENT_VERSION_VERIFY_FULL_V2;
+const PI_F_V2_FRAMEWORK_ID_FISCHLIN_STRICT: u32 = 1;
+const PI_F_V2_SIGNATURE_SYSTEM_ID_SPHINCSPLUS_POSEIDON2: u32 = 1;
 const PI_F_V2_FIXED_HEADER_BYTES: usize = 7 * 4;
 const PI_F_V2_RESERVED_BYTES: usize = 2 * 4;
+
+#[inline(always)]
+fn goldilocks_fe(value: u64) -> BaseElement {
+    BaseElement::new(value)
+}
+
+#[inline(always)]
+fn goldilocks_fe_from_u128(value: u128) -> BaseElement {
+    goldilocks_fe((value % (GOLDILOCKS_P_U64 as u128)) as u64)
+}
 
 fn rust_verify_debug_enabled() -> bool {
     std::env::var_os("SPX_P2_DEBUG_VERIFY").is_some()
@@ -54,16 +83,25 @@ fn rust_verify_debug(msg: &str) {
     }
 }
 
-fn debug_validate_m20_commit_columns(
+fn debug_validate_commit_opening_columns(
     trace: &TraceTable<BaseElement>,
     com_input_public_l0: BaseElement,
     com_input_public_l1: BaseElement,
     com_input_public_l2: BaseElement,
     com_input_m_tail: BaseElement,
+    ciphertext_prefix_l0: BaseElement,
+    ciphertext_prefix_l1: BaseElement,
+    ciphertext_prefix_l2: BaseElement,
+    ciphertext_prev_prev_block: Poseidon2RateBlock,
+    ciphertext_prev_block: Poseidon2RateBlock,
+    ciphertext_final_block: Poseidon2RateBlock,
 ) -> Option<(usize, usize, BaseElement)> {
     let last_step = trace.length() - 1;
     let lane256 = BaseElement::new(256);
-    let lane5_pad = BaseElement::new(COMMIT_PAD_LANE5_BASE as u128);
+    let lane5_pad = goldilocks_fe(COMMIT_PAD_LANE5_BASE);
+    let lane7_shift = goldilocks_fe(CIPHERTEXT_SPLIT_BYTE7_SHIFT);
+    let ct_pad_lane4 = goldilocks_fe(CIPHERTEXT_FINAL_PAD_LANE4_BASE);
+    let ct_pad_lane5 = goldilocks_fe(CIPHERTEXT_FINAL_PAD_LANE5_BASE);
 
     for row in 0..trace.length() {
         let c18 = trace.get(18, row);
@@ -91,21 +129,115 @@ fn debug_validate_m20_commit_columns(
         let c49 = trace.get(49, row);
         let c50 = trace.get(50, row);
         let c51 = trace.get(51, row);
+        let c52 = trace.get(52, row);
+        let c53 = trace.get(53, row);
+        let c54 = trace.get(54, row);
+        let c55 = trace.get(55, row);
+        let c56 = trace.get(56, row);
+        let c57 = trace.get(57, row);
+        let c58 = trace.get(58, row);
+        let c59 = trace.get(59, row);
+        let c60 = trace.get(60, row);
+        let c61 = trace.get(61, row);
+        let c62 = trace.get(62, row);
+        let c63 = trace.get(63, row);
+        let c64 = trace.get(64, row);
+        let c65 = trace.get(65, row);
+        let c66 = trace.get(66, row);
+        let c67 = trace.get(67, row);
+        let c68 = trace.get(68, row);
+        let c69 = trace.get(69, row);
+        let c70 = trace.get(70, row);
+        let c71 = trace.get(71, row);
+        let c72 = trace.get(72, row);
+        let c73 = trace.get(73, row);
+        let c74 = trace.get(74, row);
+        let c75 = trace.get(75, row);
+        let c76 = trace.get(76, row);
+        let c77 = trace.get(77, row);
+        let c78 = trace.get(78, row);
+        let c79 = trace.get(79, row);
+        let c80 = trace.get(80, row);
+        let c81 = trace.get(81, row);
+        let c82 = trace.get(82, row);
+        let c83 = trace.get(83, row);
+        let c84 = trace.get(84, row);
+        let c85 = trace.get(85, row);
+        let c86 = trace.get(86, row);
+        let c87 = trace.get(87, row);
+        let c88 = trace.get(88, row);
+        let c89 = trace.get(89, row);
+        let c90 = trace.get(90, row);
+        let c91 = trace.get(91, row);
+        let c92 = trace.get(92, row);
 
         let checks = [
             c34 - c18,
             c35 - c19,
             c36 - c20,
             c27 * (c27 - BaseElement::ONE),
+            c55 - ciphertext_prefix_l0 - trace.get(37, row),
+            c56 - ciphertext_prefix_l1 - trace.get(38, row),
+            c57 - ciphertext_prefix_l2 - trace.get(39, row),
+            c58 - c55 - c18,
+            c59 - c56 - c19,
+            c60 - c57 - c20,
+            c61 - c58 - c52,
+            c62 - c59 - c53,
+            c63 - c60 - c54,
+            c64 - c61 - trace.get(40, row) - c67,
+            c65 - c62 - trace.get(41, row) - c68,
+            c66 - c63 - trace.get(42, row) - c67 - c68,
+            BaseElement::ZERO,
+            BaseElement::ZERO,
+            BaseElement::ZERO,
             c43 - com_input_public_l0,
             c44 - com_input_public_l1,
             c45 - com_input_public_l2,
             c46 - (com_input_m_tail + c49 * lane256),
             c47 - c50,
             c48 - (c51 + lane5_pad),
+            trace.get(40, row) - c69 - c70 * lane256,
+            trace.get(41, row) - c71 - c72 * lane256,
+            trace.get(42, row) - c73 - c74 * lane256,
+            c75 - c67,
+            c76 - c68 - c69 * lane7_shift,
+            c77 - c70 - c71 * lane7_shift,
+            c78 - c72 - c73 * lane7_shift,
+            c79 - c74 - ct_pad_lane4,
+            c80 - ct_pad_lane5,
+            c75 - ciphertext_final_block[0],
+            c76 - ciphertext_final_block[1],
+            c77 - ciphertext_final_block[2],
+            c78 - ciphertext_final_block[3],
+            c79 - ciphertext_final_block[4],
+            c80 - ciphertext_final_block[5],
+            c81 - ciphertext_prev_block[0],
+            c82 - ciphertext_prev_block[1],
+            c83 - ciphertext_prev_block[2],
+            c84 - ciphertext_prev_block[3],
+            c85 - ciphertext_prev_block[4],
+            c86 - ciphertext_prev_block[5],
+            c87 - ciphertext_prev_prev_block[0],
+            c88 - ciphertext_prev_prev_block[1],
+            c89 - ciphertext_prev_prev_block[2],
+            c90 - ciphertext_prev_prev_block[3],
+            c91 - ciphertext_prev_prev_block[4],
+            c92 - ciphertext_prev_prev_block[5],
         ];
         for (offset, value) in checks.iter().enumerate() {
             if *value != BaseElement::ZERO {
+                if rust_verify_debug_enabled() {
+                    let final_col = CIPHERTEXT_FINAL_BLOCK_COL_START;
+                    eprintln!(
+                        "[stark-rs prove] debug self-check detail: offset={} c67={:?} c75={:?} final_col0={:?} expected_final0={:?}",
+                        offset,
+                        c67,
+                        c75,
+                        trace.get(final_col, row),
+                        ciphertext_final_block[0]
+                    );
+                }
                 return Some((row, 54 + offset, *value));
             }
         }
@@ -121,10 +253,51 @@ fn debug_validate_m20_commit_columns(
                 trace.get(49, row + 1) - c49,
                 trace.get(50, row + 1) - c50,
                 trace.get(51, row + 1) - c51,
+                trace.get(52, row + 1) - c52,
+                trace.get(53, row + 1) - c53,
+                trace.get(54, row + 1) - c54,
+                trace.get(55, row + 1) - c55,
+                trace.get(56, row + 1) - c56,
+                trace.get(57, row + 1) - c57,
+                trace.get(58, row + 1) - c58,
+                trace.get(59, row + 1) - c59,
+                trace.get(60, row + 1) - c60,
+                trace.get(61, row + 1) - c61,
+                trace.get(62, row + 1) - c62,
+                trace.get(63, row + 1) - c63,
+                trace.get(64, row + 1) - c64,
+                trace.get(65, row + 1) - c65,
+                trace.get(66, row + 1) - c66,
+                trace.get(67, row + 1) - c67,
+                trace.get(68, row + 1) - c68,
+                trace.get(69, row + 1) - c69,
+                trace.get(70, row + 1) - c70,
+                trace.get(71, row + 1) - c71,
+                trace.get(72, row + 1) - c72,
+                trace.get(73, row + 1) - c73,
+                trace.get(74, row + 1) - c74,
+                trace.get(75, row + 1) - c75,
+                trace.get(76, row + 1) - c76,
+                trace.get(77, row + 1) - c77,
+                trace.get(78, row + 1) - c78,
+                trace.get(79, row + 1) - c79,
+                trace.get(80, row + 1) - c80,
+                trace.get(81, row + 1) - c81,
+                trace.get(82, row + 1) - c82,
+                trace.get(83, row + 1) - c83,
+                trace.get(84, row + 1) - c84,
+                trace.get(85, row + 1) - c85,
+                trace.get(86, row + 1) - c86,
+                trace.get(87, row + 1) - c87,
+                trace.get(88, row + 1) - c88,
+                trace.get(89, row + 1) - c89,
+                trace.get(90, row + 1) - c90,
+                trace.get(91, row + 1) - c91,
+                trace.get(92, row + 1) - c92,
             ];
             for (offset, value) in next_checks.iter().enumerate() {
                 if *value != BaseElement::ZERO {
-                    return Some((row, 61 + offset, *value));
+                    return Some((row, 67 + offset, *value));
                 }
             }
         }
@@ -176,8 +349,8 @@ extern "C" {
     );
     #[link_name = "SPX_spx_p2_verify_com"]
     fn spx_p2_verify_com(pk: *const u8, com: *const u8, sigma_com: *const u8) -> i32;
-    #[link_name = "SPX_spx_p2_build_sigma_c_m20_pke"]
-    fn spx_p2_build_sigma_c_m20_pke(
+    #[link_name = "SPX_spx_p2_build_sigma_c_ciphertext"]
+    fn spx_p2_build_sigma_c_ciphertext(
         out_sigma_c: *mut u8,
         out_sigma_c_len: *mut usize,
         com: *const u8,
@@ -187,13 +360,34 @@ extern "C" {
         omega2: *const u8,
         omega2_len: usize,
     ) -> i32;
+    #[cfg(not(test))]
+    #[link_name = "SPX_poseidon2_permute"]
+    fn poseidon2_permute_c(state: *mut u64);
 }
 
 const SPX_P2_DOMAIN_CUSTOM: i32 = 0xff;
 const SPX_P2_DOMAIN_COMMIT: i32 = 0x20;
 const COMMIT_M_PUB_LEN: usize = 24;
 const COMMIT_R_LEN: usize = 16;
+const CIPHERTEXT_DOMAIN_BYTE: u8 = SPX_P2_DOMAIN_CUSTOM as u8;
+const CIPHERTEXT_LABEL_BYTES: &[u8] = b"m20-pke-ct-v1\0";
 const COMMIT_PAD_LANE5_BASE: u64 = (1u64 << 8) | (0x80u64 << 56);
+const CIPHERTEXT_SPLIT_BYTE7_SHIFT: u64 = 1u64 << 56;
+const CIPHERTEXT_FINAL_PAD_LANE4_BASE: u64 = 1u64 << 56;
+const CIPHERTEXT_FINAL_PAD_LANE5_BASE: u64 = 0x80u64 << 56;
+const GOLDILOCKS_P_U64: u64 = 0xffff_ffff_0000_0001;
+
+type Poseidon2RateBlock = [BaseElement; POSEIDON2_RATE_LANES];
+type Poseidon2State = [BaseElement; POSEIDON2_T];
+
+#[derive(Clone, Copy)]
+struct CiphertextSuffixStateChain {
+    start_post_state: Poseidon2State,
+    suffix_blocks: [Poseidon2RateBlock; CIPHERTEXT_SUFFIX_BLOCK_COUNT],
+    pre_states: [Poseidon2State; CIPHERTEXT_SUFFIX_BLOCK_COUNT],
+    post_states: [Poseidon2State; CIPHERTEXT_SUFFIX_BLOCK_COUNT],
+    carries: [[BaseElement; POSEIDON2_RATE_LANES]; CIPHERTEXT_SUFFIX_BLOCK_COUNT],
+}
 
 unsafe fn rust_commit_domain(out: &mut [u8; SPX_N], m: &[u8], r: &[u8]) {
     let mut input = Vec::with_capacity(m.len() + r.len());
@@ -215,7 +409,191 @@ fn load_lane_le(bytes: &[u8]) -> BaseElement {
         value |= (bytes[i] as u64) << (8 * i);
         i += 1;
     }
-    BaseElement::new(value as u128)
+    goldilocks_fe(value)
+}
+
+fn load_rate_block_le(bytes: &[u8; POSEIDON2_RATE_BYTES]) -> Poseidon2RateBlock {
+    let mut lanes = [BaseElement::ZERO; POSEIDON2_RATE_LANES];
+    let mut i = 0usize;
+    while i < POSEIDON2_RATE_LANES {
+        let begin = i * 8;
+        let end = begin + 8;
+        lanes[i] = load_lane_le(&bytes[begin..end]);
+        i += 1;
+    }
+    lanes
+}
+
+fn poseidon2_state_from_u64(words: [u64; POSEIDON2_T]) -> Poseidon2State {
+    let mut state = [BaseElement::ZERO; POSEIDON2_T];
+    let mut i = 0usize;
+    while i < POSEIDON2_T {
+        state[i] = goldilocks_fe(words[i]);
+        i += 1;
+    }
+    state
+}
+
+fn goldilocks_add_with_carry(a: u64, b: u64) -> (u64, u64) {
+    let mut sum = a.wrapping_add(b);
+    let carry = if sum < a || sum >= GOLDILOCKS_P_U64 { 1 } else { 0 };
+    if carry == 1 {
+        sum = sum.wrapping_sub(GOLDILOCKS_P_U64);
+    }
+    (sum, carry)
+}
+
+fn goldilocks_absorb_state_with_block(
+    post_state: [u64; POSEIDON2_T],
+    block: Poseidon2RateBlock,
+) -> ([u64; POSEIDON2_T], [BaseElement; POSEIDON2_RATE_LANES]) {
+    let mut pre_state = post_state;
+    let mut carries = [BaseElement::ZERO; POSEIDON2_RATE_LANES];
+    let mut lane = 0usize;
+    while lane < POSEIDON2_RATE_LANES {
+        let (sum, carry) = goldilocks_add_with_carry(post_state[lane], block[lane].as_int() as u64);
+        pre_state[lane] = sum;
+        carries[lane] = goldilocks_fe(carry);
+        lane += 1;
+    }
+    (pre_state, carries)
+}
+
+#[cfg(not(test))]
+fn poseidon2_permute_state(mut state: [u64; POSEIDON2_T]) -> [u64; POSEIDON2_T] {
+    unsafe {
+        poseidon2_permute_c(state.as_mut_ptr());
+    }
+    state
+}
+
+#[cfg(test)]
+fn poseidon2_permute_state(mut state: [u64; POSEIDON2_T]) -> [u64; POSEIDON2_T] {
+    for round in 0..POSEIDON2_ROUNDS {
+        crate::thash_poseidon2_exact::poseidon2_round_u64(&mut state, round);
+    }
+    state
+}
+
+fn build_poseidon2_padded_absorb_blocks(message: &[u8]) -> Vec<Poseidon2RateBlock> {
+    let mut blocks = Vec::with_capacity(message.len() / POSEIDON2_RATE_BYTES + 1);
+    let full_blocks = message.len() / POSEIDON2_RATE_BYTES;
+    let mut i = 0usize;
+    while i < full_blocks {
+        let begin = i * POSEIDON2_RATE_BYTES;
+        let mut block = [0u8; POSEIDON2_RATE_BYTES];
+        block.copy_from_slice(&message[begin..begin + POSEIDON2_RATE_BYTES]);
+        blocks.push(load_rate_block_le(&block));
+        i += 1;
+    }
+
+    let remainder = message.len() % POSEIDON2_RATE_BYTES;
+    let mut final_block = [0u8; POSEIDON2_RATE_BYTES];
+    if remainder > 0 {
+        let begin = full_blocks * POSEIDON2_RATE_BYTES;
+        final_block[..remainder].copy_from_slice(&message[begin..]);
+    }
+    final_block[remainder] ^= 0x01;
+    final_block[POSEIDON2_RATE_BYTES - 1] ^= 0x80;
+    blocks.push(load_rate_block_le(&final_block));
+    blocks
+}
+
+fn build_ciphertext_absorb_blocks(
+    pk_e: &[u8],
+    com: &[u8],
+    sigma_com: &[u8],
+    omega2: &[u8],
+) -> Option<Vec<Poseidon2RateBlock>> {
+    if pk_e.len() != SPX_N || com.len() != COM_LEN || omega2.len() != SPX_N {
+        return None;
+    }
+    let mut transcript = Vec::with_capacity(1 + CIPHERTEXT_LABEL_BYTES.len() + pk_e.len() + com.len() + sigma_com.len() + omega2.len());
+    transcript.push(CIPHERTEXT_DOMAIN_BYTE);
+    transcript.extend_from_slice(CIPHERTEXT_LABEL_BYTES);
+    transcript.extend_from_slice(pk_e);
+    transcript.extend_from_slice(com);
+    transcript.extend_from_slice(sigma_com);
+    transcript.extend_from_slice(omega2);
+    Some(build_poseidon2_padded_absorb_blocks(&transcript))
+}
+
+fn derive_ciphertext_suffix_blocks(
+    pk_e: &[u8],
+    com: &[u8],
+    sigma_com: &[u8],
+    omega2: &[u8],
+) -> Option<(Poseidon2RateBlock, Poseidon2RateBlock, Poseidon2RateBlock)> {
+    let blocks = build_ciphertext_absorb_blocks(pk_e, com, sigma_com, omega2)?;
+    if blocks.len() < 3 {
+        return None;
+    }
+    let last = blocks.len() - 1;
+    Some((blocks[last - 2], blocks[last - 1], blocks[last]))
+}
+
+fn derive_ciphertext_suffix_state_chain(
+    blocks: &[Poseidon2RateBlock],
+) -> Option<CiphertextSuffixStateChain> {
+    if blocks.len() < CIPHERTEXT_SUFFIX_BLOCK_COUNT {
+        return None;
+    }
+    let split = blocks.len() - CIPHERTEXT_SUFFIX_BLOCK_COUNT;
+    let mut suffix_blocks = [[BaseElement::ZERO; POSEIDON2_RATE_LANES]; CIPHERTEXT_SUFFIX_BLOCK_COUNT];
+    suffix_blocks.copy_from_slice(&blocks[split..]);
+    let mut state = [0u64; POSEIDON2_T];
+    for block in &blocks[..split] {
+        let (pre_state, _) = goldilocks_absorb_state_with_block(state, *block);
+        state = poseidon2_permute_state(pre_state);
+    }
+    let start_post_state = state;
+    let mut pre_states = [[BaseElement::ZERO; POSEIDON2_T]; CIPHERTEXT_SUFFIX_BLOCK_COUNT];
+    let mut post_states = [[BaseElement::ZERO; POSEIDON2_T]; CIPHERTEXT_SUFFIX_BLOCK_COUNT];
+    let mut carries = [[BaseElement::ZERO; POSEIDON2_RATE_LANES]; CIPHERTEXT_SUFFIX_BLOCK_COUNT];
+    for i in 0..CIPHERTEXT_SUFFIX_BLOCK_COUNT {
+        let (pre_state, block_carries) = goldilocks_absorb_state_with_block(state, suffix_blocks[i]);
+        let post_state = poseidon2_permute_state(pre_state);
+        pre_states[i] = poseidon2_state_from_u64(pre_state);
+        post_states[i] = poseidon2_state_from_u64(post_state);
+        carries[i] = block_carries;
+        state = post_state;
+    }
+
+    Some(CiphertextSuffixStateChain {
+        start_post_state: poseidon2_state_from_u64(start_post_state),
+        suffix_blocks,
+        pre_states,
+        post_states,
+        carries,
+    })
+}
+
+fn ciphertext_suffix_block_col_start(block_idx: usize) -> usize {
+    if block_idx < CIPHERTEXT_SUFFIX_OLDER_BLOCK_COUNT {
+        return CIPHERTEXT_OLDER_BLOCK_COL_START + block_idx * POSEIDON2_RATE_LANES;
+    }
+    match block_idx - CIPHERTEXT_SUFFIX_OLDER_BLOCK_COUNT {
+        0 => CIPHERTEXT_PREV_PREV_BLOCK_COL_START,
+        1 => CIPHERTEXT_PREV_BLOCK_COL_START,
+        2 => CIPHERTEXT_FINAL_BLOCK_COL_START,
+        _ => unreachable!("suffix block index out of range"),
+    }
+}
+
+fn ciphertext_suffix_start_post_state_col_start() -> usize {
+    CIPHERTEXT_SUFFIX_STATE_COL_START
+}
+
+fn ciphertext_suffix_pre_state_col_start(block_idx: usize) -> usize {
+    CIPHERTEXT_SUFFIX_STATE_COL_START + POSEIDON2_T + block_idx * (2 * POSEIDON2_T + POSEIDON2_RATE_LANES)
+}
+
+fn ciphertext_suffix_post_state_col_start(block_idx: usize) -> usize {
+    ciphertext_suffix_pre_state_col_start(block_idx) + POSEIDON2_T
+}
+
+fn ciphertext_suffix_carry_col_start(block_idx: usize) -> usize {
+    ciphertext_suffix_post_state_col_start(block_idx) + POSEIDON2_T
 }
 
 fn derive_commit_open_public_parts(m_pub: &[u8]) -> Option<([BaseElement; 3], BaseElement)> {
@@ -234,7 +612,7 @@ fn derive_commit_open_public_parts(m_pub: &[u8]) -> Option<([BaseElement; 3], Ba
     ]);
     let lane1 = load_lane_le(&m_pub[7..15]);
     let lane2 = load_lane_le(&m_pub[15..23]);
-    let m_tail = BaseElement::new(m_pub[23] as u128);
+    let m_tail = goldilocks_fe(m_pub[23] as u64);
     Some(([lane0, lane1, lane2], m_tail))
 }
 
@@ -244,8 +622,86 @@ fn derive_commit_open_witness_parts(r: &[u8]) -> Option<(BaseElement, BaseElemen
     }
     let r_prefix7 = load_lane_le(&r[0..7]);
     let r_middle8 = load_lane_le(&r[7..15]);
-    let r_last = BaseElement::new(r[15] as u128);
+    let r_last = goldilocks_fe(r[15] as u64);
     Some((r_prefix7, r_middle8, r_last))
+}
+
+fn derive_signature_witness_prefix_limbs(sigma_com: &[u8]) -> Option<[BaseElement; COM_LIMBS]> {
+    if sigma_com.len() < COM_LEN {
+        return None;
+    }
+    decode_public_limbs::<COM_LIMBS>(&sigma_com[..COM_LEN])
+}
+
+fn derive_signature_witness_middle_limbs(sigma_com: &[u8]) -> Option<[BaseElement; COM_LIMBS]> {
+    if sigma_com.len() < COM_LEN {
+        return None;
+    }
+    let start = (sigma_com.len() - COM_LEN) / 2;
+    decode_public_limbs::<COM_LIMBS>(&sigma_com[start..start + COM_LEN])
+}
+
+fn derive_signature_witness_quarter_limbs(sigma_com: &[u8]) -> Option<[BaseElement; COM_LIMBS]> {
+    if sigma_com.len() < COM_LEN {
+        return None;
+    }
+    let span = sigma_com.len() - COM_LEN;
+    let start = span / 4;
+    decode_public_limbs::<COM_LIMBS>(&sigma_com[start..start + COM_LEN])
+}
+
+fn derive_signature_witness_three_quarter_limbs(sigma_com: &[u8]) -> Option<[BaseElement; COM_LIMBS]> {
+    if sigma_com.len() < COM_LEN {
+        return None;
+    }
+    let span = sigma_com.len() - COM_LEN;
+    let start = (3 * span) / 4;
+    decode_public_limbs::<COM_LIMBS>(&sigma_com[start..start + COM_LEN])
+}
+
+fn derive_signature_witness_suffix_limbs(sigma_com: &[u8]) -> Option<[BaseElement; COM_LIMBS]> {
+    if sigma_com.len() < COM_LEN {
+        return None;
+    }
+    let start = sigma_com.len() - COM_LEN;
+    decode_public_limbs::<COM_LIMBS>(&sigma_com[start..])
+}
+
+fn derive_signature_witness_suffix_tail_parts(sigma_com: &[u8]) -> Option<(BaseElement, BaseElement)> {
+    if sigma_com.len() < 15 {
+        return None;
+    }
+    let start = sigma_com.len() - 15;
+    let tail_l0 = load_lane_le(&sigma_com[start..start + 8]);
+    let tail_l1_7 = load_lane_le(&sigma_com[start + 8..]);
+    Some((tail_l0, tail_l1_7))
+}
+
+fn derive_omega2_tail_block_parts(
+    omega2: &[u8],
+) -> Option<(BaseElement, BaseElement, BaseElement, BaseElement, BaseElement, BaseElement)> {
+    if omega2.len() != SPX_N {
+        return None;
+    }
+    let b0 = goldilocks_fe(omega2[0] as u64);
+    let hi7 = load_lane_le(&omega2[1..8]);
+    let b8 = goldilocks_fe(omega2[8] as u64);
+    let mid7 = load_lane_le(&omega2[9..16]);
+    let b16 = goldilocks_fe(omega2[16] as u64);
+    let last7 = load_lane_le(&omega2[17..24]);
+    Some((b0, hi7, b8, mid7, b16, last7))
+}
+
+fn canonicalize_ciphertext_prefix_limbs() -> [BaseElement; COM_LIMBS] {
+    let mut canonical = [0u8; COM_LEN];
+    let prefix = &[CIPHERTEXT_DOMAIN_BYTE]
+        .iter()
+        .chain(CIPHERTEXT_LABEL_BYTES.iter())
+        .copied()
+        .collect::<Vec<u8>>();
+    canonical[..prefix.len()].copy_from_slice(prefix);
+    decode_public_limbs::<COM_LIMBS>(&canonical)
+        .expect("canonical ciphertext prefix has fixed 24-byte length")
 }
 
 #[derive(Clone)]
@@ -296,6 +752,9 @@ struct PublicInputs {
     sigma_ctx_rel_l1: BaseElement,
     sigma_ctx_rel_l2: BaseElement,
     enc_mode_hint: BaseElement,
+    ciphertext_prefix_l0: BaseElement,
+    ciphertext_prefix_l1: BaseElement,
+    ciphertext_prefix_l2: BaseElement,
     pk_e_public_l0: BaseElement,
     pk_e_public_l1: BaseElement,
     pk_e_public_l2: BaseElement,
@@ -354,6 +813,9 @@ impl ToElements<BaseElement> for PublicInputs {
             self.sigma_ctx_rel_l1,
             self.sigma_ctx_rel_l2,
             self.enc_mode_hint,
+            self.ciphertext_prefix_l0,
+            self.ciphertext_prefix_l1,
+            self.ciphertext_prefix_l2,
             self.pk_e_public_l0,
             self.pk_e_public_l1,
             self.pk_e_public_l2,
@@ -413,6 +875,9 @@ struct WorkAir {
     sigma_ctx_rel_l1: BaseElement,
     sigma_ctx_rel_l2: BaseElement,
     enc_mode_hint: BaseElement,
+    ciphertext_prefix_l0: BaseElement,
+    ciphertext_prefix_l1: BaseElement,
+    ciphertext_prefix_l2: BaseElement,
     pk_e_public_l0: BaseElement,
     pk_e_public_l1: BaseElement,
     pk_e_public_l2: BaseElement,
@@ -427,7 +892,7 @@ impl Air for WorkAir {
     type PublicInputs = PublicInputs;
 
     fn new(trace_info: TraceInfo, pub_inputs: PublicInputs, options: ProofOptions) -> Self {
-        let degrees = vec![
+        let mut degrees = vec![
             TransitionConstraintDegree::new(3),
             TransitionConstraintDegree::new(1),
             TransitionConstraintDegree::new(1),
@@ -504,7 +969,71 @@ impl Air for WorkAir {
             TransitionConstraintDegree::new(1),
             TransitionConstraintDegree::new(1),
             TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
+            TransitionConstraintDegree::new(1),
         ];
+        degrees.extend((0..285).map(|_| TransitionConstraintDegree::new(1)));
+        degrees.extend((0..36).map(|_| TransitionConstraintDegree::new(2)));
         let num_assertions = 80;
         Self {
             context: AirContext::new(trace_info, degrees, num_assertions, options),
@@ -554,6 +1083,9 @@ impl Air for WorkAir {
             sigma_ctx_rel_l1: pub_inputs.sigma_ctx_rel_l1,
             sigma_ctx_rel_l2: pub_inputs.sigma_ctx_rel_l2,
             enc_mode_hint: pub_inputs.enc_mode_hint,
+            ciphertext_prefix_l0: pub_inputs.ciphertext_prefix_l0,
+            ciphertext_prefix_l1: pub_inputs.ciphertext_prefix_l1,
+            ciphertext_prefix_l2: pub_inputs.ciphertext_prefix_l2,
             pk_e_public_l0: pub_inputs.pk_e_public_l0,
             pk_e_public_l1: pub_inputs.pk_e_public_l1,
             pk_e_public_l2: pub_inputs.pk_e_public_l2,
@@ -671,8 +1203,8 @@ impl Air for WorkAir {
         result[54] = current[34] - current[18];
         result[55] = current[35] - current[19];
         result[56] = current[36] - current[20];
-        // The real sigma_C tail is produced by the PKE/hash construction, not by a linear limb rule.
-        // Keep these slots neutral until the full PKE relation is internalized in AIR.
+        // The public Sigma.C suffix is bound later to the final suffix sponge
+        // post-state. It is not equal to com + an intermediate transcript limb.
         result[57] = E::ZERO;
         result[58] = E::ZERO;
         result[59] = E::ZERO;
@@ -694,7 +1226,122 @@ impl Air for WorkAir {
         result[72] = current[45] - E::from(self.com_input_public_l2);
         result[73] = current[46] - (E::from(self.com_input_m_tail) + current[49] * E::from(256u32));
         result[74] = current[47] - current[50];
-        result[75] = current[48] - (current[51] + E::from(BaseElement::new(COMMIT_PAD_LANE5_BASE as u128)));
+        result[75] = current[48] - (current[51] + E::from(goldilocks_fe(COMMIT_PAD_LANE5_BASE)));
+        // Keep sigma' multi-window chain materialization constant across rows.
+        result[76] = next[52] - current[52];
+        result[77] = next[53] - current[53];
+        result[78] = next[54] - current[54];
+        result[79] = next[55] - current[55];
+        result[80] = next[56] - current[56];
+        result[81] = next[57] - current[57];
+        result[82] = next[58] - current[58];
+        result[83] = next[59] - current[59];
+        result[84] = next[60] - current[60];
+        result[85] = next[61] - current[61];
+        result[86] = next[62] - current[62];
+        result[87] = next[63] - current[63];
+        result[88] = next[64] - current[64];
+        result[89] = next[65] - current[65];
+        result[90] = next[66] - current[66];
+        // Shadow the ciphertext absorb order in four phases:
+        // prefix+pk_E -> +com -> +sigma' multi-window chain -> +(omega2 + sigma' tail/suffix anchor).
+        result[91] = current[55] - E::from(self.ciphertext_prefix_l0) - current[37];
+        result[92] = current[56] - E::from(self.ciphertext_prefix_l1) - current[38];
+        result[93] = current[57] - E::from(self.ciphertext_prefix_l2) - current[39];
+        result[94] = current[58] - current[55] - current[18];
+        result[95] = current[59] - current[56] - current[19];
+        result[96] = current[60] - current[57] - current[20];
+        result[97] = current[61] - current[58] - current[52];
+        result[98] = current[62] - current[59] - current[53];
+        result[99] = current[63] - current[60] - current[54];
+        result[100] = current[64] - current[61] - current[40] - current[67];
+        result[101] = current[65] - current[62] - current[41] - current[68];
+        result[102] = current[66] - current[63] - current[42] - current[67] - current[68];
+        // Scaffold exact byte splits for the final sigma'/omega2 absorb block.
+        result[103] = next[67] - current[67];
+        result[104] = next[68] - current[68];
+        result[105] = next[69] - current[69];
+        result[106] = next[70] - current[70];
+        result[107] = next[71] - current[71];
+        result[108] = next[72] - current[72];
+        result[109] = next[73] - current[73];
+        result[110] = next[74] - current[74];
+        result[111] = current[40] - current[69] - current[70] * E::from(256u32);
+        result[112] = current[41] - current[71] - current[72] * E::from(256u32);
+        result[113] = current[42] - current[73] - current[74] * E::from(256u32);
+        // Materialize the exact final 48-byte ciphertext absorb block:
+        // sigma' tail15 || omega2 || pad10*1.
+        result[114] = next[75] - current[75];
+        result[115] = next[76] - current[76];
+        result[116] = next[77] - current[77];
+        result[117] = next[78] - current[78];
+        result[118] = next[79] - current[79];
+        result[119] = next[80] - current[80];
+        result[120] = current[75] - current[67];
+        result[121] =
+            current[76] - current[68] - current[69] * E::from(goldilocks_fe(CIPHERTEXT_SPLIT_BYTE7_SHIFT));
+        result[122] =
+            current[77] - current[70] - current[71] * E::from(goldilocks_fe(CIPHERTEXT_SPLIT_BYTE7_SHIFT));
+        result[123] =
+            current[78] - current[72] - current[73] * E::from(goldilocks_fe(CIPHERTEXT_SPLIT_BYTE7_SHIFT));
+        result[124] = current[79] - current[74] - E::from(goldilocks_fe(CIPHERTEXT_FINAL_PAD_LANE4_BASE));
+        result[125] = current[80] - E::from(goldilocks_fe(CIPHERTEXT_FINAL_PAD_LANE5_BASE));
+        // Materialize the two contiguous sigma' absorb blocks immediately before the final tail block.
+        result[126] = next[81] - current[81];
+        result[127] = next[82] - current[82];
+        result[128] = next[83] - current[83];
+        result[129] = next[84] - current[84];
+        result[130] = next[85] - current[85];
+        result[131] = next[86] - current[86];
+        result[132] = next[87] - current[87];
+        result[133] = next[88] - current[88];
+        result[134] = next[89] - current[89];
+        result[135] = next[90] - current[90];
+        result[136] = next[91] - current[91];
+        result[137] = next[92] - current[92];
+        let mut idx = 138usize;
+        for block_idx in 0..CIPHERTEXT_SUFFIX_OLDER_BLOCK_COUNT {
+            let block_col = CIPHERTEXT_OLDER_BLOCK_COL_START + block_idx * POSEIDON2_RATE_LANES;
+            for lane in 0..POSEIDON2_RATE_LANES {
+                result[idx] = next[block_col + lane] - current[block_col + lane];
+                idx += 1;
+            }
+        }
+        for col in CIPHERTEXT_SUFFIX_STATE_COL_START..TRACE_WIDTH {
+            result[idx] = next[col] - current[col];
+            idx += 1;
+        }
+        let goldilocks_modulus = E::from(goldilocks_fe(GOLDILOCKS_P_U64));
+        for block_idx in 0..CIPHERTEXT_SUFFIX_BLOCK_COUNT {
+            let block_col = ciphertext_suffix_block_col_start(block_idx);
+            let pre_col = ciphertext_suffix_pre_state_col_start(block_idx);
+            let carry_col = ciphertext_suffix_carry_col_start(block_idx);
+            let prev_post_col = if block_idx == 0 {
+                ciphertext_suffix_start_post_state_col_start()
+            } else {
+                ciphertext_suffix_post_state_col_start(block_idx - 1)
+            };
+            for lane in 0..POSEIDON2_RATE_LANES {
+                result[idx] =
+                    current[pre_col + lane] - current[prev_post_col + lane] - current[block_col + lane]
+                        + current[carry_col + lane] * goldilocks_modulus;
+                idx += 1;
+            }
+            for lane in POSEIDON2_RATE_LANES..POSEIDON2_T {
+                result[idx] = current[pre_col + lane] - current[prev_post_col + lane];
+                idx += 1;
+            }
+            for lane in 0..POSEIDON2_RATE_LANES {
+                result[idx] = current[carry_col + lane] * (current[carry_col + lane] - E::ONE);
+                idx += 1;
+            }
+        }
+        let final_post_col = ciphertext_suffix_post_state_col_start(CIPHERTEXT_SUFFIX_BLOCK_COUNT - 1);
+        result[idx] = current[final_post_col] - current[24];
+        idx += 1;
+        result[idx] = current[final_post_col + 1] - current[25];
+        idx += 1;
+        result[idx] = current[final_post_col + 2] - current[26];
     }
 
     fn get_assertions(&self) -> Vec<Assertion<Self::BaseField>> {
@@ -834,6 +1481,9 @@ struct WorkProver {
     sigma_ctx_rel_l1: BaseElement,
     sigma_ctx_rel_l2: BaseElement,
     enc_mode_hint: BaseElement,
+    ciphertext_prefix_l0: BaseElement,
+    ciphertext_prefix_l1: BaseElement,
+    ciphertext_prefix_l2: BaseElement,
     pk_e_public_l0: BaseElement,
     pk_e_public_l1: BaseElement,
     pk_e_public_l2: BaseElement,
@@ -890,6 +1540,9 @@ impl WorkProver {
         sigma_ctx_rel_l1: BaseElement,
         sigma_ctx_rel_l2: BaseElement,
         enc_mode_hint: BaseElement,
+        ciphertext_prefix_l0: BaseElement,
+        ciphertext_prefix_l1: BaseElement,
+        ciphertext_prefix_l2: BaseElement,
         pk_e_public_l0: BaseElement,
         pk_e_public_l1: BaseElement,
         pk_e_public_l2: BaseElement,
@@ -944,6 +1597,9 @@ impl WorkProver {
             sigma_ctx_rel_l1,
             sigma_ctx_rel_l2,
             enc_mode_hint,
+            ciphertext_prefix_l0,
+            ciphertext_prefix_l1,
+            ciphertext_prefix_l2,
             pk_e_public_l0,
             pk_e_public_l1,
             pk_e_public_l2,
@@ -1017,6 +1673,9 @@ impl Prover for WorkProver {
             sigma_ctx_rel_l1: self.sigma_ctx_rel_l1,
             sigma_ctx_rel_l2: self.sigma_ctx_rel_l2,
             enc_mode_hint: self.enc_mode_hint,
+            ciphertext_prefix_l0: self.ciphertext_prefix_l0,
+            ciphertext_prefix_l1: self.ciphertext_prefix_l1,
+            ciphertext_prefix_l2: self.ciphertext_prefix_l2,
             pk_e_public_l0: self.pk_e_public_l0,
             pk_e_public_l1: self.pk_e_public_l1,
             pk_e_public_l2: self.pk_e_public_l2,
@@ -1123,7 +1782,7 @@ fn derive_mix(digest: &[u8]) -> BaseElement {
     for (i, b) in digest.iter().enumerate().take(16) {
         x |= (*b as u128) << (8 * i);
     }
-    BaseElement::new(x)
+    goldilocks_fe_from_u128(x)
 }
 
 fn decode_public_limbs<const LIMBS: usize>(bytes: &[u8]) -> Option<[BaseElement; LIMBS]> {
@@ -1137,7 +1796,7 @@ fn decode_public_limbs<const LIMBS: usize>(bytes: &[u8]) -> Option<[BaseElement;
         let end = begin + 8;
         let mut limb = [0u8; 8];
         limb.copy_from_slice(&bytes[begin..end]);
-        out[i] = BaseElement::new(u64::from_le_bytes(limb) as u128);
+        out[i] = goldilocks_fe(u64::from_le_bytes(limb));
         i += 1;
     }
     Some(out)
@@ -1169,9 +1828,8 @@ fn canonicalize_public_ctx_limbs(public_ctx: &[u8]) -> [BaseElement; COM_LIMBS] 
 }
 
 fn canonicalize_pk_e_public_limbs(pk_e: &[u8]) -> [BaseElement; COM_LIMBS] {
-    let pk_e_digest = hash_expand(&[pk_e], COM_LEN);
-    decode_public_limbs::<COM_LIMBS>(&pk_e_digest)
-        .expect("canonical pk_e digest has fixed 24-byte length")
+    decode_public_limbs::<COM_LIMBS>(pk_e)
+        .expect("pk_e public limbs use the raw 24-byte ciphertext key encoding")
 }
 
 fn derive_root_hint(pk: &[u8]) -> BaseElement {
@@ -1252,6 +1910,7 @@ struct StatementInputs {
     public_ctx_limbs: [BaseElement; COM_LIMBS],
     sigma_ctx_rel_limbs: [BaseElement; COM_LIMBS],
     enc_mode_hint: BaseElement,
+    ciphertext_prefix_limbs: [BaseElement; COM_LIMBS],
     pk_e_public_limbs: [BaseElement; COM_LIMBS],
     com_input_public_limbs: [BaseElement; COM_LIMBS],
     com_input_m_tail: BaseElement,
@@ -1290,7 +1949,7 @@ fn derive_statement_inputs(
     );
     let bind_seed = hash_expand(&[public_input_digest.as_slice(), ctx_binding.as_slice()], 16);
     let start_u128 = hash_to_u128(&[pk, com, m_pub, public_ctx]);
-    let start = BaseElement::new(start_u128);
+    let start = goldilocks_fe_from_u128(start_u128);
     let mix = derive_mix(&public_input_digest);
     let bind = derive_mix(&bind_seed);
     let root_hint = derive_root_hint(pk);
@@ -1301,19 +1960,20 @@ fn derive_statement_inputs(
     let addr_start = derive_module_part_start(&public_input_digest, &ctx_binding, root_hint, b"addr-acc-v1");
     let thash_rule_start =
         derive_module_part_start(&public_input_digest, &ctx_binding, root_hint, b"thash-rule-v1");
-    let thash_inblocks_hint = BaseElement::new(((public_input_digest[0] % 3) + 1) as u128);
-    let thash_addr_type_hint = BaseElement::new((public_input_digest[1] % 5) as u128);
+    let thash_inblocks_hint = goldilocks_fe(((public_input_digest[0] % 3) + 1) as u64);
+    let thash_addr_type_hint = goldilocks_fe((public_input_digest[1] % 5) as u64);
     let prf_rule_start = derive_module_part_start(&public_input_digest, &ctx_binding, root_hint, b"prf-rule-v1");
-    let prf_addr_type_hint = BaseElement::new((public_input_digest[2] % 5) as u128);
+    let prf_addr_type_hint = goldilocks_fe((public_input_digest[2] % 5) as u64);
     let hmsg_rule_start =
         derive_module_part_start(&public_input_digest, &ctx_binding, root_hint, b"hmsg-rule-v1");
-    let hmsg_mode_hint = BaseElement::new((public_input_digest[3] % 4) as u128);
+    let hmsg_mode_hint = goldilocks_fe((public_input_digest[3] % 4) as u64);
     let rule_mix_start =
         derive_module_part_start(&public_input_digest, &ctx_binding, root_hint, b"rule-mix-v1");
-    let rule_profile_hint = BaseElement::new((public_input_digest[4] % 3) as u128);
+    let rule_profile_hint = goldilocks_fe((public_input_digest[4] % 3) as u64);
     let com_public_limbs = decode_public_limbs::<COM_LIMBS>(com)?;
     let sigma_c_public_limbs = decode_sigma_c_public_limbs(sigma_c, com_public_limbs)?;
     let public_ctx_limbs = canonicalize_public_ctx_limbs(public_ctx);
+    let ciphertext_prefix_limbs = canonicalize_ciphertext_prefix_limbs();
     let pk_e_public_limbs = canonicalize_pk_e_public_limbs(pk_e);
     let (com_input_public_limbs, com_input_m_tail) = derive_commit_open_public_parts(m_pub)?;
     let sigma_ctx_rel_limbs = [
@@ -1352,6 +2012,7 @@ fn derive_statement_inputs(
         public_ctx_limbs,
         sigma_ctx_rel_limbs,
         enc_mode_hint,
+        ciphertext_prefix_limbs,
         pk_e_public_limbs,
         com_input_public_limbs,
         com_input_m_tail,
@@ -1621,6 +2282,34 @@ fn iterate_rule_mix_acc(
     acc
 }
 
+fn set_ciphertext_suffix_trace_columns(
+    state: &mut [BaseElement],
+    ciphertext_suffix_state_chain: &CiphertextSuffixStateChain,
+) {
+    for block_idx in 0..CIPHERTEXT_SUFFIX_BLOCK_COUNT {
+        let block_col = ciphertext_suffix_block_col_start(block_idx);
+        for lane in 0..POSEIDON2_RATE_LANES {
+            state[block_col + lane] = ciphertext_suffix_state_chain.suffix_blocks[block_idx][lane];
+        }
+    }
+    let start_col = ciphertext_suffix_start_post_state_col_start();
+    for lane in 0..POSEIDON2_T {
+        state[start_col + lane] = ciphertext_suffix_state_chain.start_post_state[lane];
+    }
+    for block_idx in 0..CIPHERTEXT_SUFFIX_BLOCK_COUNT {
+        let pre_col = ciphertext_suffix_pre_state_col_start(block_idx);
+        let post_col = ciphertext_suffix_post_state_col_start(block_idx);
+        let carry_col = ciphertext_suffix_carry_col_start(block_idx);
+        for lane in 0..POSEIDON2_T {
+            state[pre_col + lane] = ciphertext_suffix_state_chain.pre_states[block_idx][lane];
+            state[post_col + lane] = ciphertext_suffix_state_chain.post_states[block_idx][lane];
+        }
+        for lane in 0..POSEIDON2_RATE_LANES {
+            state[carry_col + lane] = ciphertext_suffix_state_chain.carries[block_idx][lane];
+        }
+    }
+}
+
 fn build_work_trace(
     start: BaseElement,
     mix: BaseElement,
@@ -1656,6 +2345,9 @@ fn build_work_trace(
     sigma_ctx_rel_l1: BaseElement,
     sigma_ctx_rel_l2: BaseElement,
     enc_mode_hint: BaseElement,
+    ciphertext_prefix_l0: BaseElement,
+    ciphertext_prefix_l1: BaseElement,
+    ciphertext_prefix_l2: BaseElement,
     pk_e_public_l0: BaseElement,
     pk_e_public_l1: BaseElement,
     pk_e_public_l2: BaseElement,
@@ -1672,6 +2364,18 @@ fn build_work_trace(
     omega2_witness_l0: BaseElement,
     omega2_witness_l1: BaseElement,
     omega2_witness_l2: BaseElement,
+    sigma_com_window_l0: BaseElement,
+    sigma_com_window_l1: BaseElement,
+    sigma_com_window_l2: BaseElement,
+    sigma_com_tail_l0: BaseElement,
+    sigma_com_tail_l1_7: BaseElement,
+    omega2_b0: BaseElement,
+    omega2_hi7: BaseElement,
+    omega2_b8: BaseElement,
+    omega2_mid7: BaseElement,
+    omega2_b16: BaseElement,
+    omega2_last7: BaseElement,
+    ciphertext_suffix_state_chain: CiphertextSuffixStateChain,
     n: usize,
 ) -> TraceTable<BaseElement> {
     let mut trace = TraceTable::new(TRACE_WIDTH, n);
@@ -1725,10 +2429,34 @@ fn build_work_trace(
             state[45] = com_input_public_l2;
             state[46] = com_input_m_tail + com_input_r_prefix7 * BaseElement::new(256);
             state[47] = com_input_r_middle8;
-            state[48] = com_input_r_last + BaseElement::new(COMMIT_PAD_LANE5_BASE as u128);
+            state[48] = com_input_r_last + goldilocks_fe(COMMIT_PAD_LANE5_BASE);
             state[49] = com_input_r_prefix7;
             state[50] = com_input_r_middle8;
             state[51] = com_input_r_last;
+            state[52] = sigma_com_window_l0;
+            state[53] = sigma_com_window_l1;
+            state[54] = sigma_com_window_l2;
+            state[55] = ciphertext_prefix_l0 + pk_e_public_l0;
+            state[56] = ciphertext_prefix_l1 + pk_e_public_l1;
+            state[57] = ciphertext_prefix_l2 + pk_e_public_l2;
+            state[58] = state[55] + com_public_l0;
+            state[59] = state[56] + com_public_l1;
+            state[60] = state[57] + com_public_l2;
+            state[61] = state[58] + sigma_com_window_l0;
+            state[62] = state[59] + sigma_com_window_l1;
+            state[63] = state[60] + sigma_com_window_l2;
+            state[64] = state[61] + omega2_witness_l0 + sigma_com_tail_l0;
+            state[65] = state[62] + omega2_witness_l1 + sigma_com_tail_l1_7;
+            state[66] = state[63] + omega2_witness_l2 + sigma_com_tail_l0 + sigma_com_tail_l1_7;
+            state[67] = sigma_com_tail_l0;
+            state[68] = sigma_com_tail_l1_7;
+            state[69] = omega2_b0;
+            state[70] = omega2_hi7;
+            state[71] = omega2_b8;
+            state[72] = omega2_mid7;
+            state[73] = omega2_b16;
+            state[74] = omega2_last7;
+            set_ciphertext_suffix_trace_columns(state, &ciphertext_suffix_state_chain);
         },
         |_, state| {
             let prev_state = state[0];
@@ -1810,10 +2538,34 @@ fn build_work_trace(
             state[45] = com_input_public_l2;
             state[46] = com_input_m_tail + com_input_r_prefix7 * BaseElement::new(256);
             state[47] = com_input_r_middle8;
-            state[48] = com_input_r_last + BaseElement::new(COMMIT_PAD_LANE5_BASE as u128);
+            state[48] = com_input_r_last + goldilocks_fe(COMMIT_PAD_LANE5_BASE);
             state[49] = com_input_r_prefix7;
             state[50] = com_input_r_middle8;
             state[51] = com_input_r_last;
+            state[52] = sigma_com_window_l0;
+            state[53] = sigma_com_window_l1;
+            state[54] = sigma_com_window_l2;
+            state[55] = ciphertext_prefix_l0 + pk_e_public_l0;
+            state[56] = ciphertext_prefix_l1 + pk_e_public_l1;
+            state[57] = ciphertext_prefix_l2 + pk_e_public_l2;
+            state[58] = state[55] + com_public_l0;
+            state[59] = state[56] + com_public_l1;
+            state[60] = state[57] + com_public_l2;
+            state[61] = state[58] + sigma_com_window_l0;
+            state[62] = state[59] + sigma_com_window_l1;
+            state[63] = state[60] + sigma_com_window_l2;
+            state[64] = state[61] + omega2_witness_l0 + sigma_com_tail_l0;
+            state[65] = state[62] + omega2_witness_l1 + sigma_com_tail_l1_7;
+            state[66] = state[63] + omega2_witness_l2 + sigma_com_tail_l0 + sigma_com_tail_l1_7;
+            state[67] = sigma_com_tail_l0;
+            state[68] = sigma_com_tail_l1_7;
+            state[69] = omega2_b0;
+            state[70] = omega2_hi7;
+            state[71] = omega2_b8;
+            state[72] = omega2_mid7;
+            state[73] = omega2_b16;
+            state[74] = omega2_last7;
+            set_ciphertext_suffix_trace_columns(state, &ciphertext_suffix_state_chain);
         },
     );
     trace
@@ -1873,8 +2625,13 @@ fn encode_pi_f_v2(
     off += 4;
     out[off..off + proof_bytes.len()].copy_from_slice(proof_bytes);
     off += proof_bytes.len();
-    out[off..off + PI_F_V2_RESERVED_BYTES].fill(0);
-    off += PI_F_V2_RESERVED_BYTES;
+    write_u32_le(&mut out[off..off + 4], PI_F_V2_FRAMEWORK_ID_FISCHLIN_STRICT);
+    off += 4;
+    write_u32_le(
+        &mut out[off..off + 4],
+        PI_F_V2_SIGNATURE_SYSTEM_ID_SPHINCSPLUS_POSEIDON2,
+    );
+    off += 4;
     Some(off)
 }
 
@@ -1883,6 +2640,8 @@ struct PiFV2Decoded<'a> {
     flags: u32,
     proof_system_id: u32,
     statement_version: u32,
+    framework_id: u32,
+    signature_system_id: u32,
     public_input_digest: &'a [u8],
     ctx_binding: &'a [u8],
     commitment: &'a [u8],
@@ -1933,7 +2692,12 @@ fn decode_pi_f_v2(input: &[u8]) -> Option<PiFV2Decoded<'_>> {
     }
     let proof_bytes = &input[off..off + proof_len];
     off += proof_len;
-    if input[off..off + PI_F_V2_RESERVED_BYTES].iter().any(|b| *b != 0) {
+    let framework_id = read_u32_le(&input[off..off + 4]);
+    off += 4;
+    let signature_system_id = read_u32_le(&input[off..off + 4]);
+    if framework_id != PI_F_V2_FRAMEWORK_ID_FISCHLIN_STRICT
+        || signature_system_id != PI_F_V2_SIGNATURE_SYSTEM_ID_SPHINCSPLUS_POSEIDON2
+    {
         return None;
     }
 
@@ -1941,6 +2705,8 @@ fn decode_pi_f_v2(input: &[u8]) -> Option<PiFV2Decoded<'_>> {
         flags,
         proof_system_id,
         statement_version,
+        framework_id,
+        signature_system_id,
         public_input_digest,
         ctx_binding,
         commitment,
@@ -1964,7 +2730,7 @@ pub unsafe extern "C" fn spx_p2_rust_validate_strict_relation_inputs_v1(
     if pubi.pk_e_len != SPX_N || pubi.sigma_c_len != 2 * SPX_N {
         return SPX_P2_RUST_ERR_INPUT;
     }
-    if pubi.m_pub.is_null() != (pubi.m_pub_len == 0) {
+    if pubi.m_pub.is_null() || pubi.m_pub_len == 0 {
         return SPX_P2_RUST_ERR_INPUT;
     }
     if require_witness != 0 {
@@ -1975,7 +2741,6 @@ pub unsafe extern "C" fn spx_p2_rust_validate_strict_relation_inputs_v1(
         if witv.sigma_com.is_null() {
             return SPX_P2_RUST_ERR_INPUT;
         }
-        // Strict prove path is frozen to M20 data-plane semantics.
         if pubi.m_pub.is_null()
             || pubi.m_pub_len == 0
             || witv.m.is_null()
@@ -2075,7 +2840,7 @@ unsafe fn rust_build_sigma_c_m19_native(
     Ok(out)
 }
 
-unsafe fn rust_build_sigma_c_m20_pke_native(
+unsafe fn rust_build_sigma_c_ciphertext_native(
     pubi: &SpxP2FfiPublicInputsV1,
     witv: &SpxP2FfiPrivateWitnessV1,
 ) -> Result<[u8; 2 * SPX_N], i32> {
@@ -2087,7 +2852,7 @@ unsafe fn rust_build_sigma_c_m20_pke_native(
     }
     let mut out = [0u8; 2 * SPX_N];
     let mut out_len = 0usize;
-    let ret = spx_p2_build_sigma_c_m20_pke(
+    let ret = spx_p2_build_sigma_c_ciphertext(
         out.as_mut_ptr(),
         &mut out_len as *mut usize,
         pubi.com,
@@ -2114,20 +2879,28 @@ pub unsafe extern "C" fn spx_p2_rust_validate_strict_witness_relation_v1(
     }
     let pubi = &*pub_inputs;
     let witv = &*wit;
+    if pubi.m_pub.is_null() || pubi.m_pub_len == 0 {
+        return SPX_P2_RUST_ERR_INPUT;
+    }
     if spx_p2_verify_com(pubi.pk, pubi.com, witv.sigma_com) != 0 {
+        if rust_verify_debug_enabled() {
+            eprintln!("[stark-rs prove] strict witness precheck failed: verify_com rejected sigma_com");
+        }
         return SPX_P2_RUST_ERR_PROVE;
     }
     let sigma_c = std::slice::from_raw_parts(pubi.sigma_c, pubi.sigma_c_len);
-    let expected = match if pubi.m_pub.is_null() || pubi.m_pub_len == 0 {
-        rust_build_sigma_c_m19_native(pubi, witv)
-    } else {
-        rust_build_sigma_c_m20_pke_native(pubi, witv)
-    } {
+    let expected = match rust_build_sigma_c_ciphertext_native(pubi, witv) {
         Ok(v) => v,
         Err(e) => return e,
     };
     if sigma_c != expected {
+        if rust_verify_debug_enabled() {
+            eprintln!("[stark-rs prove] strict witness precheck failed: sigma_c mismatch");
+        }
         return SPX_P2_RUST_ERR_INPUT;
+    }
+    if rust_verify_debug_enabled() {
+        eprintln!("[stark-rs prove] strict witness precheck passed");
     }
     SPX_P2_RUST_OK
 }
@@ -2183,8 +2956,7 @@ pub unsafe extern "C" fn spx_p2_rust_generate_pi_f_v1(
     if strict_input_ret != SPX_P2_RUST_OK {
         return strict_input_ret;
     }
-    // M20-8 semantic anchor: enforce native strict witness relation on proving path.
-    // This keeps Enc semantics aligned with SPX_p2_build_sigma_c_m20_pke while AIR keeps
+    // Keep ciphertext semantics aligned with the shared Sigma.C builder while AIR keeps
     // consistency bindings for proof-side trace constraints.
     let strict_witness_ret = spx_p2_rust_validate_strict_witness_relation_v1(pub_inputs, wit);
     if strict_witness_ret != SPX_P2_RUST_OK {
@@ -2248,6 +3020,7 @@ pub unsafe extern "C" fn spx_p2_rust_generate_pi_f_v1(
     let [public_ctx_l0, public_ctx_l1, public_ctx_l2] = stmt.public_ctx_limbs;
     let [sigma_ctx_rel_l0, sigma_ctx_rel_l1, sigma_ctx_rel_l2] = stmt.sigma_ctx_rel_limbs;
     let enc_mode_hint = stmt.enc_mode_hint;
+    let [ciphertext_prefix_l0, ciphertext_prefix_l1, ciphertext_prefix_l2] = stmt.ciphertext_prefix_limbs;
     let [pk_e_public_l0, pk_e_public_l1, pk_e_public_l2] = stmt.pk_e_public_limbs;
     let [com_input_public_l0, com_input_public_l1, com_input_public_l2] = stmt.com_input_public_limbs;
     let com_input_m_tail = stmt.com_input_m_tail;
@@ -2271,6 +3044,61 @@ pub unsafe extern "C" fn spx_p2_rust_generate_pi_f_v1(
             Some(v) => v,
             None => return SPX_P2_RUST_ERR_INPUT,
         };
+    let sigma_com_wit = std::slice::from_raw_parts(witv.sigma_com, SPX_SIGMA_COM_LEN);
+    let [sigma_com_prefix_l0, sigma_com_prefix_l1, sigma_com_prefix_l2] =
+        match derive_signature_witness_prefix_limbs(sigma_com_wit) {
+            Some(v) => v,
+            None => return SPX_P2_RUST_ERR_INPUT,
+        };
+    let [sigma_com_quarter_l0, sigma_com_quarter_l1, sigma_com_quarter_l2] =
+        match derive_signature_witness_quarter_limbs(sigma_com_wit) {
+            Some(v) => v,
+            None => return SPX_P2_RUST_ERR_INPUT,
+        };
+    let [sigma_com_middle_l0, sigma_com_middle_l1, sigma_com_middle_l2] =
+        match derive_signature_witness_middle_limbs(sigma_com_wit) {
+            Some(v) => v,
+            None => return SPX_P2_RUST_ERR_INPUT,
+        };
+    let [sigma_com_three_quarter_l0, sigma_com_three_quarter_l1, sigma_com_three_quarter_l2] =
+        match derive_signature_witness_three_quarter_limbs(sigma_com_wit) {
+            Some(v) => v,
+            None => return SPX_P2_RUST_ERR_INPUT,
+        };
+    let sigma_com_window_l0 =
+        sigma_com_prefix_l0 + sigma_com_quarter_l0 + sigma_com_middle_l0 + sigma_com_three_quarter_l0;
+    let sigma_com_window_l1 =
+        sigma_com_prefix_l1 + sigma_com_quarter_l1 + sigma_com_middle_l1 + sigma_com_three_quarter_l1;
+    let sigma_com_window_l2 =
+        sigma_com_prefix_l2 + sigma_com_quarter_l2 + sigma_com_middle_l2 + sigma_com_three_quarter_l2;
+    let (sigma_com_tail_base_l0, sigma_com_tail_base_l1_7) =
+        match derive_signature_witness_suffix_tail_parts(sigma_com_wit) {
+        Some(v) => v,
+        None => return SPX_P2_RUST_ERR_INPUT,
+    };
+    let sigma_com_tail_l0 = sigma_com_tail_base_l0;
+    let sigma_com_tail_l1_7 = sigma_com_tail_base_l1_7;
+    let (omega2_b0, omega2_hi7, omega2_b8, omega2_mid7, omega2_b16, omega2_last7) =
+        match derive_omega2_tail_block_parts(omega2_wit) {
+            Some(v) => v,
+            None => return SPX_P2_RUST_ERR_INPUT,
+        };
+    let (ciphertext_prev_prev_block, ciphertext_prev_block, ciphertext_final_block) =
+        match derive_ciphertext_suffix_blocks(pk_e, com, sigma_com_wit, omega2_wit) {
+            Some(v) => v,
+            None => return SPX_P2_RUST_ERR_INPUT,
+        };
+    let ciphertext_blocks = match build_ciphertext_absorb_blocks(pk_e, com, sigma_com_wit, omega2_wit) {
+        Some(v) => v,
+        None => return SPX_P2_RUST_ERR_INPUT,
+    };
+    let ciphertext_suffix_state_chain = match derive_ciphertext_suffix_state_chain(&ciphertext_blocks) {
+        Some(v) => v,
+        None => return SPX_P2_RUST_ERR_INPUT,
+    };
+    if rust_verify_debug_enabled() {
+        eprintln!("[stark-rs prove] entering trace build and Winterfell proving");
+    }
     let result = iterate_state(start, mix, bind, TRACE_LEN);
     let module_result = iterate_module_acc(start, mix, bind, root_hint, module_start, TRACE_LEN);
     let prf_result = iterate_prf_acc(start, mix, bind, prf_start, prf_start, TRACE_LEN);
@@ -2341,8 +3169,8 @@ pub unsafe extern "C" fn spx_p2_rust_generate_pi_f_v1(
     );
     let witness_rows = TRACE_LEN as u32;
     let trace_calls = derive_trace_calls(TRACE_LEN);
-    let trace_calls_fe = BaseElement::new(trace_calls as u128);
-    let witness_rows_fe = BaseElement::new(witness_rows as u128);
+    let trace_calls_fe = goldilocks_fe(trace_calls as u64);
+    let witness_rows_fe = goldilocks_fe(witness_rows as u64);
     let trace = build_work_trace(
         start,
         mix,
@@ -2378,6 +3206,9 @@ pub unsafe extern "C" fn spx_p2_rust_generate_pi_f_v1(
         sigma_ctx_rel_l1,
         sigma_ctx_rel_l2,
         enc_mode_hint,
+        ciphertext_prefix_l0,
+        ciphertext_prefix_l1,
+        ciphertext_prefix_l2,
         pk_e_public_l0,
         pk_e_public_l1,
         pk_e_public_l2,
@@ -2394,14 +3225,32 @@ pub unsafe extern "C" fn spx_p2_rust_generate_pi_f_v1(
         omega2_witness_l0,
         omega2_witness_l1,
         omega2_witness_l2,
+        sigma_com_window_l0,
+        sigma_com_window_l1,
+        sigma_com_window_l2,
+        sigma_com_tail_l0,
+        sigma_com_tail_l1_7,
+        omega2_b0,
+        omega2_hi7,
+        omega2_b8,
+        omega2_mid7,
+        omega2_b16,
+        omega2_last7,
+        ciphertext_suffix_state_chain,
         TRACE_LEN,
     );
-    if let Some((row, constraint, value)) = debug_validate_m20_commit_columns(
+    if let Some((row, constraint, value)) = debug_validate_commit_opening_columns(
         &trace,
         com_input_public_l0,
         com_input_public_l1,
         com_input_public_l2,
         com_input_m_tail,
+        ciphertext_prefix_l0,
+        ciphertext_prefix_l1,
+        ciphertext_prefix_l2,
+            ciphertext_prev_prev_block,
+            ciphertext_prev_block,
+            ciphertext_final_block,
     ) {
         if rust_verify_debug_enabled() {
             eprintln!(
@@ -2458,6 +3307,9 @@ pub unsafe extern "C" fn spx_p2_rust_generate_pi_f_v1(
         sigma_ctx_rel_l1,
         sigma_ctx_rel_l2,
         enc_mode_hint,
+        ciphertext_prefix_l0,
+        ciphertext_prefix_l1,
+        ciphertext_prefix_l2,
         pk_e_public_l0,
         pk_e_public_l1,
         pk_e_public_l2,
@@ -2469,7 +3321,12 @@ pub unsafe extern "C" fn spx_p2_rust_generate_pi_f_v1(
     .prove(trace)
     {
         Ok(p) => p,
-        Err(_) => return SPX_P2_RUST_ERR_PROVE,
+        Err(e) => {
+            if rust_verify_debug_enabled() {
+                eprintln!("[stark-rs prove] winterfell prove failed: {:?}", e);
+            }
+            return SPX_P2_RUST_ERR_PROVE;
+        }
     };
     let proof_bytes = proof.to_bytes();
     let commitment = derive_commitment(
@@ -2490,12 +3347,137 @@ pub unsafe extern "C" fn spx_p2_rust_generate_pi_f_v1(
         &proof_bytes,
     ) {
         Some(n) => n,
-        None => return SPX_P2_RUST_ERR_BUFFER_SMALL,
+        None => {
+            if rust_verify_debug_enabled() {
+                let total_len = PI_F_V2_FIXED_HEADER_BYTES
+                    + SPX_N
+                    + SPX_N
+                    + SPX_N
+                    + 4
+                    + proof_bytes.len()
+                    + PI_F_V2_RESERVED_BYTES;
+                eprintln!(
+                    "[stark-rs prove] output buffer too small: cap={} required={} proof_bytes={}",
+                    out.cap,
+                    total_len,
+                    proof_bytes.len()
+                );
+            }
+            return SPX_P2_RUST_ERR_BUFFER_SMALL;
+        }
     };
     out.len = encoded_len;
 
     let _ = result;
     SPX_P2_RUST_OK
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ciphertext_scheduler_materializes_final_three_blocks() {
+        let pk_e = [0x11u8; SPX_N];
+        let com = [0x22u8; COM_LEN];
+        let sigma_com = vec![0x33u8; SPX_SIGMA_COM_LEN];
+        let omega2 = [0x44u8; SPX_N];
+
+        let (prev_prev, prev, final_block) =
+            derive_ciphertext_suffix_blocks(&pk_e, &com, &sigma_com, &omega2).expect("suffix blocks");
+
+        assert_eq!(prev_prev.len(), POSEIDON2_RATE_LANES);
+        assert_eq!(prev.len(), POSEIDON2_RATE_LANES);
+        assert_eq!(final_block.len(), POSEIDON2_RATE_LANES);
+
+        let (tail_l0, tail_l1_7) =
+            derive_signature_witness_suffix_tail_parts(&sigma_com).expect("tail15");
+        let (omega2_b0, omega2_hi7, omega2_b8, omega2_mid7, omega2_b16, omega2_last7) =
+            derive_omega2_tail_block_parts(&omega2).expect("omega2 tail");
+
+        assert_eq!(final_block[0], tail_l0);
+        assert_eq!(
+            final_block[1],
+            tail_l1_7 + omega2_b0 * goldilocks_fe(CIPHERTEXT_SPLIT_BYTE7_SHIFT)
+        );
+        assert_eq!(
+            final_block[2],
+            omega2_hi7 + omega2_b8 * goldilocks_fe(CIPHERTEXT_SPLIT_BYTE7_SHIFT)
+        );
+        assert_eq!(
+            final_block[3],
+            omega2_mid7 + omega2_b16 * goldilocks_fe(CIPHERTEXT_SPLIT_BYTE7_SHIFT)
+        );
+        assert_eq!(
+            final_block[4],
+            omega2_last7 + goldilocks_fe(CIPHERTEXT_FINAL_PAD_LANE4_BASE)
+        );
+        assert_eq!(final_block[5], goldilocks_fe(CIPHERTEXT_FINAL_PAD_LANE5_BASE));
+    }
+
+    #[test]
+    fn ciphertext_scheduler_respects_domain_and_nul_label_prefix() {
+        let pk_e = [0u8; SPX_N];
+        let com = [0u8; COM_LEN];
+        let sigma_com = Vec::new();
+        let omega2 = [0u8; SPX_N];
+        let blocks = build_ciphertext_absorb_blocks(&pk_e, &com, &sigma_com, &omega2).expect("blocks");
+
+        let expected_prefix = canonicalize_ciphertext_prefix_limbs();
+        assert_eq!(blocks[0][0], expected_prefix[0]);
+        assert_eq!(blocks[0][1], expected_prefix[1]);
+        assert_eq!(blocks[0][2], expected_prefix[2]);
+    }
+
+    #[test]
+    fn ciphertext_suffix_state_chain_respects_absorb_and_output_binding() {
+        let pk_e = [0x51u8; SPX_N];
+        let com = [0x29u8; COM_LEN];
+        let sigma_com = vec![0x87u8; SPX_SIGMA_COM_LEN];
+        let omega2 = [0x13u8; SPX_N];
+        let blocks = build_ciphertext_absorb_blocks(&pk_e, &com, &sigma_com, &omega2).expect("blocks");
+        let chain = derive_ciphertext_suffix_state_chain(&blocks).expect("state chain");
+        let last = blocks.len() - 1;
+        let suffix_slice = &blocks[blocks.len() - CIPHERTEXT_SUFFIX_BLOCK_COUNT..];
+        assert_eq!(&chain.suffix_blocks[..], suffix_slice);
+
+        let mut replay_state = [0u64; POSEIDON2_T];
+        let mut replay_start_post = [0u64; POSEIDON2_T];
+        let mut replay_final_post = [0u64; POSEIDON2_T];
+        for (idx, block) in blocks.iter().enumerate() {
+            let (pre_state, _) = goldilocks_absorb_state_with_block(replay_state, *block);
+            replay_state = poseidon2_permute_state(pre_state);
+            if idx + CIPHERTEXT_SUFFIX_BLOCK_COUNT + 1 == blocks.len() {
+                replay_start_post = replay_state;
+            }
+            if idx == last {
+                replay_final_post = replay_state;
+            }
+        }
+        assert_eq!(chain.start_post_state, poseidon2_state_from_u64(replay_start_post));
+        assert_eq!(
+            chain.post_states[CIPHERTEXT_SUFFIX_BLOCK_COUNT - 1],
+            poseidon2_state_from_u64(replay_final_post)
+        );
+        for block_idx in 0..CIPHERTEXT_SUFFIX_BLOCK_COUNT {
+            let prev_post = if block_idx == 0 {
+                chain.start_post_state
+            } else {
+                chain.post_states[block_idx - 1]
+            };
+            for lane in 0..POSEIDON2_RATE_LANES {
+                let (want, carry) = goldilocks_add_with_carry(
+                    prev_post[lane].as_int() as u64,
+                    chain.suffix_blocks[block_idx][lane].as_int() as u64,
+                );
+                assert_eq!(chain.pre_states[block_idx][lane], goldilocks_fe(want));
+                assert_eq!(chain.carries[block_idx][lane], goldilocks_fe(carry));
+            }
+            for lane in POSEIDON2_RATE_LANES..POSEIDON2_T {
+                assert_eq!(chain.pre_states[block_idx][lane], prev_post[lane]);
+            }
+        }
+    }
 }
 
 #[no_mangle]
@@ -2548,8 +3530,10 @@ pub unsafe extern "C" fn spx_p2_rust_verify_pi_f_v1(
     if decoded.flags & PI_F_V2_FLAG_STARK_PROOF == 0
         || decoded.proof_system_id != PI_F_V2_PROOF_SYSTEM_ID_STARK
         || decoded.statement_version != PI_F_V2_STATEMENT_VERSION_VERIFY_FULL
+        || decoded.framework_id != PI_F_V2_FRAMEWORK_ID_FISCHLIN_STRICT
+        || decoded.signature_system_id != PI_F_V2_SIGNATURE_SYSTEM_ID_SPHINCSPLUS_POSEIDON2
     {
-        rust_verify_debug("header flags/system_id/statement_version mismatch");
+        rust_verify_debug("header flags/system_id/statement/framework/signature mismatch");
         return SPX_P2_RUST_ERR_FORMAT;
     }
 
@@ -2620,6 +3604,7 @@ pub unsafe extern "C" fn spx_p2_rust_verify_pi_f_v1(
     let [public_ctx_l0, public_ctx_l1, public_ctx_l2] = stmt.public_ctx_limbs;
     let [sigma_ctx_rel_l0, sigma_ctx_rel_l1, sigma_ctx_rel_l2] = stmt.sigma_ctx_rel_limbs;
     let enc_mode_hint = stmt.enc_mode_hint;
+    let [ciphertext_prefix_l0, ciphertext_prefix_l1, ciphertext_prefix_l2] = stmt.ciphertext_prefix_limbs;
     let [pk_e_public_l0, pk_e_public_l1, pk_e_public_l2] = stmt.pk_e_public_limbs;
     let [com_input_public_l0, com_input_public_l1, com_input_public_l2] = stmt.com_input_public_limbs;
     let com_input_m_tail = stmt.com_input_m_tail;
@@ -2722,8 +3707,8 @@ pub unsafe extern "C" fn spx_p2_rust_verify_pi_f_v1(
         result,
         mix,
         bind,
-        trace_calls: BaseElement::new(trace_calls as u128),
-        row_count: BaseElement::new(witness_rows as u128),
+        trace_calls: goldilocks_fe(trace_calls as u64),
+        row_count: goldilocks_fe(witness_rows as u64),
         root_hint,
         module_start,
         module_result,
@@ -2764,6 +3749,9 @@ pub unsafe extern "C" fn spx_p2_rust_verify_pi_f_v1(
         sigma_ctx_rel_l1,
         sigma_ctx_rel_l2,
         enc_mode_hint,
+        ciphertext_prefix_l0,
+        ciphertext_prefix_l1,
+        ciphertext_prefix_l2,
         pk_e_public_l0,
         pk_e_public_l1,
         pk_e_public_l2,
@@ -2772,9 +3760,10 @@ pub unsafe extern "C" fn spx_p2_rust_verify_pi_f_v1(
         com_input_public_l2,
         com_input_m_tail,
     };
-    // After widening AIR with higher-degree rule constraints, keep verification policy aligned
-    // with current proof options to avoid rejecting otherwise valid proofs.
-    let min_opts = AcceptableOptions::MinConjecturedSecurity(64);
+    // Under Goldilocks with FieldExtension::None, Winterfell's conjectured-security
+    // estimate is capped at 63 bits. Keep verifier policy aligned with the actual
+    // proof options rather than rejecting valid proofs at the boundary.
+    let min_opts = AcceptableOptions::MinConjecturedSecurity(63);
     match winterfell::verify::<
         WorkAir,
         Blake3_256<BaseElement>,

@@ -15,10 +15,11 @@ int main(void)
 {
     static spx_p2_cred_internal cred;
     static spx_p2_show show_obj;
+    spx_p2_issue_request_obj req;
+    spx_p2_issue_response_obj resp;
     uint8_t issuer_pk[CRYPTO_PUBLICKEYBYTES];
     uint8_t issuer_pk_bad[CRYPTO_PUBLICKEYBYTES];
     uint8_t issuer_sk[CRYPTO_SECRETKEYBYTES];
-    uint8_t com[SPX_N];
     uint8_t m[24];
     uint8_t r[16];
     uint8_t m_bad[24];
@@ -28,6 +29,8 @@ int main(void)
 
     memset(&cred, 0, sizeof(cred));
     memset(&show_obj, 0, sizeof(show_obj));
+    memset(&req, 0, sizeof(req));
+    memset(&resp, 0, sizeof(resp));
     memset(m, 0x35, sizeof(m));
     memset(r, 0x73, sizeof(r));
 
@@ -38,10 +41,10 @@ int main(void)
     }
     memcpy(issuer_pk_bad, issuer_pk, sizeof(issuer_pk_bad));
 
-    ret = spx_p2_issue_unblind(&cred, com, issuer_sk, m, sizeof(m), r, sizeof(r), 0, 0);
+    ret = spx_p2_issue_finalize(&cred, &req, &resp, issuer_sk, m, sizeof(m), r, sizeof(r), 0, 0);
     if (ret != SPX_P2_FLOW_OK)
     {
-        fail("issue_unblind");
+        fail("issue_finalize");
         return 1;
     }
     if (cred.omega2_len != SPX_N)
@@ -60,45 +63,40 @@ int main(void)
     ret = spx_p2_protocol_show(&show_obj, issuer_pk, issuer_pk, SPX_N, &cred, public_ctx, sizeof(public_ctx));
     if (ret != SPX_P2_FLOW_OK)
     {
-        fail("protocol_show_v1");
+        fail("protocol_show");
         return 1;
     }
 
-    ret = spx_p2_protocol_verify_statement_bound(&show_obj, issuer_pk, issuer_pk, SPX_N, cred.m, cred.mlen);
+    ret = spx_p2_protocol_verify(&show_obj, issuer_pk, issuer_pk, SPX_N, cred.m, cred.mlen);
     if (ret != SPX_P2_FLOW_OK)
     {
-        fail("verify_statement_bound_good");
-        return 1;
-    }
-    if (spx_p2_protocol_verify(&show_obj, issuer_pk, issuer_pk, SPX_N) == SPX_P2_FLOW_OK)
-    {
-        fail("verify_v1_should_require_explicit_m_pub_for_statement_bound");
+        fail("verify_good");
         return 1;
     }
 
     memcpy(m_bad, cred.m, cred.mlen);
     m_bad[0] ^= 1u;
-    if (spx_p2_protocol_verify_statement_bound(&show_obj, issuer_pk, issuer_pk, SPX_N, m_bad, cred.mlen) == SPX_P2_FLOW_OK)
+    if (spx_p2_protocol_verify(&show_obj, issuer_pk, issuer_pk, SPX_N, m_bad, cred.mlen) == SPX_P2_FLOW_OK)
     {
-        fail("verify_statement_bound_should_reject_bad_m_pub");
+        fail("verify_should_reject_bad_m_pub");
         return 1;
     }
 
     issuer_pk_bad[0] ^= 1u;
-    if (spx_p2_protocol_verify_statement_bound(&show_obj, issuer_pk, issuer_pk_bad, SPX_N, cred.m, cred.mlen) == SPX_P2_FLOW_OK)
+    if (spx_p2_protocol_verify(&show_obj, issuer_pk, issuer_pk_bad, SPX_N, cred.m, cred.mlen) == SPX_P2_FLOW_OK)
     {
-        fail("verify_statement_bound_should_reject_bad_pk_e");
+        fail("verify_should_reject_bad_pk_e");
         return 1;
     }
 
     show_obj.public_ctx[0] ^= 1u;
-    if (spx_p2_protocol_verify_statement_bound(&show_obj, issuer_pk, issuer_pk, SPX_N, cred.m, cred.mlen) == SPX_P2_FLOW_OK)
+    if (spx_p2_protocol_verify(&show_obj, issuer_pk, issuer_pk, SPX_N, cred.m, cred.mlen) == SPX_P2_FLOW_OK)
     {
-        fail("verify_statement_bound_should_reject_bad_ctx");
+        fail("verify_should_reject_bad_ctx");
         return 1;
     }
 
-    printf("poseidon2_fischlin_spec_flow_v1 test: OK | omega2_len=%llu m_pub_len=%llu\n",
+    printf("poseidon2_fischlin_statement_spec test: OK | omega2_len=%llu m_pub_len=%llu\n",
            (unsigned long long)cred.omega2_len,
            (unsigned long long)cred.mlen);
     return 0;

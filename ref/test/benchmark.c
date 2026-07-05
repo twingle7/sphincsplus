@@ -13,7 +13,12 @@
 #include "cycles.h"
 
 #define SPX_MLEN 32
-#define NTESTS 10
+
+#ifndef SPX_BENCH_NTESTS
+#define SPX_BENCH_NTESTS 10
+#endif
+
+#define NTESTS SPX_BENCH_NTESTS
 
 static void wots_gen_pkx1(unsigned char *pk, const spx_ctx* ctx,
                 uint32_t addr[8]);
@@ -170,4 +175,3 @@ static void wots_gen_pkx1(unsigned char *pk, const spx_ctx *ctx,
     INITIALIZE_LEAF_INFO_X1(leaf, addr, steps);
     wots_gen_leafx1(pk, ctx, 0, &leaf);
 }
-

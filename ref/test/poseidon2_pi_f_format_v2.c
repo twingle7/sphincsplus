@@ -32,6 +32,8 @@ int main(void)
     in_view.flags = SPX_P2_PI_F_V2_FLAG_STARK_PROOF;
     in_view.proof_system_id = SPX_P2_PI_F_V2_PROOF_SYSTEM_ID_STARK;
     in_view.statement_version = SPX_P2_PI_F_V2_STATEMENT_VERSION_VERIFY_FULL_V1;
+    in_view.framework_id = SPX_P2_PI_F_V2_FRAMEWORK_ID_FISCHLIN_STRICT;
+    in_view.signature_system_id = SPX_P2_PI_F_V2_SIGNATURE_SYSTEM_ID_SPHINCSPLUS_POSEIDON2;
     in_view.proof_bytes = proof_blob;
     in_view.proof_len = (uint32_t)sizeof(proof_blob);
 
@@ -48,6 +50,8 @@ int main(void)
     if (out_view.flags != in_view.flags ||
         out_view.proof_system_id != in_view.proof_system_id ||
         out_view.statement_version != in_view.statement_version ||
+        out_view.framework_id != in_view.framework_id ||
+        out_view.signature_system_id != in_view.signature_system_id ||
         out_view.proof_len != in_view.proof_len)
     {
         fail("roundtrip_meta");
@@ -98,13 +102,21 @@ int main(void)
         encoded[proof_len_off] ^= 1u;
     }
 
-    encoded[encoded_len - 1] ^= 1u;
+    encoded[encoded_len - 8u] ^= 1u;
     if (spx_p2_pi_f_v2_decode(&out_view, encoded, encoded_len) == 0)
     {
-        fail("tamper_reserved");
+        fail("tamper_framework_id");
         return 1;
     }
-    encoded[encoded_len - 1] ^= 1u;
+    encoded[encoded_len - 8u] ^= 1u;
+
+    encoded[encoded_len - 4u] ^= 1u;
+    if (spx_p2_pi_f_v2_decode(&out_view, encoded, encoded_len) == 0)
+    {
+        fail("tamper_signature_system_id");
+        return 1;
+    }
+    encoded[encoded_len - 4u] ^= 1u;
 
     printf("poseidon2_pi_f_format_v2 test: OK | len=%llu\n",
            (unsigned long long)encoded_len);

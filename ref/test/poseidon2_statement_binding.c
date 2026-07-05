@@ -26,6 +26,8 @@ int main(void)
     size_t siglen = 0;
     size_t statement_ver_off = 24u;
     size_t pid_off = SPX_P2_PI_F_FIXED_HEADER_BYTES;
+    size_t framework_id_off = 0;
+    size_t signature_system_id_off = 0;
 
     memset(&cred, 0, sizeof(cred));
     memset(&show_obj, 0, sizeof(show_obj));
@@ -60,6 +62,8 @@ int main(void)
         fail("show_verify");
         return 1;
     }
+    framework_id_off = show_obj.pi_f_len - SPX_P2_PI_F_RESERVED_BYTES;
+    signature_system_id_off = framework_id_off + 4u;
 
     if (show_obj.pi_f_len <= statement_ver_off)
     {
@@ -86,6 +90,27 @@ int main(void)
         return 1;
     }
     show_obj.pi_f[pid_off] ^= 1u;
+
+    if (show_obj.pi_f_len <= signature_system_id_off)
+    {
+        fail("len_framework_signature_off");
+        return 1;
+    }
+    show_obj.pi_f[framework_id_off] ^= 1u;
+    if (spx_p2_show_verify(&show_obj, pk) == 0)
+    {
+        fail("tamper_framework_id_should_reject");
+        return 1;
+    }
+    show_obj.pi_f[framework_id_off] ^= 1u;
+
+    show_obj.pi_f[signature_system_id_off] ^= 1u;
+    if (spx_p2_show_verify(&show_obj, pk) == 0)
+    {
+        fail("tamper_signature_system_id_should_reject");
+        return 1;
+    }
+    show_obj.pi_f[signature_system_id_off] ^= 1u;
 
     if (show_obj.m_pub_len == 0)
     {

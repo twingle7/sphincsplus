@@ -30,21 +30,22 @@ int main(void)
 {
     static spx_p2_cred_internal cred;
     static spx_p2_show show_obj;
+    spx_p2_issue_request_obj req;
+    spx_p2_issue_response_obj resp;
     int ret = 0;
     uint8_t signer_pk[CRYPTO_PUBLICKEYBYTES];
     uint8_t signer_sk[CRYPTO_SECRETKEYBYTES];
-    uint8_t com[SPX_N];
     uint8_t m[24];
     uint8_t r[16];
     uint8_t omega2[SPX_N];
-    uint8_t sigma_blind[SPX_BYTES];
     uint8_t public_ctx[12] = {'D', 'E', 'M', 'O', '-', 'F', 'I', 'N', 'A', 'L', 0, 0};
-    size_t sigma_blind_len = 0;
     uint32_t magic = 0;
     size_t i = 0;
 
     memset(&cred, 0, sizeof(cred));
     memset(&show_obj, 0, sizeof(show_obj));
+    memset(&req, 0, sizeof(req));
+    memset(&resp, 0, sizeof(resp));
     memset(m, 0x33, sizeof(m));
     memset(r, 0x44, sizeof(r));
     for (i = 0; i < sizeof(omega2); i++)
@@ -54,13 +55,13 @@ int main(void)
 
     printf("=== ROLE INTERACTION DEMO (FINAL) ===\n");
     printf("[User]    generate commitment com = Commit(m||r)\n");
-    spx_p2_commit(com, m, sizeof(m), r, sizeof(r));
+    spx_p2_commit(req.c, m, sizeof(m), r, sizeof(r));
     memcpy(cred.m, m, sizeof(m));
     cred.mlen = sizeof(m);
     memcpy(cred.r, r, sizeof(r));
     cred.rlen = sizeof(r);
     printf("[User]    com[0..7]=0x");
-    print_hex_prefix(com, SPX_N, 8);
+    print_hex_prefix(req.c, SPX_N, 8);
     printf("\n");
 
     printf("[Signer]  keygen and sign request(com)\n");
@@ -69,34 +70,30 @@ int main(void)
         printf("FAIL: signer_keygen\n");
         return 1;
     }
-    ret = spx_p2_issue_request(com, m, sizeof(m), r, sizeof(r));
+    ret = spx_p2_prepare_issue_request(&req, m, sizeof(m), r, sizeof(r));
     if (ret != SPX_P2_FLOW_OK)
     {
         printf("FAIL: issue_request ret=%d\n", ret);
         return 1;
     }
-    ret = spx_p2_issue_sign(sigma_blind, &sigma_blind_len, signer_sk, com);
+    ret = spx_p2_issue_respond(&resp, signer_sk, &req);
     if (ret != SPX_P2_FLOW_OK)
     {
         printf("FAIL: issue_sign ret=%d\n", ret);
         return 1;
     }
-    ret = spx_p2_unblind(&cred, com, sigma_blind, sigma_blind_len, omega2, sizeof(omega2));
+    ret = spx_p2_finalize_credential(&cred, &req, &resp, m, sizeof(m), r, sizeof(r), omega2, sizeof(omega2));
     if (ret != SPX_P2_FLOW_OK)
     {
-        printf("FAIL: unblind ret=%d\n", ret);
+        printf("FAIL: finalize_credential ret=%d\n", ret);
         return 1;
     }
-    memcpy(cred.m, m, sizeof(m));
-    cred.mlen = sizeof(m);
-    memcpy(cred.r, r, sizeof(r));
-    cred.rlen = sizeof(r);
-    if (sigma_blind_len != SPX_BYTES)
+    if (resp.sigma_prime_len != SPX_BYTES)
     {
         printf("FAIL: signer_sign_len\n");
         return 1;
     }
-    printf("[Signer]  sig_com issued (%llu bytes)\n", (unsigned long long)sigma_blind_len);
+    printf("[Signer]  sig_com issued (%llu bytes)\n", (unsigned long long)resp.sigma_prime_len);
 
     printf("[User]    run ShowProve(final)\n");
     ret = spx_p2_show_prove(&show_obj, signer_pk, &cred, public_ctx, sizeof(public_ctx));

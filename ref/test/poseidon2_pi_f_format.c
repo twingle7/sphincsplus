@@ -32,6 +32,8 @@ int main(void)
     in_view.flags = SPX_P2_SHOW_PROOF_FLAG_STARK;
     in_view.proof_system_id = SPX_P2_SHOW_PROOF_SYSTEM_ID_STARK;
     in_view.statement_version = SPX_P2_SHOW_PROOF_STATEMENT_VERSION;
+    in_view.framework_id = SPX_P2_SHOW_PROOF_FRAMEWORK_ID_FISCHLIN_STRICT;
+    in_view.signature_system_id = SPX_P2_SHOW_PROOF_SIGNATURE_SYSTEM_ID_SPHINCSPLUS_POSEIDON2;
     in_view.proof_bytes = proof_blob;
     in_view.proof_len = (uint32_t)sizeof(proof_blob);
 
@@ -48,6 +50,8 @@ int main(void)
     if (out_view.flags != in_view.flags ||
         out_view.proof_system_id != in_view.proof_system_id ||
         out_view.statement_version != in_view.statement_version ||
+        out_view.framework_id != in_view.framework_id ||
+        out_view.signature_system_id != in_view.signature_system_id ||
         out_view.proof_len != in_view.proof_len)
     {
         fail("roundtrip_meta");

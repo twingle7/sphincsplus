@@ -18,18 +18,17 @@ int main(void)
 {
     static spx_p2_cred_internal cred;
     static spx_p2_show show_obj;
+    spx_p2_issue_request_obj req;
+    spx_p2_issue_response_obj resp;
     uint8_t pk_sig[CRYPTO_PUBLICKEYBYTES];
     uint8_t sk_sig[CRYPTO_SECRETKEYBYTES];
     uint8_t pk_e[SPX_N];
     uint8_t m[24];
     uint8_t r[16];
-    uint8_t com[SPX_N];
-    uint8_t sigma_blind[SPX_BYTES];
     uint8_t omega2[SPX_N];
     uint8_t public_ctx[16] = {
         'S', 'T', 'A', 'R', 'K', '-', 'S', 'T',
         'A', 'T', 'S', '-', 'M', '2', '0', '1'};
-    size_t sigma_blind_len = 0;
     spx_p2_stark_stats stats;
     spx_p2_ffi_public_inputs pub;
     spx_p2_ffi_private_witness wit;
@@ -37,6 +36,8 @@ int main(void)
 
     memset(&cred, 0, sizeof(cred));
     memset(&show_obj, 0, sizeof(show_obj));
+    memset(&req, 0, sizeof(req));
+    memset(&resp, 0, sizeof(resp));
     memset(&pub, 0, sizeof(pub));
     memset(&wit, 0, sizeof(wit));
     memset(m, 0x13, sizeof(m));
@@ -51,27 +52,25 @@ int main(void)
         fail("keypair");
         return 1;
     }
-    if (spx_p2_issue_request(com, m, sizeof(m), r, sizeof(r)) != SPX_P2_FLOW_OK)
+    if (spx_p2_prepare_issue_request(&req, m, sizeof(m), r, sizeof(r)) != SPX_P2_FLOW_OK)
     {
-        fail("issue_request");
+        fail("prepare_issue_request");
         return 1;
     }
-    if (spx_p2_issue_sign(sigma_blind, &sigma_blind_len, sk_sig, com) != SPX_P2_FLOW_OK)
+    if (spx_p2_issue_respond(&resp, sk_sig, &req) != SPX_P2_FLOW_OK)
     {
-        fail("issue_sign");
+        fail("issue_respond");
         return 1;
     }
-    if (spx_p2_unblind(&cred, com, sigma_blind, sigma_blind_len, omega2, sizeof(omega2)) != SPX_P2_FLOW_OK)
+    if (spx_p2_finalize_credential(&cred, &req, &resp,
+                                   m, sizeof(m), r, sizeof(r),
+                                   omega2, sizeof(omega2)) != SPX_P2_FLOW_OK)
     {
-        fail("unblind");
+        fail("finalize_credential");
         return 1;
     }
-    memcpy(cred.m, m, sizeof(m));
-    cred.mlen = sizeof(m);
-    memcpy(cred.r, r, sizeof(r));
-    cred.rlen = sizeof(r);
-    if (spx_p2_protocol_show_statement_bound(&show_obj, pk_sig, pk_e, sizeof(pk_e),
-                                             &cred, public_ctx, sizeof(public_ctx)) != SPX_P2_FLOW_OK)
+    if (spx_p2_protocol_show(&show_obj, pk_sig, pk_e, sizeof(pk_e),
+                             &cred, public_ctx, sizeof(public_ctx)) != SPX_P2_FLOW_OK)
     {
         fail("show_statement_bound");
         return 1;
@@ -80,7 +79,7 @@ int main(void)
     pub.pk = pk_sig;
     pub.pk_e = pk_e;
     pub.pk_e_len = sizeof(pk_e);
-    pub.com = show_obj.com;
+    pub.com = show_obj.sigma_C;
     pub.m_pub = show_obj.m_pub;
     pub.m_pub_len = show_obj.m_pub_len;
     pub.public_ctx = show_obj.public_ctx;
