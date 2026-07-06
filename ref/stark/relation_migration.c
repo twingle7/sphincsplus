@@ -4,9 +4,7 @@
 #include <string.h>
 
 #include "../hash_poseidon2_adapter.h"
-#ifndef SPX_P2_USE_RUST_STARK
 #include "air_verify_full.h"
-#endif
 #include "relation_migration.h"
 
 #ifdef SPX_P2_USE_RUST_STARK
@@ -42,10 +40,9 @@ static int spx_p2_map_rust_relation_status_to_ffi(int rust_ret)
 }
 #endif
 
-#ifndef SPX_P2_USE_RUST_STARK
-static int spx_p2_eval_verify_full_guard(const uint8_t *pk,
-                                         const uint8_t *com,
-                                         const uint8_t *sigma_com)
+int spx_p2_relation_eval_verify_full_guard(const uint8_t *pk,
+                                           const uint8_t *com,
+                                           const uint8_t *sigma_com)
 {
     spx_p2_trace replay;
     spx_p2_witness_row_v1 *rows = 0;
@@ -82,7 +79,6 @@ done:
     free(rows);
     return ret;
 }
-
 static int spx_p2_relation_validate_sigma_c_local(const spx_p2_ffi_public_inputs *pub,
                                                   const spx_p2_ffi_private_witness *wit)
 {
@@ -123,7 +119,6 @@ static int spx_p2_relation_validate_sigma_c_local(const spx_p2_ffi_public_inputs
     }
     return SPX_P2_FFI_STATUS_OK;
 }
-#endif
 
 int spx_p2_relation_validate_strict_prove_inputs(const spx_p2_ffi_public_inputs *pub,
                                                  const spx_p2_ffi_private_witness *wit)
@@ -229,7 +224,7 @@ int spx_p2_relation_precheck_strict_prove_witness(const spx_p2_ffi_public_inputs
     {
         return SPX_P2_FFI_STATUS_ERR_PROVE;
     }
-    if (spx_p2_eval_verify_full_guard(pub->pk, pub->com, wit->sigma_com) != 0)
+    if (spx_p2_relation_eval_verify_full_guard(pub->pk, pub->com, wit->sigma_com) != 0)
     {
         return SPX_P2_FFI_STATUS_ERR_PROVE;
     }

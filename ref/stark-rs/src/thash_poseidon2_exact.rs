@@ -24,7 +24,7 @@ const SPX_ADDR_BYTES: usize = SPX_ADDR_WORDS * 4;
 const POSEIDON2_T: usize = 12;
 const POSEIDON2_RATE_WORDS: usize = 6;
 const POSEIDON2_RATE_BYTES: usize = POSEIDON2_RATE_WORDS * 8;
-const POSEIDON2_ROUNDS: usize = 30;
+pub(crate) const POSEIDON2_ROUNDS: usize = 30;
 const POSEIDON2_TRACE_WIDTH: usize = 15;
 const POSEIDON2_TRANSITION_CONSTRAINTS: usize = 17;
 const POSEIDON2_BOUNDARY_ASSERTIONS: usize = 21;
@@ -42,13 +42,13 @@ extern "C" {
     fn poseidon2_permute_c(state: *mut u64);
 }
 
-const P2_INTERNAL_DIAG_12: [u64; POSEIDON2_T] = [
+pub(crate) const P2_INTERNAL_DIAG_12: [u64; POSEIDON2_T] = [
     0xc3b6c08e23ba9300, 0xd84b5de94a324fb6, 0x0d0c371c5b35b84f, 0x7964f570e7188037,
     0x5daf18bbd996604b, 0x6743bc47b9595257, 0x5528b9362c59bb70, 0xac45e25b7127b68b,
     0xa2077d7dfbb606b5, 0xf3faac6faee378ae, 0x0c6388b51545e883, 0xd27dbb6944917b60,
 ];
 
-const P2_ROUND_CONSTANTS: [[u64; POSEIDON2_T]; POSEIDON2_ROUNDS] = [
+pub(crate) const P2_ROUND_CONSTANTS: [[u64; POSEIDON2_T]; POSEIDON2_ROUNDS] = [
     [0x615dc2abaa0ab5d7, 0x45d05516c0b791b5, 0x77fea9cf2cd85ef8, 0xb2cabe81e93d91bf, 0x5fd23bdc8e61f633, 0xe7e4af990295310e, 0x69617bad4a6647ed, 0xaaa9696e40634855, 0x6b97fab65990bc8c, 0x44cb13e2a9d2ada6, 0x02a914451e61e9a9, 0xad5ef3321ec74ce5],
     [0x5e42e6d638b4eece, 0xf0dec325577f2984, 0x84c49196cbc7197b, 0xc759b66ba945a5b8, 0x41e50b3f48d9f039, 0x7ac3567502cbdecd, 0x0cd4768f705c003b, 0xd7d5d675c5945a03, 0x13c8002c09a1579d, 0x98e077b78ce5091d, 0xe27eb84f637ee44b, 0xf39a0b6dbd5c1d82],
     [0x09e72ca7823c236a, 0xb9adf0b67ddb9496, 0xec8af086f99a60aa, 0x175e0f05a7bbd90e, 0xfe0478c66357fee6, 0x9d9e39624ee357ca, 0xe4b3e1e52281bdb6, 0xce5ef98210c415fc, 0x90d9d332495673a4, 0x4c294905450d8a75, 0x0c1205c382657deb, 0xd51adf0c55d0d057],
@@ -184,7 +184,7 @@ fn load_lane(bytes: &[u8]) -> BaseElement {
     BaseElement::new(value)
 }
 
-fn round_kind(round: usize) -> (bool, bool) {
+pub(crate) fn round_kind(round: usize) -> (bool, bool) {
     if round < 4 || round >= 26 {
         (true, false)
     } else {

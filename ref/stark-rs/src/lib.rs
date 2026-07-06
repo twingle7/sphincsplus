@@ -25,7 +25,7 @@ pub const SPX_P2_RUST_ERR_PROVE: i32 = -4;
 pub const SPX_P2_RUST_ERR_VERIFY: i32 = -5;
 pub const SPX_P2_RUST_ERR_FORMAT: i32 = -6;
 
-const TRACE_LEN: usize = 64;
+const TRACE_LEN: usize = 128;
 const PK_LEN: usize = 48;
 const COM_LEN: usize = 24;
 const SPX_N: usize = 24;
@@ -33,12 +33,11 @@ const SPX_SIGMA_COM_LEN: usize = 16224;
 const COM_LIMBS: usize = 3;
 const SIGMA_C_LIMBS: usize = 6;
 const POSEIDON2_T: usize = 12;
-#[cfg(test)]
-const POSEIDON2_ROUNDS: usize = 30;
 const POSEIDON2_RATE_BYTES: usize = 48;
 const POSEIDON2_RATE_LANES: usize = POSEIDON2_RATE_BYTES / 8;
 // Winterfell 0.13 limits total trace columns to 255. With the current
-// per-block lane/state layout, 4 suffix blocks keeps TRACE_WIDTH at 231.
+// per-block lane/state layout, exact Com permutation trace, and a reused
+// 9-column H_msg witness slice, TRACE_WIDTH fits exactly at that ceiling.
 const CIPHERTEXT_SUFFIX_BLOCK_COUNT: usize = 4;
 const CIPHERTEXT_SUFFIX_OLDER_BLOCK_COUNT: usize = CIPHERTEXT_SUFFIX_BLOCK_COUNT - 3;
 const CIPHERTEXT_FINAL_BLOCK_COL_START: usize = 75;
@@ -49,7 +48,25 @@ const CIPHERTEXT_SUFFIX_STATE_COL_START: usize =
     CIPHERTEXT_OLDER_BLOCK_COL_START + CIPHERTEXT_SUFFIX_OLDER_BLOCK_COUNT * POSEIDON2_RATE_LANES;
 const CIPHERTEXT_SUFFIX_CHAIN_COLS: usize =
     POSEIDON2_T + CIPHERTEXT_SUFFIX_BLOCK_COUNT * (2 * POSEIDON2_T + POSEIDON2_RATE_LANES);
-const TRACE_WIDTH: usize = CIPHERTEXT_SUFFIX_STATE_COL_START + CIPHERTEXT_SUFFIX_CHAIN_COLS;
+const MAIN_TRACE_WIDTH: usize = CIPHERTEXT_SUFFIX_STATE_COL_START + CIPHERTEXT_SUFFIX_CHAIN_COLS;
+const HMSG_VERIFY_INPUT_COL_START: usize = MAIN_TRACE_WIDTH;
+const HMSG_VERIFY_OUTPUT_COL_START: usize = HMSG_VERIFY_INPUT_COL_START + POSEIDON2_RATE_LANES;
+const COMMIT_EXACT_STATE_COL_START: usize = HMSG_VERIFY_OUTPUT_COL_START + COM_LIMBS;
+const COMMIT_EXACT_PERIOD: usize = TRACE_LEN;
+const COMMIT_EXACT_PERIODIC_COLS: usize = 71;
+const COMMIT_EXACT_OUTPUT_ROW: usize = crate::thash_poseidon2_exact::POSEIDON2_ROUNDS;
+const HMSG_PHASE0_START_ROW: usize = COMMIT_EXACT_OUTPUT_ROW + 1;
+const HMSG_PHASE0_OUTPUT_ROW: usize =
+    HMSG_PHASE0_START_ROW + crate::thash_poseidon2_exact::POSEIDON2_ROUNDS;
+const HMSG_PHASE1_START_ROW: usize = HMSG_PHASE0_OUTPUT_ROW + 1;
+const HMSG_PHASE1_OUTPUT_ROW: usize =
+    HMSG_PHASE1_START_ROW + crate::thash_poseidon2_exact::POSEIDON2_ROUNDS;
+const HMSG_PHASE2_START_ROW: usize = HMSG_PHASE1_OUTPUT_ROW + 1;
+const HMSG_PHASE2_OUTPUT_ROW: usize =
+    HMSG_PHASE2_START_ROW + crate::thash_poseidon2_exact::POSEIDON2_ROUNDS;
+const HMSG_BLOCK_COUNT: usize = 3;
+const SPX_FORS_HEIGHT: usize = 14;
+const TRACE_WIDTH: usize = COMMIT_EXACT_STATE_COL_START + POSEIDON2_T;
 
 const PI_F_V2_MAGIC: u32 = 0x32504650; // "PFP2"
 const PI_F_V2_VERSION: u32 = 2;
@@ -71,6 +88,33 @@ fn goldilocks_fe(value: u64) -> BaseElement {
 #[inline(always)]
 fn goldilocks_fe_from_u128(value: u128) -> BaseElement {
     goldilocks_fe((value % (GOLDILOCKS_P_U64 as u128)) as u64)
+}
+
+#[inline(always)]
+fn pow7_ext<E: FieldElement>(x: E) -> E {
+    let x2 = x * x;
+    let x4 = x2 * x2;
+    (x4 * x2) * x
+}
+
+fn hmsg_input_phase_index(row: usize) -> usize {
+    if row < HMSG_PHASE0_OUTPUT_ROW {
+        0
+    } else if row < HMSG_PHASE1_OUTPUT_ROW {
+        1
+    } else {
+        2
+    }
+}
+
+fn hmsg_output_phase_index(row: usize) -> usize {
+    if row <= HMSG_PHASE0_OUTPUT_ROW {
+        0
+    } else if row <= HMSG_PHASE1_OUTPUT_ROW {
+        1
+    } else {
+        2
+    }
 }
 
 fn rust_verify_debug_enabled() -> bool {
@@ -349,6 +393,12 @@ extern "C" {
     );
     #[link_name = "SPX_spx_p2_verify_com"]
     fn spx_p2_verify_com(pk: *const u8, com: *const u8, sigma_com: *const u8) -> i32;
+    #[link_name = "SPX_spx_p2_relation_eval_verify_full_guard"]
+    fn spx_p2_relation_eval_verify_full_guard(
+        pk: *const u8,
+        com: *const u8,
+        sigma_com: *const u8,
+    ) -> i32;
     #[link_name = "SPX_spx_p2_build_sigma_c_ciphertext"]
     fn spx_p2_build_sigma_c_ciphertext(
         out_sigma_c: *mut u8,
@@ -367,6 +417,7 @@ extern "C" {
 
 const SPX_P2_DOMAIN_CUSTOM: i32 = 0xff;
 const SPX_P2_DOMAIN_COMMIT: i32 = 0x20;
+const SPX_P2_DOMAIN_HASH_MESSAGE: i32 = 0x03;
 const COMMIT_M_PUB_LEN: usize = 24;
 const COMMIT_R_LEN: usize = 16;
 const CIPHERTEXT_DOMAIN_BYTE: u8 = SPX_P2_DOMAIN_CUSTOM as u8;
@@ -424,6 +475,517 @@ fn load_rate_block_le(bytes: &[u8; POSEIDON2_RATE_BYTES]) -> Poseidon2RateBlock 
     lanes
 }
 
+fn derive_verify_hmsg_exact_blocks(sigma_com: &[u8], pk: &[u8], com: &[u8]) -> Option<[Poseidon2RateBlock; HMSG_BLOCK_COUNT]> {
+    if sigma_com.len() < SPX_N || pk.len() != PK_LEN || com.len() != COM_LEN {
+        return None;
+    }
+    let mut stream = Vec::with_capacity(1 + SPX_N + PK_LEN + COM_LEN);
+    stream.push(SPX_P2_DOMAIN_HASH_MESSAGE as u8);
+    stream.extend_from_slice(&sigma_com[..SPX_N]);
+    stream.extend_from_slice(pk);
+    stream.extend_from_slice(com);
+    let blocks = build_poseidon2_padded_absorb_blocks(&stream);
+    if blocks.len() != HMSG_BLOCK_COUNT {
+        return None;
+    }
+    Some([blocks[0], blocks[1], blocks[2]])
+}
+
+fn derive_verify_hmsg_exact_outputs(
+    blocks: &[Poseidon2RateBlock; HMSG_BLOCK_COUNT],
+) -> [[BaseElement; COM_LIMBS]; HMSG_BLOCK_COUNT] {
+    let mut outputs = [[BaseElement::ZERO; COM_LIMBS]; HMSG_BLOCK_COUNT];
+    let mut state = [0u64; POSEIDON2_T];
+    for (idx, block) in blocks.iter().enumerate() {
+        for lane in 0..POSEIDON2_RATE_LANES {
+            let (sum, _) = goldilocks_add_with_carry(state[lane], block[lane].as_int());
+            state[lane] = sum;
+        }
+        for round in 0..crate::thash_poseidon2_exact::POSEIDON2_ROUNDS {
+            crate::thash_poseidon2_exact::poseidon2_round_u64(&mut state, round);
+        }
+        outputs[idx] = [
+            goldilocks_fe(state[0]),
+            goldilocks_fe(state[1]),
+            goldilocks_fe(state[2]),
+        ];
+    }
+    outputs
+}
+
+fn derive_verify_hmsg_final_rate_lanes(
+    blocks: &[Poseidon2RateBlock; HMSG_BLOCK_COUNT],
+) -> Poseidon2RateBlock {
+    let mut state = [0u64; POSEIDON2_T];
+    for block in blocks {
+        for lane in 0..POSEIDON2_RATE_LANES {
+            let (sum, _) = goldilocks_add_with_carry(state[lane], block[lane].as_int());
+            state[lane] = sum;
+        }
+        for round in 0..crate::thash_poseidon2_exact::POSEIDON2_ROUNDS {
+            crate::thash_poseidon2_exact::poseidon2_round_u64(&mut state, round);
+        }
+    }
+    let mut lanes = [BaseElement::ZERO; POSEIDON2_RATE_LANES];
+    for lane in 0..POSEIDON2_RATE_LANES {
+        lanes[lane] = goldilocks_fe(state[lane]);
+    }
+    lanes
+}
+
+fn derive_verify_hmsg_unpack_parts(final_rate_lanes: &Poseidon2RateBlock) -> Poseidon2RateBlock {
+    let lane3 = final_rate_lanes[3].as_int();
+    let lane4 = final_rate_lanes[4].as_int();
+    [
+        goldilocks_fe(lane3 & ((1u64 << 48) - 1)),
+        goldilocks_fe(lane3 >> 48),
+        goldilocks_fe(lane4 & 0xffff_ffff),
+        goldilocks_fe((lane4 >> 32) & 0xff),
+        goldilocks_fe((lane4 >> 40) & 0xffff),
+        goldilocks_fe((lane4 >> 56) & 0xff),
+    ]
+}
+
+fn derive_verify_hmsg_tree_mask_parts(unpack: &Poseidon2RateBlock) -> [BaseElement; COM_LIMBS] {
+    let tree_high_raw = unpack[3].as_int();
+    [
+        goldilocks_fe(tree_high_raw & 0x3f),
+        goldilocks_fe(tree_high_raw >> 6),
+        BaseElement::ZERO,
+    ]
+}
+
+fn derive_verify_hmsg_leaf_mask_parts(unpack: &Poseidon2RateBlock) -> [BaseElement; COM_LIMBS] {
+    let leaf_raw = unpack[4].as_int();
+    [
+        goldilocks_fe(leaf_raw & 0x01ff),
+        goldilocks_fe(leaf_raw >> 9),
+        BaseElement::ZERO,
+    ]
+}
+
+fn derive_verify_fors_idx0_parts(final_rate_lanes: &Poseidon2RateBlock) -> [BaseElement; COM_LIMBS] {
+    let digest_lane0 = final_rate_lanes[0].as_int();
+    let idx0 = digest_lane0 & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let idx0_hi6 = (idx0 >> 8) & 0x3f;
+    let digest_tail_quot = digest_lane0 >> SPX_FORS_HEIGHT;
+    [
+        goldilocks_fe(idx0),
+        goldilocks_fe(idx0_hi6),
+        goldilocks_fe(digest_tail_quot),
+    ]
+}
+
+fn derive_verify_fors_idx1_parts(final_rate_lanes: &Poseidon2RateBlock) -> [BaseElement; COM_LIMBS] {
+    let digest_lane0 = final_rate_lanes[0].as_int();
+    let idx1 = (digest_lane0 >> SPX_FORS_HEIGHT) & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let idx1_hi6 = (idx1 >> 8) & 0x3f;
+    let digest_tail_quot = digest_lane0 >> (2 * SPX_FORS_HEIGHT);
+    [
+        goldilocks_fe(idx1),
+        goldilocks_fe(idx1_hi6),
+        goldilocks_fe(digest_tail_quot),
+    ]
+}
+
+fn derive_verify_fors_idx2_parts(final_rate_lanes: &Poseidon2RateBlock) -> [BaseElement; COM_LIMBS] {
+    let digest_lane0 = final_rate_lanes[0].as_int();
+    let idx2 = (digest_lane0 >> (2 * SPX_FORS_HEIGHT)) & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let idx2_hi6 = (idx2 >> 8) & 0x3f;
+    let digest_tail_quot = digest_lane0 >> (3 * SPX_FORS_HEIGHT);
+    [
+        goldilocks_fe(idx2),
+        goldilocks_fe(idx2_hi6),
+        goldilocks_fe(digest_tail_quot),
+    ]
+}
+
+fn derive_verify_fors_idx3_parts(final_rate_lanes: &Poseidon2RateBlock) -> [BaseElement; COM_LIMBS] {
+    let digest_lane0 = final_rate_lanes[0].as_int();
+    let idx3 = (digest_lane0 >> (3 * SPX_FORS_HEIGHT)) & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let idx3_hi6 = (idx3 >> 8) & 0x3f;
+    let lane0_tail8 = digest_lane0 >> (4 * SPX_FORS_HEIGHT);
+    [
+        goldilocks_fe(idx3),
+        goldilocks_fe(idx3_hi6),
+        goldilocks_fe(lane0_tail8),
+    ]
+}
+
+fn derive_verify_fors_idx4_parts(final_rate_lanes: &Poseidon2RateBlock) -> [BaseElement; COM_LIMBS] {
+    let digest_lane0 = final_rate_lanes[0].as_int();
+    let digest_lane1 = final_rate_lanes[1].as_int();
+    let lane0_tail8 = digest_lane0 >> (4 * SPX_FORS_HEIGHT);
+    let lane1_low6 = digest_lane1 & 0x3f;
+    let lane1_tail58 = digest_lane1 >> 6;
+    let idx4 = lane0_tail8 + (lane1_low6 << 8);
+    [
+        goldilocks_fe(idx4),
+        goldilocks_fe(lane1_low6),
+        goldilocks_fe(lane1_tail58),
+    ]
+}
+
+fn derive_verify_fors_idx5_parts(final_rate_lanes: &Poseidon2RateBlock) -> [BaseElement; COM_LIMBS] {
+    let digest_lane1 = final_rate_lanes[1].as_int();
+    let idx5 = (digest_lane1 >> 6) & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let idx5_hi6 = (idx5 >> 8) & 0x3f;
+    let lane1_tail44 = digest_lane1 >> 20;
+    [
+        goldilocks_fe(idx5),
+        goldilocks_fe(idx5_hi6),
+        goldilocks_fe(lane1_tail44),
+    ]
+}
+
+fn derive_verify_fors_idx6_parts(final_rate_lanes: &Poseidon2RateBlock) -> [BaseElement; COM_LIMBS] {
+    let digest_lane1 = final_rate_lanes[1].as_int();
+    let idx6 = (digest_lane1 >> 20) & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let idx6_hi6 = (idx6 >> 8) & 0x3f;
+    let lane1_tail30 = digest_lane1 >> 34;
+    [
+        goldilocks_fe(idx6),
+        goldilocks_fe(idx6_hi6),
+        goldilocks_fe(lane1_tail30),
+    ]
+}
+
+fn derive_verify_fors_idx7_parts(final_rate_lanes: &Poseidon2RateBlock) -> [BaseElement; COM_LIMBS] {
+    let digest_lane1 = final_rate_lanes[1].as_int();
+    let idx7 = (digest_lane1 >> 34) & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let idx7_hi6 = (idx7 >> 8) & 0x3f;
+    let lane1_tail16 = digest_lane1 >> 48;
+    [
+        goldilocks_fe(idx7),
+        goldilocks_fe(idx7_hi6),
+        goldilocks_fe(lane1_tail16),
+    ]
+}
+
+fn derive_verify_fors_idx8_parts(final_rate_lanes: &Poseidon2RateBlock) -> [BaseElement; COM_LIMBS] {
+    let digest_lane1 = final_rate_lanes[1].as_int();
+    let idx8 = (digest_lane1 >> 48) & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let idx8_hi6 = (idx8 >> 8) & 0x3f;
+    let lane1_tail2 = digest_lane1 >> 62;
+    [
+        goldilocks_fe(idx8),
+        goldilocks_fe(idx8_hi6),
+        goldilocks_fe(lane1_tail2),
+    ]
+}
+
+fn derive_verify_fors_idx9_parts(final_rate_lanes: &Poseidon2RateBlock) -> [BaseElement; COM_LIMBS] {
+    let digest_lane1 = final_rate_lanes[1].as_int();
+    let digest_lane2 = final_rate_lanes[2].as_int();
+    let lane1_tail2 = digest_lane1 >> 62;
+    let lane2_low12 = digest_lane2 & 0x0fff;
+    let lane2_tail52 = digest_lane2 >> 12;
+    let idx9 = lane1_tail2 + (lane2_low12 << 2);
+    [
+        goldilocks_fe(idx9),
+        goldilocks_fe(lane2_low12),
+        goldilocks_fe(lane2_tail52),
+    ]
+}
+
+fn derive_verify_fors_idx10_parts(final_rate_lanes: &Poseidon2RateBlock) -> [BaseElement; COM_LIMBS] {
+    let digest_lane2 = final_rate_lanes[2].as_int();
+    let idx10 = (digest_lane2 >> 12) & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let idx10_hi6 = (idx10 >> 8) & 0x3f;
+    let lane2_tail38 = digest_lane2 >> 26;
+    [
+        goldilocks_fe(idx10),
+        goldilocks_fe(idx10_hi6),
+        goldilocks_fe(lane2_tail38),
+    ]
+}
+
+fn derive_verify_fors_idx11_parts(final_rate_lanes: &Poseidon2RateBlock) -> [BaseElement; COM_LIMBS] {
+    let digest_lane2 = final_rate_lanes[2].as_int();
+    let idx11 = (digest_lane2 >> 26) & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let idx11_hi6 = (idx11 >> 8) & 0x3f;
+    let lane2_tail24 = digest_lane2 >> 40;
+    [
+        goldilocks_fe(idx11),
+        goldilocks_fe(idx11_hi6),
+        goldilocks_fe(lane2_tail24),
+    ]
+}
+
+fn derive_verify_fors_idx12_parts(final_rate_lanes: &Poseidon2RateBlock) -> [BaseElement; COM_LIMBS] {
+    let digest_lane2 = final_rate_lanes[2].as_int();
+    let idx12 = (digest_lane2 >> 40) & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let idx12_hi6 = (idx12 >> 8) & 0x3f;
+    let lane2_tail10 = digest_lane2 >> 54;
+    [
+        goldilocks_fe(idx12),
+        goldilocks_fe(idx12_hi6),
+        goldilocks_fe(lane2_tail10),
+    ]
+}
+
+fn derive_verify_fors_idx13_parts(final_rate_lanes: &Poseidon2RateBlock) -> [BaseElement; COM_LIMBS] {
+    let digest_lane2 = final_rate_lanes[2].as_int();
+    let digest_lane3_low48 = final_rate_lanes[3].as_int() & ((1u64 << 48) - 1);
+    let lane2_tail10 = digest_lane2 >> 54;
+    let lane3_low4 = digest_lane3_low48 & 0x0f;
+    let lane3_tail44 = digest_lane3_low48 >> 4;
+    let idx13 = lane2_tail10 + (lane3_low4 << 10);
+    [
+        goldilocks_fe(idx13),
+        goldilocks_fe(lane3_low4),
+        goldilocks_fe(lane3_tail44),
+    ]
+}
+
+fn derive_verify_fors_idx14_parts(final_rate_lanes: &Poseidon2RateBlock) -> [BaseElement; COM_LIMBS] {
+    let digest_lane3_low48 = final_rate_lanes[3].as_int() & ((1u64 << 48) - 1);
+    let idx14 = (digest_lane3_low48 >> 4) & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let idx14_hi6 = (idx14 >> 8) & 0x3f;
+    let lane3_tail30 = digest_lane3_low48 >> 18;
+    [
+        goldilocks_fe(idx14),
+        goldilocks_fe(idx14_hi6),
+        goldilocks_fe(lane3_tail30),
+    ]
+}
+
+fn derive_verify_fors_idx15_parts(final_rate_lanes: &Poseidon2RateBlock) -> [BaseElement; COM_LIMBS] {
+    let digest_lane3_low48 = final_rate_lanes[3].as_int() & ((1u64 << 48) - 1);
+    let idx15 = (digest_lane3_low48 >> 18) & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let idx15_hi6 = (idx15 >> 8) & 0x3f;
+    let lane3_tail16 = digest_lane3_low48 >> 32;
+    [
+        goldilocks_fe(idx15),
+        goldilocks_fe(idx15_hi6),
+        goldilocks_fe(lane3_tail16),
+    ]
+}
+
+fn derive_verify_fors_idx16_parts(final_rate_lanes: &Poseidon2RateBlock) -> [BaseElement; COM_LIMBS] {
+    let digest_lane3_low48 = final_rate_lanes[3].as_int() & ((1u64 << 48) - 1);
+    let idx16 = (digest_lane3_low48 >> 32) & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let idx16_hi6 = (idx16 >> 8) & 0x3f;
+    let lane3_tail2 = digest_lane3_low48 >> 46;
+    [
+        goldilocks_fe(idx16),
+        goldilocks_fe(idx16_hi6),
+        goldilocks_fe(lane3_tail2),
+    ]
+}
+
+fn derive_verify_fors_tree0_leaf_parts(
+    final_rate_lanes: &Poseidon2RateBlock,
+) -> [BaseElement; COM_LIMBS] {
+    let digest_lane0 = final_rate_lanes[0].as_int();
+    [
+        goldilocks_fe(digest_lane0 & ((1u64 << SPX_FORS_HEIGHT) - 1)),
+        goldilocks_fe(digest_lane0 >> SPX_FORS_HEIGHT),
+        BaseElement::ZERO,
+    ]
+}
+
+fn derive_verify_fors_tree0_parent_parts(
+    final_rate_lanes: &Poseidon2RateBlock,
+) -> [BaseElement; COM_LIMBS] {
+    let idx0 = final_rate_lanes[0].as_int() & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let parent = idx0 >> 1;
+    [
+        goldilocks_fe(parent & 0xff),
+        goldilocks_fe(parent >> 8),
+        goldilocks_fe(idx0 & 1),
+    ]
+}
+
+fn derive_verify_fors_tree0_parent_h2_parts(
+    final_rate_lanes: &Poseidon2RateBlock,
+) -> [BaseElement; COM_LIMBS] {
+    let idx0 = final_rate_lanes[0].as_int() & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let parent_h1 = idx0 >> 1;
+    let parent_h2 = parent_h1 >> 1;
+    [
+        goldilocks_fe(parent_h2 & 0xff),
+        goldilocks_fe(parent_h2 >> 8),
+        goldilocks_fe(parent_h1 & 1),
+    ]
+}
+
+fn derive_verify_fors_tree0_parent_h3_parts(
+    final_rate_lanes: &Poseidon2RateBlock,
+) -> [BaseElement; COM_LIMBS] {
+    let idx0 = final_rate_lanes[0].as_int() & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let parent_h2 = idx0 >> 2;
+    let parent_h3 = parent_h2 >> 1;
+    [
+        goldilocks_fe(parent_h3 & 0xff),
+        goldilocks_fe(parent_h3 >> 8),
+        goldilocks_fe(parent_h2 & 1),
+    ]
+}
+
+fn derive_verify_fors_tree0_parent_h4_parts(
+    final_rate_lanes: &Poseidon2RateBlock,
+) -> [BaseElement; COM_LIMBS] {
+    let idx0 = final_rate_lanes[0].as_int() & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let parent_h3 = idx0 >> 3;
+    let parent_h4 = parent_h3 >> 1;
+    [
+        goldilocks_fe(parent_h4 & 0xff),
+        goldilocks_fe(parent_h4 >> 8),
+        goldilocks_fe(parent_h3 & 1),
+    ]
+}
+
+fn derive_verify_fors_tree0_parent_h5_parts(
+    final_rate_lanes: &Poseidon2RateBlock,
+) -> [BaseElement; COM_LIMBS] {
+    let idx0 = final_rate_lanes[0].as_int() & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let parent_h4 = idx0 >> 4;
+    let parent_h5 = parent_h4 >> 1;
+    [
+        goldilocks_fe(parent_h5 & 0xff),
+        goldilocks_fe(parent_h5 >> 8),
+        goldilocks_fe(parent_h4 & 1),
+    ]
+}
+
+fn derive_verify_fors_tree0_parent_h6_parts(
+    final_rate_lanes: &Poseidon2RateBlock,
+) -> [BaseElement; COM_LIMBS] {
+    let idx0 = final_rate_lanes[0].as_int() & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let parent_h5 = idx0 >> 5;
+    let parent_h6 = parent_h5 >> 1;
+    [
+        goldilocks_fe(parent_h6 & 0xff),
+        BaseElement::ZERO,
+        goldilocks_fe(parent_h5 & 1),
+    ]
+}
+
+fn derive_verify_fors_tree0_parent_h7_parts(
+    final_rate_lanes: &Poseidon2RateBlock,
+) -> [BaseElement; COM_LIMBS] {
+    let idx0 = final_rate_lanes[0].as_int() & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let parent_h6 = idx0 >> 6;
+    let parent_h7 = parent_h6 >> 1;
+    [
+        goldilocks_fe(parent_h7),
+        BaseElement::ZERO,
+        goldilocks_fe(parent_h6 & 1),
+    ]
+}
+
+fn derive_verify_fors_tree0_parent_h8_parts(
+    final_rate_lanes: &Poseidon2RateBlock,
+) -> [BaseElement; COM_LIMBS] {
+    let idx0 = final_rate_lanes[0].as_int() & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let parent_h7 = idx0 >> 7;
+    let parent_h8 = parent_h7 >> 1;
+    [
+        goldilocks_fe(parent_h8),
+        BaseElement::ZERO,
+        goldilocks_fe(parent_h7 & 1),
+    ]
+}
+
+fn derive_verify_fors_tree0_parent_h9_parts(
+    final_rate_lanes: &Poseidon2RateBlock,
+) -> [BaseElement; COM_LIMBS] {
+    let idx0 = final_rate_lanes[0].as_int() & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let parent_h8 = idx0 >> 8;
+    let parent_h9 = parent_h8 >> 1;
+    [
+        goldilocks_fe(parent_h9),
+        BaseElement::ZERO,
+        goldilocks_fe(parent_h8 & 1),
+    ]
+}
+
+fn derive_verify_fors_tree0_parent_h10_parts(
+    final_rate_lanes: &Poseidon2RateBlock,
+) -> [BaseElement; COM_LIMBS] {
+    let idx0 = final_rate_lanes[0].as_int() & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let parent_h9 = idx0 >> 9;
+    let parent_h10 = parent_h9 >> 1;
+    [
+        goldilocks_fe(parent_h10),
+        BaseElement::ZERO,
+        goldilocks_fe(parent_h9 & 1),
+    ]
+}
+
+fn derive_verify_fors_tree0_parent_h11_parts(
+    final_rate_lanes: &Poseidon2RateBlock,
+) -> [BaseElement; COM_LIMBS] {
+    let idx0 = final_rate_lanes[0].as_int() & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let parent_h10 = idx0 >> 10;
+    let parent_h11 = parent_h10 >> 1;
+    [
+        goldilocks_fe(parent_h11),
+        BaseElement::ZERO,
+        goldilocks_fe(parent_h10 & 1),
+    ]
+}
+
+fn derive_verify_fors_tree0_parent_h12_parts(
+    final_rate_lanes: &Poseidon2RateBlock,
+) -> [BaseElement; COM_LIMBS] {
+    let idx0 = final_rate_lanes[0].as_int() & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let parent_h11 = idx0 >> 11;
+    let parent_h12 = parent_h11 >> 1;
+    [
+        goldilocks_fe(parent_h12),
+        BaseElement::ZERO,
+        goldilocks_fe(parent_h11 & 1),
+    ]
+}
+
+fn derive_verify_fors_tree0_parent_h13_parts(
+    final_rate_lanes: &Poseidon2RateBlock,
+) -> [BaseElement; COM_LIMBS] {
+    let idx0 = final_rate_lanes[0].as_int() & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let parent_h12 = idx0 >> 12;
+    let parent_h13 = parent_h12 >> 1;
+    [
+        goldilocks_fe(parent_h13),
+        BaseElement::ZERO,
+        goldilocks_fe(parent_h12 & 1),
+    ]
+}
+
+fn derive_verify_fors_tree0_parent_h14_parts(
+    final_rate_lanes: &Poseidon2RateBlock,
+) -> [BaseElement; COM_LIMBS] {
+    let idx0 = final_rate_lanes[0].as_int() & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let parent_h13 = idx0 >> 13;
+    [BaseElement::ZERO, BaseElement::ZERO, goldilocks_fe(parent_h13 & 1)]
+}
+
+fn derive_verify_fors_tree0_addr_final_parts(
+    final_rate_lanes: &Poseidon2RateBlock,
+) -> [BaseElement; COM_LIMBS] {
+    let idx0 = final_rate_lanes[0].as_int() & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let parent_h13 = idx0 >> 13;
+    [
+        goldilocks_fe(SPX_FORS_HEIGHT as u64),
+        BaseElement::ZERO,
+        goldilocks_fe(parent_h13 & 1),
+    ]
+}
+
+fn derive_verify_fors_tree0_addr_h13_parts(
+    final_rate_lanes: &Poseidon2RateBlock,
+) -> [BaseElement; COM_LIMBS] {
+    let idx0 = final_rate_lanes[0].as_int() & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let parent_h12 = idx0 >> 12;
+    let parent_h13 = parent_h12 >> 1;
+    [
+        goldilocks_fe((SPX_FORS_HEIGHT - 1) as u64),
+        goldilocks_fe(parent_h13),
+        goldilocks_fe(parent_h12 & 1),
+    ]
+}
+
 fn poseidon2_state_from_u64(words: [u64; POSEIDON2_T]) -> Poseidon2State {
     let mut state = [BaseElement::ZERO; POSEIDON2_T];
     let mut i = 0usize;
@@ -469,7 +1031,7 @@ fn poseidon2_permute_state(mut state: [u64; POSEIDON2_T]) -> [u64; POSEIDON2_T] 
 
 #[cfg(test)]
 fn poseidon2_permute_state(mut state: [u64; POSEIDON2_T]) -> [u64; POSEIDON2_T] {
-    for round in 0..POSEIDON2_ROUNDS {
+    for round in 0..crate::thash_poseidon2_exact::POSEIDON2_ROUNDS {
         crate::thash_poseidon2_exact::poseidon2_round_u64(&mut state, round);
     }
     state
@@ -1034,6 +1596,135 @@ impl Air for WorkAir {
         ];
         degrees.extend((0..285).map(|_| TransitionConstraintDegree::new(1)));
         degrees.extend((0..36).map(|_| TransitionConstraintDegree::new(2)));
+        degrees.extend(
+            (0..54).map(|_| TransitionConstraintDegree::with_cycles(16, vec![COMMIT_EXACT_PERIOD; 16])),
+        );
+        degrees.push(TransitionConstraintDegree::new(64));
+        degrees.push(TransitionConstraintDegree::new(4));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(512));
+        degrees.push(TransitionConstraintDegree::new(128));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(64));
+        degrees.push(TransitionConstraintDegree::new(256));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(64));
+        degrees.push(TransitionConstraintDegree::new(256));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(64));
+        degrees.push(TransitionConstraintDegree::new(256));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(4));
+        degrees.push(TransitionConstraintDegree::new(4096));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(64));
+        degrees.push(TransitionConstraintDegree::new(256));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(64));
+        degrees.push(TransitionConstraintDegree::new(256));
+        degrees.push(TransitionConstraintDegree::new(256));
+        degrees.push(TransitionConstraintDegree::new(64));
+        degrees.push(TransitionConstraintDegree::new(256));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(64));
+        degrees.push(TransitionConstraintDegree::new(256));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(64));
+        degrees.push(TransitionConstraintDegree::new(256));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(64));
+        degrees.push(TransitionConstraintDegree::new(256));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(64));
+        degrees.push(TransitionConstraintDegree::new(256));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(64));
+        degrees.push(TransitionConstraintDegree::new(256));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(64));
+        degrees.push(TransitionConstraintDegree::new(256));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(1024));
+        degrees.push(TransitionConstraintDegree::new(16));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(64));
+        degrees.push(TransitionConstraintDegree::new(256));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(64));
+        degrees.push(TransitionConstraintDegree::new(256));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(64));
+        degrees.push(TransitionConstraintDegree::new(256));
+        degrees.push(TransitionConstraintDegree::new(4));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(256));
+        degrees.push(TransitionConstraintDegree::new(32));
+        degrees.push(TransitionConstraintDegree::new(2));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(256));
+        degrees.push(TransitionConstraintDegree::new(16));
+        degrees.push(TransitionConstraintDegree::new(2));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(256));
+        degrees.push(TransitionConstraintDegree::new(8));
+        degrees.push(TransitionConstraintDegree::new(2));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(256));
+        degrees.push(TransitionConstraintDegree::new(4));
+        degrees.push(TransitionConstraintDegree::new(2));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(256));
+        degrees.push(TransitionConstraintDegree::new(2));
+        degrees.push(TransitionConstraintDegree::new(2));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(256));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(2));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(128));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(2));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(64));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(2));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(32));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(2));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(16));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(2));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(8));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(2));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(4));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(2));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(2));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(2));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(2));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(2));
+        degrees.push(TransitionConstraintDegree::new(2));
+        degrees.push(TransitionConstraintDegree::new(2));
         let num_assertions = 80;
         Self {
             context: AirContext::new(trace_info, degrees, num_assertions, options),
@@ -1099,7 +1790,7 @@ impl Air for WorkAir {
     fn evaluate_transition<E: FieldElement + From<Self::BaseField>>(
         &self,
         frame: &EvaluationFrame<E>,
-        _periodic_values: &[E],
+        periodic_values: &[E],
         result: &mut [E],
     ) {
         let current = frame.current();
@@ -1307,7 +1998,7 @@ impl Air for WorkAir {
                 idx += 1;
             }
         }
-        for col in CIPHERTEXT_SUFFIX_STATE_COL_START..TRACE_WIDTH {
+        for col in CIPHERTEXT_SUFFIX_STATE_COL_START..MAIN_TRACE_WIDTH {
             result[idx] = next[col] - current[col];
             idx += 1;
         }
@@ -1342,6 +2033,960 @@ impl Air for WorkAir {
         result[idx] = current[final_post_col + 1] - current[25];
         idx += 1;
         result[idx] = current[final_post_col + 2] - current[26];
+        idx += 1;
+
+        let hmsg_input_switch_flag = periodic_values[32];
+        let hmsg_output_switch_flag = periodic_values[33];
+        let hmsg_unpack_flag = periodic_values[34];
+        let hmsg_tree_mask_flag = periodic_values[35];
+        let hmsg_leaf_mask_flag = periodic_values[36];
+        let hmsg_fors_idx0_flag = periodic_values[37];
+        let hmsg_fors_idx1_flag = periodic_values[38];
+        let hmsg_fors_idx2_flag = periodic_values[39];
+        let hmsg_fors_idx3_flag = periodic_values[40];
+        let hmsg_fors_idx4_flag = periodic_values[41];
+        let hmsg_fors_idx5_flag = periodic_values[42];
+        let hmsg_fors_idx6_flag = periodic_values[43];
+        let hmsg_fors_idx7_flag = periodic_values[44];
+        let hmsg_fors_idx8_flag = periodic_values[45];
+        let hmsg_fors_idx9_flag = periodic_values[46];
+        let hmsg_fors_idx10_flag = periodic_values[47];
+        let hmsg_fors_idx11_flag = periodic_values[48];
+        let hmsg_fors_idx12_flag = periodic_values[49];
+        let hmsg_fors_idx13_flag = periodic_values[50];
+        let hmsg_fors_idx14_flag = periodic_values[51];
+        let hmsg_fors_idx15_flag = periodic_values[52];
+        let hmsg_fors_idx16_flag = periodic_values[53];
+        let hmsg_fors_tree0_leaf_flag = periodic_values[54];
+        let hmsg_fors_tree0_parent_flag = periodic_values[55];
+        let hmsg_fors_tree0_parent_h2_flag = periodic_values[56];
+        let hmsg_fors_tree0_parent_h3_flag = periodic_values[57];
+        let hmsg_fors_tree0_parent_h4_flag = periodic_values[58];
+        let hmsg_fors_tree0_parent_h5_flag = periodic_values[59];
+        let hmsg_fors_tree0_parent_h6_flag = periodic_values[60];
+        let hmsg_fors_tree0_parent_h7_flag = periodic_values[61];
+        let hmsg_fors_tree0_parent_h8_flag = periodic_values[62];
+        let hmsg_fors_tree0_parent_h9_flag = periodic_values[63];
+        let hmsg_fors_tree0_parent_h10_flag = periodic_values[64];
+        let hmsg_fors_tree0_parent_h11_flag = periodic_values[65];
+        let hmsg_fors_tree0_parent_h12_flag = periodic_values[66];
+        let hmsg_fors_tree0_parent_h13_flag = periodic_values[67];
+        let hmsg_fors_tree0_parent_h14_flag = periodic_values[68];
+        let hmsg_fors_tree0_addr_final_flag = periodic_values[69];
+        let hmsg_fors_tree0_addr_h13_flag = periodic_values[70];
+        for col in HMSG_VERIFY_INPUT_COL_START..HMSG_VERIFY_OUTPUT_COL_START {
+            result[idx] = (E::ONE - hmsg_input_switch_flag) * (next[col] - current[col]);
+            idx += 1;
+        }
+        for col in HMSG_VERIFY_OUTPUT_COL_START..COMMIT_EXACT_STATE_COL_START {
+            result[idx] = (E::ONE - hmsg_output_switch_flag) * (next[col] - current[col]);
+            idx += 1;
+        }
+
+        let commit_full_flag = periodic_values[0];
+        let commit_internal_flag = periodic_values[1];
+        let commit_init_flag = periodic_values[2];
+        let commit_output_flag = periodic_values[3];
+        let hmsg_reset_flag = periodic_values[4];
+        let hmsg_full_flag = periodic_values[5];
+        let hmsg_internal_flag = periodic_values[6];
+        let hmsg_output_flag = periodic_values[7];
+        let full_flag = commit_full_flag + hmsg_full_flag;
+        let internal_flag = commit_internal_flag + hmsg_internal_flag;
+        let exact_idle_flag = E::ONE - full_flag - internal_flag - hmsg_reset_flag;
+        let mut commit_tmp = [E::ZERO; POSEIDON2_T];
+        for lane in 0..POSEIDON2_T {
+            commit_tmp[lane] = current[COMMIT_EXACT_STATE_COL_START + lane] + periodic_values[8 + lane];
+        }
+        let mut commit_full_s = [E::ZERO; POSEIDON2_T];
+        let mut commit_full_sum = E::ZERO;
+        for lane in 0..POSEIDON2_T {
+            commit_full_s[lane] = pow7_ext(commit_tmp[lane]);
+            commit_full_sum += commit_full_s[lane];
+        }
+        let mut commit_internal_s = commit_tmp;
+        commit_internal_s[0] = pow7_ext(commit_internal_s[0]);
+        let mut commit_internal_sum = E::ZERO;
+        for value in &commit_internal_s {
+            commit_internal_sum += *value;
+        }
+        for lane in 0..POSEIDON2_T {
+            let cur = current[COMMIT_EXACT_STATE_COL_START + lane];
+            let next_lane = next[COMMIT_EXACT_STATE_COL_START + lane];
+            let full_next = commit_full_sum + commit_full_s[lane];
+            let internal_next =
+                commit_internal_sum + periodic_values[20 + lane] * commit_internal_s[lane];
+            let reset_next = if lane < POSEIDON2_RATE_LANES {
+                current[HMSG_VERIFY_INPUT_COL_START + lane]
+            } else {
+                E::ZERO
+            };
+            let expect =
+                full_flag * full_next + internal_flag * internal_next + hmsg_reset_flag * reset_next + exact_idle_flag * cur;
+            result[idx] = next_lane - expect;
+            idx += 1;
+        }
+        result[idx] = commit_init_flag * (current[COMMIT_EXACT_STATE_COL_START] - current[43]);
+        idx += 1;
+        result[idx] = commit_init_flag * (current[COMMIT_EXACT_STATE_COL_START + 1] - current[44]);
+        idx += 1;
+        result[idx] = commit_init_flag * (current[COMMIT_EXACT_STATE_COL_START + 2] - current[45]);
+        idx += 1;
+        result[idx] = commit_init_flag * (current[COMMIT_EXACT_STATE_COL_START + 3] - current[46]);
+        idx += 1;
+        result[idx] = commit_init_flag * (current[COMMIT_EXACT_STATE_COL_START + 4] - current[47]);
+        idx += 1;
+        result[idx] = commit_init_flag * (current[COMMIT_EXACT_STATE_COL_START + 5] - current[48]);
+        idx += 1;
+        for lane in POSEIDON2_RATE_LANES..POSEIDON2_T {
+            result[idx] = commit_init_flag * current[COMMIT_EXACT_STATE_COL_START + lane];
+            idx += 1;
+        }
+        result[idx] = commit_output_flag * (current[COMMIT_EXACT_STATE_COL_START] - current[18]);
+        idx += 1;
+        result[idx] = commit_output_flag * (current[COMMIT_EXACT_STATE_COL_START + 1] - current[19]);
+        idx += 1;
+        result[idx] = commit_output_flag * (current[COMMIT_EXACT_STATE_COL_START + 2] - current[20]);
+        idx += 1;
+        for lane in 0..POSEIDON2_RATE_LANES {
+            result[idx] =
+                hmsg_reset_flag * (next[COMMIT_EXACT_STATE_COL_START + lane] - current[HMSG_VERIFY_INPUT_COL_START + lane]);
+            idx += 1;
+        }
+        for lane in POSEIDON2_RATE_LANES..POSEIDON2_T {
+            result[idx] = hmsg_reset_flag * next[COMMIT_EXACT_STATE_COL_START + lane];
+            idx += 1;
+        }
+        result[idx] = hmsg_output_flag * (current[COMMIT_EXACT_STATE_COL_START] - current[HMSG_VERIFY_OUTPUT_COL_START]);
+        idx += 1;
+        result[idx] =
+            hmsg_output_flag * (current[COMMIT_EXACT_STATE_COL_START + 1] - current[HMSG_VERIFY_OUTPUT_COL_START + 1]);
+        idx += 1;
+        result[idx] =
+            hmsg_output_flag * (current[COMMIT_EXACT_STATE_COL_START + 2] - current[HMSG_VERIFY_OUTPUT_COL_START + 2]);
+        idx += 1;
+        result[idx] = hmsg_unpack_flag
+            * (current[COMMIT_EXACT_STATE_COL_START + 3]
+                - next[HMSG_VERIFY_INPUT_COL_START]
+                - E::from(goldilocks_fe(1u64 << 48)) * next[HMSG_VERIFY_INPUT_COL_START + 1]);
+        idx += 1;
+        result[idx] = hmsg_unpack_flag
+            * (current[COMMIT_EXACT_STATE_COL_START + 4]
+                - next[HMSG_VERIFY_INPUT_COL_START + 2]
+                - E::from(goldilocks_fe(1u64 << 32)) * next[HMSG_VERIFY_INPUT_COL_START + 3]
+                - E::from(goldilocks_fe(1u64 << 40)) * next[HMSG_VERIFY_INPUT_COL_START + 4]
+                - E::from(goldilocks_fe(1u64 << 56)) * next[HMSG_VERIFY_INPUT_COL_START + 5]);
+        idx += 1;
+        let tree_mask_low6 = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let tree_mask_quot = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        result[idx] = hmsg_tree_mask_flag
+            * (current[HMSG_VERIFY_INPUT_COL_START + 3]
+                - tree_mask_low6
+                - E::from(goldilocks_fe(64)) * tree_mask_quot);
+        idx += 1;
+        let mut range64 = E::ONE;
+        for value in 0u64..64 {
+            range64 *= tree_mask_low6 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_tree_mask_flag * range64;
+        idx += 1;
+        result[idx] = hmsg_tree_mask_flag
+            * tree_mask_quot
+            * (tree_mask_quot - E::ONE)
+            * (tree_mask_quot - E::from(goldilocks_fe(2)))
+            * (tree_mask_quot - E::from(goldilocks_fe(3)));
+        idx += 1;
+        result[idx] = hmsg_tree_mask_flag * next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        idx += 1;
+        let leaf_mask_low9 = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let leaf_mask_quot = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        result[idx] = hmsg_leaf_mask_flag
+            * (current[HMSG_VERIFY_INPUT_COL_START + 4]
+                - leaf_mask_low9
+                - E::from(goldilocks_fe(512)) * leaf_mask_quot);
+        idx += 1;
+        let mut range512 = E::ONE;
+        for value in 0u64..512 {
+            range512 *= leaf_mask_low9 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_leaf_mask_flag * range512;
+        idx += 1;
+        let mut range128 = E::ONE;
+        for value in 0u64..128 {
+            range128 *= leaf_mask_quot - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_leaf_mask_flag * range128;
+        idx += 1;
+        result[idx] = hmsg_leaf_mask_flag * next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        idx += 1;
+        let digest_lane0 = current[COMMIT_EXACT_STATE_COL_START];
+        let digest_lane1 = current[COMMIT_EXACT_STATE_COL_START + 1];
+        let digest_lane2 = current[COMMIT_EXACT_STATE_COL_START + 2];
+        let fors_idx0 = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_idx0_hi6 = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_digest_tail_quot = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_idx0_flag
+            * (digest_lane0
+                - fors_idx0
+                - E::from(goldilocks_fe(1u64 << SPX_FORS_HEIGHT)) * fors_digest_tail_quot);
+        idx += 1;
+        let mut range64 = E::ONE;
+        for value in 0u64..64 {
+            range64 *= fors_idx0_hi6 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_idx0_flag * range64;
+        idx += 1;
+        let fors_idx0_low8 = fors_idx0 - E::from(goldilocks_fe(256)) * fors_idx0_hi6;
+        let mut range256 = E::ONE;
+        for value in 0u64..256 {
+            range256 *= fors_idx0_low8 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_idx0_flag * range256;
+        idx += 1;
+        let fors_idx0_tail_current = current[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        let fors_idx1 = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_idx1_hi6 = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_idx1_tail_quot = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_idx1_flag
+            * (fors_idx0_tail_current
+                - fors_idx1
+                - E::from(goldilocks_fe(1u64 << SPX_FORS_HEIGHT)) * fors_idx1_tail_quot);
+        idx += 1;
+        let mut range64 = E::ONE;
+        for value in 0u64..64 {
+            range64 *= fors_idx1_hi6 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_idx1_flag * range64;
+        idx += 1;
+        let fors_idx1_low8 = fors_idx1 - E::from(goldilocks_fe(256)) * fors_idx1_hi6;
+        let mut range256 = E::ONE;
+        for value in 0u64..256 {
+            range256 *= fors_idx1_low8 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_idx1_flag * range256;
+        idx += 1;
+        let fors_idx1_tail_current = current[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        let fors_idx2 = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_idx2_hi6 = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_idx2_tail_quot = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_idx2_flag
+            * (fors_idx1_tail_current
+                - fors_idx2
+                - E::from(goldilocks_fe(1u64 << SPX_FORS_HEIGHT)) * fors_idx2_tail_quot);
+        idx += 1;
+        let mut range64 = E::ONE;
+        for value in 0u64..64 {
+            range64 *= fors_idx2_hi6 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_idx2_flag * range64;
+        idx += 1;
+        let fors_idx2_low8 = fors_idx2 - E::from(goldilocks_fe(256)) * fors_idx2_hi6;
+        let mut range256 = E::ONE;
+        for value in 0u64..256 {
+            range256 *= fors_idx2_low8 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_idx2_flag * range256;
+        idx += 1;
+        let fors_idx2_tail_current = current[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        let fors_idx3 = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_idx3_hi6 = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_idx3_tail8 = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_idx3_flag
+            * (fors_idx2_tail_current
+                - fors_idx3
+                - E::from(goldilocks_fe(1u64 << SPX_FORS_HEIGHT)) * fors_idx3_tail8);
+        idx += 1;
+        let mut range64 = E::ONE;
+        for value in 0u64..64 {
+            range64 *= fors_idx3_hi6 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_idx3_flag * range64;
+        idx += 1;
+        let mut range256 = E::ONE;
+        for value in 0u64..256 {
+            range256 *= fors_idx3_tail8 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_idx3_flag * range256;
+        idx += 1;
+        let fors_idx3_low8 = fors_idx3 - E::from(goldilocks_fe(256)) * fors_idx3_hi6;
+        let mut range256 = E::ONE;
+        for value in 0u64..256 {
+            range256 *= fors_idx3_low8 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_idx3_flag
+            * range256;
+        idx += 1;
+        let fors_idx4 = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_idx4_lane1_low6 = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_idx4_tail58 = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_idx4_flag
+            * (digest_lane1
+                - fors_idx4_lane1_low6
+                - E::from(goldilocks_fe(1u64 << 6)) * fors_idx4_tail58);
+        idx += 1;
+        let mut range64 = E::ONE;
+        for value in 0u64..64 {
+            range64 *= fors_idx4_lane1_low6 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_idx4_flag * range64;
+        idx += 1;
+        let mut range256 = E::ONE;
+        for value in 0u64..256 {
+            range256 *= current[HMSG_VERIFY_OUTPUT_COL_START + 2] - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_idx4_flag
+            * (fors_idx4
+                - current[HMSG_VERIFY_OUTPUT_COL_START + 2]
+                - E::from(goldilocks_fe(256)) * fors_idx4_lane1_low6);
+        idx += 1;
+        let fors_idx5 = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_idx5_hi6 = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_idx5_tail44 = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_idx5_flag
+            * (current[HMSG_VERIFY_OUTPUT_COL_START + 2]
+                - fors_idx5
+                - E::from(goldilocks_fe(1u64 << SPX_FORS_HEIGHT)) * fors_idx5_tail44);
+        idx += 1;
+        let mut range64 = E::ONE;
+        for value in 0u64..64 {
+            range64 *= fors_idx5_hi6 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_idx5_flag * range64;
+        idx += 1;
+        let fors_idx5_low8 = fors_idx5 - E::from(goldilocks_fe(256)) * fors_idx5_hi6;
+        let mut range256 = E::ONE;
+        for value in 0u64..256 {
+            range256 *= fors_idx5_low8 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_idx5_flag * range256;
+        idx += 1;
+        let fors_idx6 = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_idx6_hi6 = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_idx6_tail30 = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_idx6_flag
+            * (current[HMSG_VERIFY_OUTPUT_COL_START + 2]
+                - fors_idx6
+                - E::from(goldilocks_fe(1u64 << SPX_FORS_HEIGHT)) * fors_idx6_tail30);
+        idx += 1;
+        let mut range64 = E::ONE;
+        for value in 0u64..64 {
+            range64 *= fors_idx6_hi6 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_idx6_flag * range64;
+        idx += 1;
+        let fors_idx6_low8 = fors_idx6 - E::from(goldilocks_fe(256)) * fors_idx6_hi6;
+        let mut range256 = E::ONE;
+        for value in 0u64..256 {
+            range256 *= fors_idx6_low8 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_idx6_flag * range256;
+        idx += 1;
+        let fors_idx7 = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_idx7_hi6 = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_idx7_tail16 = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_idx7_flag
+            * (current[HMSG_VERIFY_OUTPUT_COL_START + 2]
+                - fors_idx7
+                - E::from(goldilocks_fe(1u64 << SPX_FORS_HEIGHT)) * fors_idx7_tail16);
+        idx += 1;
+        let mut range64 = E::ONE;
+        for value in 0u64..64 {
+            range64 *= fors_idx7_hi6 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_idx7_flag * range64;
+        idx += 1;
+        let fors_idx7_low8 = fors_idx7 - E::from(goldilocks_fe(256)) * fors_idx7_hi6;
+        let mut range256 = E::ONE;
+        for value in 0u64..256 {
+            range256 *= fors_idx7_low8 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_idx7_flag * range256;
+        idx += 1;
+        let fors_idx8 = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_idx8_hi6 = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_idx8_tail2 = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_idx8_flag
+            * (current[HMSG_VERIFY_OUTPUT_COL_START + 2]
+                - fors_idx8
+                - E::from(goldilocks_fe(1u64 << SPX_FORS_HEIGHT)) * fors_idx8_tail2);
+        idx += 1;
+        let mut range64 = E::ONE;
+        for value in 0u64..64 {
+            range64 *= fors_idx8_hi6 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_idx8_flag * range64;
+        idx += 1;
+        let fors_idx8_low8 = fors_idx8 - E::from(goldilocks_fe(256)) * fors_idx8_hi6;
+        let mut range256 = E::ONE;
+        for value in 0u64..256 {
+            range256 *= fors_idx8_low8 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_idx8_flag * range256;
+        idx += 1;
+        let fors_idx8_tail2_current = current[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        let fors_idx9 = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_idx9_lane2_low12 = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_idx9_lane2_tail52 = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_idx9_flag
+            * (digest_lane2
+                - fors_idx9_lane2_low12
+                - E::from(goldilocks_fe(1u64 << 12)) * fors_idx9_lane2_tail52);
+        idx += 1;
+        let mut range4 = E::ONE;
+        for value in 0u64..4 {
+            range4 *= fors_idx8_tail2_current - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_idx9_flag * range4;
+        idx += 1;
+        let mut range4096 = E::ONE;
+        for value in 0u64..4096 {
+            range4096 *= fors_idx9_lane2_low12 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_idx9_flag * range4096;
+        idx += 1;
+        result[idx] = hmsg_fors_idx9_flag
+            * (fors_idx9
+                - fors_idx8_tail2_current
+                - E::from(goldilocks_fe(1u64 << 2)) * fors_idx9_lane2_low12);
+        idx += 1;
+        let fors_idx10 = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_idx10_hi6 = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_idx10_tail38 = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_idx10_flag
+            * (current[HMSG_VERIFY_OUTPUT_COL_START + 2]
+                - fors_idx10
+                - E::from(goldilocks_fe(1u64 << SPX_FORS_HEIGHT)) * fors_idx10_tail38);
+        idx += 1;
+        let mut range64 = E::ONE;
+        for value in 0u64..64 {
+            range64 *= fors_idx10_hi6 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_idx10_flag * range64;
+        idx += 1;
+        let fors_idx10_low8 = fors_idx10 - E::from(goldilocks_fe(256)) * fors_idx10_hi6;
+        let mut range256 = E::ONE;
+        for value in 0u64..256 {
+            range256 *= fors_idx10_low8 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_idx10_flag * range256;
+        idx += 1;
+        let fors_idx11 = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_idx11_hi6 = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_idx11_tail24 = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_idx11_flag
+            * (current[HMSG_VERIFY_OUTPUT_COL_START + 2]
+                - fors_idx11
+                - E::from(goldilocks_fe(1u64 << SPX_FORS_HEIGHT)) * fors_idx11_tail24);
+        idx += 1;
+        let mut range64 = E::ONE;
+        for value in 0u64..64 {
+            range64 *= fors_idx11_hi6 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_idx11_flag * range64;
+        idx += 1;
+        let fors_idx11_low8 = fors_idx11 - E::from(goldilocks_fe(256)) * fors_idx11_hi6;
+        let mut range256 = E::ONE;
+        for value in 0u64..256 {
+            range256 *= fors_idx11_low8 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_idx11_flag * range256;
+        idx += 1;
+        let fors_idx12 = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_idx12_hi6 = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_idx12_tail10 = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_idx12_flag
+            * (current[HMSG_VERIFY_OUTPUT_COL_START + 2]
+                - fors_idx12
+                - E::from(goldilocks_fe(1u64 << SPX_FORS_HEIGHT)) * fors_idx12_tail10);
+        idx += 1;
+        let mut range64 = E::ONE;
+        for value in 0u64..64 {
+            range64 *= fors_idx12_hi6 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_idx12_flag * range64;
+        idx += 1;
+        let fors_idx12_low8 = fors_idx12 - E::from(goldilocks_fe(256)) * fors_idx12_hi6;
+        let mut range256 = E::ONE;
+        for value in 0u64..256 {
+            range256 *= fors_idx12_low8 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_idx12_flag * range256;
+        idx += 1;
+        let fors_idx12_tail10_current = current[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        let fors_idx13 = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_idx13_lane3_low4 = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_idx13_lane3_tail44 = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_idx13_flag
+            * (current[HMSG_VERIFY_INPUT_COL_START]
+                - fors_idx13_lane3_low4
+                - E::from(goldilocks_fe(1u64 << 4)) * fors_idx13_lane3_tail44);
+        idx += 1;
+        let mut range1024 = E::ONE;
+        for value in 0u64..1024 {
+            range1024 *= fors_idx12_tail10_current - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_idx13_flag * range1024;
+        idx += 1;
+        let mut range16 = E::ONE;
+        for value in 0u64..16 {
+            range16 *= fors_idx13_lane3_low4 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_idx13_flag * range16;
+        idx += 1;
+        result[idx] = hmsg_fors_idx13_flag
+            * (fors_idx13
+                - fors_idx12_tail10_current
+                - E::from(goldilocks_fe(1u64 << 10)) * fors_idx13_lane3_low4);
+        idx += 1;
+        let fors_idx14 = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_idx14_hi6 = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_idx14_tail30 = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_idx14_flag
+            * (current[HMSG_VERIFY_OUTPUT_COL_START + 2]
+                - fors_idx14
+                - E::from(goldilocks_fe(1u64 << SPX_FORS_HEIGHT)) * fors_idx14_tail30);
+        idx += 1;
+        let mut range64 = E::ONE;
+        for value in 0u64..64 {
+            range64 *= fors_idx14_hi6 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_idx14_flag * range64;
+        idx += 1;
+        let fors_idx14_low8 = fors_idx14 - E::from(goldilocks_fe(256)) * fors_idx14_hi6;
+        let mut range256 = E::ONE;
+        for value in 0u64..256 {
+            range256 *= fors_idx14_low8 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_idx14_flag * range256;
+        idx += 1;
+        let fors_idx15 = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_idx15_hi6 = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_idx15_tail16 = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_idx15_flag
+            * (current[HMSG_VERIFY_OUTPUT_COL_START + 2]
+                - fors_idx15
+                - E::from(goldilocks_fe(1u64 << SPX_FORS_HEIGHT)) * fors_idx15_tail16);
+        idx += 1;
+        let mut range64 = E::ONE;
+        for value in 0u64..64 {
+            range64 *= fors_idx15_hi6 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_idx15_flag * range64;
+        idx += 1;
+        let fors_idx15_low8 = fors_idx15 - E::from(goldilocks_fe(256)) * fors_idx15_hi6;
+        let mut range256 = E::ONE;
+        for value in 0u64..256 {
+            range256 *= fors_idx15_low8 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_idx15_flag * range256;
+        idx += 1;
+        let fors_idx16 = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_idx16_hi6 = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_idx16_tail2 = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_idx16_flag
+            * (current[HMSG_VERIFY_OUTPUT_COL_START + 2]
+                - fors_idx16
+                - E::from(goldilocks_fe(1u64 << SPX_FORS_HEIGHT)) * fors_idx16_tail2);
+        idx += 1;
+        let mut range64 = E::ONE;
+        for value in 0u64..64 {
+            range64 *= fors_idx16_hi6 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_idx16_flag * range64;
+        idx += 1;
+        let fors_idx16_low8 = fors_idx16 - E::from(goldilocks_fe(256)) * fors_idx16_hi6;
+        let mut range256 = E::ONE;
+        for value in 0u64..256 {
+            range256 *= fors_idx16_low8 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_idx16_flag * range256;
+        idx += 1;
+        let mut range4 = E::ONE;
+        for value in 0u64..4 {
+            range4 *= fors_idx16_tail2 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_idx16_flag * range4;
+        idx += 1;
+        let fors_tree0_leaf_index = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_tree0_leaf_tail = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        result[idx] = hmsg_fors_tree0_leaf_flag
+            * (digest_lane0
+                - fors_tree0_leaf_index
+                - E::from(goldilocks_fe(1u64 << SPX_FORS_HEIGHT)) * fors_tree0_leaf_tail);
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_leaf_flag * next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        idx += 1;
+        let fors_tree0_parent_low8 = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_tree0_parent_hi5 = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_tree0_leaf_parity = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_tree0_parent_flag
+            * (current[HMSG_VERIFY_OUTPUT_COL_START]
+                - fors_tree0_leaf_parity
+                - E::from(goldilocks_fe(2))
+                    * (fors_tree0_parent_low8
+                        + E::from(goldilocks_fe(256)) * fors_tree0_parent_hi5));
+        idx += 1;
+        let mut range256 = E::ONE;
+        for value in 0u64..256 {
+            range256 *= fors_tree0_parent_low8 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_tree0_parent_flag * range256;
+        idx += 1;
+        let mut range32 = E::ONE;
+        for value in 0u64..32 {
+            range32 *= fors_tree0_parent_hi5 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_tree0_parent_flag * range32;
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_parent_flag
+            * fors_tree0_leaf_parity
+            * (fors_tree0_leaf_parity - E::ONE);
+        idx += 1;
+        let fors_tree0_parent_h2_low8 = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_tree0_parent_h2_hi4 = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_tree0_parent_h1_parity = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_tree0_parent_h2_flag
+            * ((current[HMSG_VERIFY_OUTPUT_COL_START]
+                + E::from(goldilocks_fe(256)) * current[HMSG_VERIFY_OUTPUT_COL_START + 1])
+                - fors_tree0_parent_h1_parity
+                - E::from(goldilocks_fe(2))
+                    * (fors_tree0_parent_h2_low8
+                        + E::from(goldilocks_fe(256)) * fors_tree0_parent_h2_hi4));
+        idx += 1;
+        let mut range256 = E::ONE;
+        for value in 0u64..256 {
+            range256 *= fors_tree0_parent_h2_low8 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_tree0_parent_h2_flag * range256;
+        idx += 1;
+        let mut range16 = E::ONE;
+        for value in 0u64..16 {
+            range16 *= fors_tree0_parent_h2_hi4 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_tree0_parent_h2_flag * range16;
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_parent_h2_flag
+            * fors_tree0_parent_h1_parity
+            * (fors_tree0_parent_h1_parity - E::ONE);
+        idx += 1;
+        let fors_tree0_parent_h3_low8 = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_tree0_parent_h3_hi3 = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_tree0_parent_h2_parity = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_tree0_parent_h3_flag
+            * ((current[HMSG_VERIFY_OUTPUT_COL_START]
+                + E::from(goldilocks_fe(256)) * current[HMSG_VERIFY_OUTPUT_COL_START + 1])
+                - fors_tree0_parent_h2_parity
+                - E::from(goldilocks_fe(2))
+                    * (fors_tree0_parent_h3_low8
+                        + E::from(goldilocks_fe(256)) * fors_tree0_parent_h3_hi3));
+        idx += 1;
+        let mut range256 = E::ONE;
+        for value in 0u64..256 {
+            range256 *= fors_tree0_parent_h3_low8 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_tree0_parent_h3_flag * range256;
+        idx += 1;
+        let mut range8 = E::ONE;
+        for value in 0u64..8 {
+            range8 *= fors_tree0_parent_h3_hi3 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_tree0_parent_h3_flag * range8;
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_parent_h3_flag
+            * fors_tree0_parent_h2_parity
+            * (fors_tree0_parent_h2_parity - E::ONE);
+        idx += 1;
+        let fors_tree0_parent_h4_low8 = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_tree0_parent_h4_hi2 = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_tree0_parent_h3_parity = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_tree0_parent_h4_flag
+            * ((current[HMSG_VERIFY_OUTPUT_COL_START]
+                + E::from(goldilocks_fe(256)) * current[HMSG_VERIFY_OUTPUT_COL_START + 1])
+                - fors_tree0_parent_h3_parity
+                - E::from(goldilocks_fe(2))
+                    * (fors_tree0_parent_h4_low8
+                        + E::from(goldilocks_fe(256)) * fors_tree0_parent_h4_hi2));
+        idx += 1;
+        let mut range256 = E::ONE;
+        for value in 0u64..256 {
+            range256 *= fors_tree0_parent_h4_low8 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_tree0_parent_h4_flag * range256;
+        idx += 1;
+        let mut range4 = E::ONE;
+        for value in 0u64..4 {
+            range4 *= fors_tree0_parent_h4_hi2 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_tree0_parent_h4_flag * range4;
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_parent_h4_flag
+            * fors_tree0_parent_h3_parity
+            * (fors_tree0_parent_h3_parity - E::ONE);
+        idx += 1;
+        let fors_tree0_parent_h5_low8 = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_tree0_parent_h5_hi1 = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_tree0_parent_h4_parity = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_tree0_parent_h5_flag
+            * ((current[HMSG_VERIFY_OUTPUT_COL_START]
+                + E::from(goldilocks_fe(256)) * current[HMSG_VERIFY_OUTPUT_COL_START + 1])
+                - fors_tree0_parent_h4_parity
+                - E::from(goldilocks_fe(2))
+                    * (fors_tree0_parent_h5_low8
+                        + E::from(goldilocks_fe(256)) * fors_tree0_parent_h5_hi1));
+        idx += 1;
+        let mut range256 = E::ONE;
+        for value in 0u64..256 {
+            range256 *= fors_tree0_parent_h5_low8 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_tree0_parent_h5_flag * range256;
+        idx += 1;
+        let mut range2 = E::ONE;
+        for value in 0u64..2 {
+            range2 *= fors_tree0_parent_h5_hi1 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_tree0_parent_h5_flag * range2;
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_parent_h5_flag
+            * fors_tree0_parent_h4_parity
+            * (fors_tree0_parent_h4_parity - E::ONE);
+        idx += 1;
+        let fors_tree0_parent_h6_low8 = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_tree0_parent_h6_hi0 = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_tree0_parent_h5_parity = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_tree0_parent_h6_flag
+            * ((current[HMSG_VERIFY_OUTPUT_COL_START]
+                + E::from(goldilocks_fe(256)) * current[HMSG_VERIFY_OUTPUT_COL_START + 1])
+                - fors_tree0_parent_h5_parity
+                - E::from(goldilocks_fe(2))
+                    * (fors_tree0_parent_h6_low8
+                        + E::from(goldilocks_fe(256)) * fors_tree0_parent_h6_hi0));
+        idx += 1;
+        let mut range256 = E::ONE;
+        for value in 0u64..256 {
+            range256 *= fors_tree0_parent_h6_low8 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_tree0_parent_h6_flag * range256;
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_parent_h6_flag * fors_tree0_parent_h6_hi0;
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_parent_h6_flag
+            * fors_tree0_parent_h5_parity
+            * (fors_tree0_parent_h5_parity - E::ONE);
+        idx += 1;
+        let fors_tree0_parent_h7_low8 = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_tree0_parent_h7_hi0 = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_tree0_parent_h6_parity = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_tree0_parent_h7_flag
+            * ((current[HMSG_VERIFY_OUTPUT_COL_START]
+                + E::from(goldilocks_fe(256)) * current[HMSG_VERIFY_OUTPUT_COL_START + 1])
+                - fors_tree0_parent_h6_parity
+                - E::from(goldilocks_fe(2))
+                    * (fors_tree0_parent_h7_low8
+                        + E::from(goldilocks_fe(256)) * fors_tree0_parent_h7_hi0));
+        idx += 1;
+        let mut range128 = E::ONE;
+        for value in 0u64..128 {
+            range128 *= fors_tree0_parent_h7_low8 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_tree0_parent_h7_flag * range128;
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_parent_h7_flag * fors_tree0_parent_h7_hi0;
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_parent_h7_flag
+            * fors_tree0_parent_h6_parity
+            * (fors_tree0_parent_h6_parity - E::ONE);
+        idx += 1;
+        let fors_tree0_parent_h8_low8 = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_tree0_parent_h8_hi0 = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_tree0_parent_h7_parity = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_tree0_parent_h8_flag
+            * ((current[HMSG_VERIFY_OUTPUT_COL_START]
+                + E::from(goldilocks_fe(256)) * current[HMSG_VERIFY_OUTPUT_COL_START + 1])
+                - fors_tree0_parent_h7_parity
+                - E::from(goldilocks_fe(2))
+                    * (fors_tree0_parent_h8_low8
+                        + E::from(goldilocks_fe(256)) * fors_tree0_parent_h8_hi0));
+        idx += 1;
+        let mut range64 = E::ONE;
+        for value in 0u64..64 {
+            range64 *= fors_tree0_parent_h8_low8 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_tree0_parent_h8_flag * range64;
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_parent_h8_flag * fors_tree0_parent_h8_hi0;
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_parent_h8_flag
+            * fors_tree0_parent_h7_parity
+            * (fors_tree0_parent_h7_parity - E::ONE);
+        idx += 1;
+        let fors_tree0_parent_h9_low8 = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_tree0_parent_h9_hi0 = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_tree0_parent_h8_parity = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_tree0_parent_h9_flag
+            * ((current[HMSG_VERIFY_OUTPUT_COL_START]
+                + E::from(goldilocks_fe(256)) * current[HMSG_VERIFY_OUTPUT_COL_START + 1])
+                - fors_tree0_parent_h8_parity
+                - E::from(goldilocks_fe(2))
+                    * (fors_tree0_parent_h9_low8
+                        + E::from(goldilocks_fe(256)) * fors_tree0_parent_h9_hi0));
+        idx += 1;
+        let mut range32 = E::ONE;
+        for value in 0u64..32 {
+            range32 *= fors_tree0_parent_h9_low8 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_tree0_parent_h9_flag * range32;
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_parent_h9_flag * fors_tree0_parent_h9_hi0;
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_parent_h9_flag
+            * fors_tree0_parent_h8_parity
+            * (fors_tree0_parent_h8_parity - E::ONE);
+        idx += 1;
+        let fors_tree0_parent_h10_low8 = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_tree0_parent_h10_hi0 = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_tree0_parent_h9_parity = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_tree0_parent_h10_flag
+            * ((current[HMSG_VERIFY_OUTPUT_COL_START]
+                + E::from(goldilocks_fe(256)) * current[HMSG_VERIFY_OUTPUT_COL_START + 1])
+                - fors_tree0_parent_h9_parity
+                - E::from(goldilocks_fe(2))
+                    * (fors_tree0_parent_h10_low8
+                        + E::from(goldilocks_fe(256)) * fors_tree0_parent_h10_hi0));
+        idx += 1;
+        let mut range16 = E::ONE;
+        for value in 0u64..16 {
+            range16 *= fors_tree0_parent_h10_low8 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_tree0_parent_h10_flag * range16;
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_parent_h10_flag * fors_tree0_parent_h10_hi0;
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_parent_h10_flag
+            * fors_tree0_parent_h9_parity
+            * (fors_tree0_parent_h9_parity - E::ONE);
+        idx += 1;
+        let fors_tree0_parent_h11_low8 = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_tree0_parent_h11_hi0 = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_tree0_parent_h10_parity = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_tree0_parent_h11_flag
+            * ((current[HMSG_VERIFY_OUTPUT_COL_START]
+                + E::from(goldilocks_fe(256)) * current[HMSG_VERIFY_OUTPUT_COL_START + 1])
+                - fors_tree0_parent_h10_parity
+                - E::from(goldilocks_fe(2))
+                    * (fors_tree0_parent_h11_low8
+                        + E::from(goldilocks_fe(256)) * fors_tree0_parent_h11_hi0));
+        idx += 1;
+        let mut range8 = E::ONE;
+        for value in 0u64..8 {
+            range8 *= fors_tree0_parent_h11_low8 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_tree0_parent_h11_flag * range8;
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_parent_h11_flag * fors_tree0_parent_h11_hi0;
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_parent_h11_flag
+            * fors_tree0_parent_h10_parity
+            * (fors_tree0_parent_h10_parity - E::ONE);
+        idx += 1;
+        let fors_tree0_parent_h12_low8 = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_tree0_parent_h12_hi0 = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_tree0_parent_h11_parity = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_tree0_parent_h12_flag
+            * ((current[HMSG_VERIFY_OUTPUT_COL_START]
+                + E::from(goldilocks_fe(256)) * current[HMSG_VERIFY_OUTPUT_COL_START + 1])
+                - fors_tree0_parent_h11_parity
+                - E::from(goldilocks_fe(2))
+                    * (fors_tree0_parent_h12_low8
+                        + E::from(goldilocks_fe(256)) * fors_tree0_parent_h12_hi0));
+        idx += 1;
+        let mut range4 = E::ONE;
+        for value in 0u64..4 {
+            range4 *= fors_tree0_parent_h12_low8 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_tree0_parent_h12_flag * range4;
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_parent_h12_flag * fors_tree0_parent_h12_hi0;
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_parent_h12_flag
+            * fors_tree0_parent_h11_parity
+            * (fors_tree0_parent_h11_parity - E::ONE);
+        idx += 1;
+        let fors_tree0_parent_h13_low8 = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_tree0_parent_h13_hi0 = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_tree0_parent_h12_parity = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_tree0_parent_h13_flag
+            * ((current[HMSG_VERIFY_OUTPUT_COL_START]
+                + E::from(goldilocks_fe(256)) * current[HMSG_VERIFY_OUTPUT_COL_START + 1])
+                - fors_tree0_parent_h12_parity
+                - E::from(goldilocks_fe(2))
+                    * (fors_tree0_parent_h13_low8
+                        + E::from(goldilocks_fe(256)) * fors_tree0_parent_h13_hi0));
+        idx += 1;
+        let mut range2 = E::ONE;
+        for value in 0u64..2 {
+            range2 *= fors_tree0_parent_h13_low8 - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_tree0_parent_h13_flag * range2;
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_parent_h13_flag * fors_tree0_parent_h13_hi0;
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_parent_h13_flag
+            * fors_tree0_parent_h12_parity
+            * (fors_tree0_parent_h12_parity - E::ONE);
+        idx += 1;
+        let fors_tree0_parent_h14_low8 = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_tree0_parent_h14_hi0 = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_tree0_parent_h13_parity = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_tree0_parent_h14_flag
+            * ((current[HMSG_VERIFY_OUTPUT_COL_START]
+                + E::from(goldilocks_fe(256)) * current[HMSG_VERIFY_OUTPUT_COL_START + 1])
+                - fors_tree0_parent_h13_parity
+                - E::from(goldilocks_fe(2))
+                    * (fors_tree0_parent_h14_low8
+                        + E::from(goldilocks_fe(256)) * fors_tree0_parent_h14_hi0));
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_parent_h14_flag * fors_tree0_parent_h14_low8;
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_parent_h14_flag * fors_tree0_parent_h14_hi0;
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_parent_h14_flag
+            * fors_tree0_parent_h13_parity
+            * (fors_tree0_parent_h13_parity - E::ONE);
+        idx += 1;
+        let fors_tree0_addr_final_height = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_tree0_addr_final_index_low8 = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_tree0_addr_final_aux = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_tree0_addr_final_flag
+            * (current[HMSG_VERIFY_OUTPUT_COL_START + 1] - fors_tree0_addr_final_index_low8);
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_addr_final_flag
+            * (fors_tree0_addr_final_height - E::from(goldilocks_fe(SPX_FORS_HEIGHT as u64)));
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_addr_final_flag
+            * (fors_tree0_addr_final_aux - current[HMSG_VERIFY_OUTPUT_COL_START + 2]);
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_addr_final_flag
+            * fors_tree0_addr_final_aux
+            * (fors_tree0_addr_final_aux - E::ONE);
+        idx += 1;
+        let fors_tree0_addr_h13_height = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_tree0_addr_h13_index = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_tree0_addr_h13_aux = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_tree0_addr_h13_flag
+            * (current[HMSG_VERIFY_OUTPUT_COL_START] - E::ONE - fors_tree0_addr_h13_height);
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_addr_h13_flag
+            * ((current[HMSG_VERIFY_OUTPUT_COL_START + 2]
+                + E::from(goldilocks_fe(2)) * current[HMSG_VERIFY_OUTPUT_COL_START + 1])
+                - fors_tree0_addr_h13_index);
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_addr_h13_flag
+            * fors_tree0_addr_h13_index
+            * (fors_tree0_addr_h13_index - E::ONE);
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_addr_h13_flag
+            * fors_tree0_addr_h13_aux
+            * (fors_tree0_addr_h13_aux - E::ONE);
     }
 
     fn get_assertions(&self) -> Vec<Assertion<Self::BaseField>> {
@@ -1428,6 +3073,232 @@ impl Air for WorkAir {
             Assertion::single(45, 0, self.com_input_public_l2),
             Assertion::single(45, last_step, self.com_input_public_l2),
         ]
+    }
+
+    fn get_periodic_column_values(&self) -> Vec<Vec<Self::BaseField>> {
+        let mut columns = vec![vec![BaseElement::ZERO; COMMIT_EXACT_PERIOD]; COMMIT_EXACT_PERIODIC_COLS];
+        for row in 0..COMMIT_EXACT_PERIOD {
+            if row < crate::thash_poseidon2_exact::POSEIDON2_ROUNDS {
+                let (is_full, is_internal) = crate::thash_poseidon2_exact::round_kind(row);
+                columns[0][row] = BaseElement::new(if is_full { 1 } else { 0 });
+                columns[1][row] = BaseElement::new(if is_internal { 1 } else { 0 });
+                for lane in 0..POSEIDON2_T {
+                    columns[8 + lane][row] =
+                        BaseElement::new(crate::thash_poseidon2_exact::P2_ROUND_CONSTANTS[row][lane]);
+                    columns[20 + lane][row] =
+                        BaseElement::new(crate::thash_poseidon2_exact::P2_INTERNAL_DIAG_12[lane]);
+                }
+            } else if row >= HMSG_PHASE0_START_ROW && row < HMSG_PHASE0_OUTPUT_ROW {
+                let round = row - HMSG_PHASE0_START_ROW;
+                let (is_full, is_internal) = crate::thash_poseidon2_exact::round_kind(round);
+                columns[5][row] = BaseElement::new(if is_full { 1 } else { 0 });
+                columns[6][row] = BaseElement::new(if is_internal { 1 } else { 0 });
+                for lane in 0..POSEIDON2_T {
+                    columns[8 + lane][row] =
+                        BaseElement::new(crate::thash_poseidon2_exact::P2_ROUND_CONSTANTS[round][lane]);
+                    columns[20 + lane][row] =
+                        BaseElement::new(crate::thash_poseidon2_exact::P2_INTERNAL_DIAG_12[lane]);
+                }
+            } else if row >= HMSG_PHASE1_START_ROW && row < HMSG_PHASE1_OUTPUT_ROW {
+                let round = row - HMSG_PHASE1_START_ROW;
+                let (is_full, is_internal) = crate::thash_poseidon2_exact::round_kind(round);
+                columns[5][row] = BaseElement::new(if is_full { 1 } else { 0 });
+                columns[6][row] = BaseElement::new(if is_internal { 1 } else { 0 });
+                for lane in 0..POSEIDON2_T {
+                    columns[8 + lane][row] =
+                        BaseElement::new(crate::thash_poseidon2_exact::P2_ROUND_CONSTANTS[round][lane]);
+                    columns[20 + lane][row] =
+                        BaseElement::new(crate::thash_poseidon2_exact::P2_INTERNAL_DIAG_12[lane]);
+                }
+            } else if row >= HMSG_PHASE2_START_ROW && row < HMSG_PHASE2_OUTPUT_ROW {
+                let round = row - HMSG_PHASE2_START_ROW;
+                let (is_full, is_internal) = crate::thash_poseidon2_exact::round_kind(round);
+                columns[5][row] = BaseElement::new(if is_full { 1 } else { 0 });
+                columns[6][row] = BaseElement::new(if is_internal { 1 } else { 0 });
+                for lane in 0..POSEIDON2_T {
+                    columns[8 + lane][row] =
+                        BaseElement::new(crate::thash_poseidon2_exact::P2_ROUND_CONSTANTS[round][lane]);
+                    columns[20 + lane][row] =
+                        BaseElement::new(crate::thash_poseidon2_exact::P2_INTERNAL_DIAG_12[lane]);
+                }
+            }
+            if row == 0 {
+                columns[2][row] = BaseElement::ONE;
+            }
+            if row == COMMIT_EXACT_OUTPUT_ROW {
+                columns[3][row] = BaseElement::ONE;
+                columns[4][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE0_OUTPUT_ROW {
+                columns[4][row] = BaseElement::ONE;
+                columns[7][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE1_OUTPUT_ROW {
+                columns[4][row] = BaseElement::ONE;
+                columns[7][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW {
+                columns[7][row] = BaseElement::ONE;
+            }
+            if row == (HMSG_PHASE0_OUTPUT_ROW - 1)
+                || row == (HMSG_PHASE1_OUTPUT_ROW - 1)
+                || row == HMSG_PHASE2_OUTPUT_ROW
+            {
+                columns[32][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE0_OUTPUT_ROW
+                || row == HMSG_PHASE1_OUTPUT_ROW
+                || row == HMSG_PHASE2_OUTPUT_ROW
+                || row == HMSG_PHASE2_OUTPUT_ROW + 1
+                || row == HMSG_PHASE2_OUTPUT_ROW + 2
+                || row == HMSG_PHASE2_OUTPUT_ROW + 3
+                || row == HMSG_PHASE2_OUTPUT_ROW + 4
+                || row == HMSG_PHASE2_OUTPUT_ROW + 5
+                || row == HMSG_PHASE2_OUTPUT_ROW + 6
+                || row == HMSG_PHASE2_OUTPUT_ROW + 7
+                || row == HMSG_PHASE2_OUTPUT_ROW + 8
+                || row == HMSG_PHASE2_OUTPUT_ROW + 9
+                || row == HMSG_PHASE2_OUTPUT_ROW + 10
+                || row == HMSG_PHASE2_OUTPUT_ROW + 11
+                || row == HMSG_PHASE2_OUTPUT_ROW + 12
+                || row == HMSG_PHASE2_OUTPUT_ROW + 13
+                || row == HMSG_PHASE2_OUTPUT_ROW + 14
+                || row == HMSG_PHASE2_OUTPUT_ROW + 15
+                || row == HMSG_PHASE2_OUTPUT_ROW + 16
+                || row == HMSG_PHASE2_OUTPUT_ROW + 17
+                || row == HMSG_PHASE2_OUTPUT_ROW + 18
+                || row == HMSG_PHASE2_OUTPUT_ROW + 19
+                || row == HMSG_PHASE2_OUTPUT_ROW + 20
+                || row == HMSG_PHASE2_OUTPUT_ROW + 21
+                || row == HMSG_PHASE2_OUTPUT_ROW + 22
+                || row == HMSG_PHASE2_OUTPUT_ROW + 23
+                || row == HMSG_PHASE2_OUTPUT_ROW + 24
+                || row == HMSG_PHASE2_OUTPUT_ROW + 25
+                || row == HMSG_PHASE2_OUTPUT_ROW + 26
+                || row == HMSG_PHASE2_OUTPUT_ROW + 27
+                || row == HMSG_PHASE2_OUTPUT_ROW + 28
+                || row == HMSG_PHASE2_OUTPUT_ROW + 29
+                || row == HMSG_PHASE2_OUTPUT_ROW + 30
+                || row == HMSG_PHASE2_OUTPUT_ROW + 31
+                || row == HMSG_PHASE2_OUTPUT_ROW + 32
+                || row == HMSG_PHASE2_OUTPUT_ROW + 33
+                || row == HMSG_PHASE2_OUTPUT_ROW + 34
+                || row == HMSG_PHASE2_OUTPUT_ROW + 35
+            {
+                columns[33][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW {
+                columns[34][row] = BaseElement::ONE;
+                columns[35][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 1 {
+                columns[35][row] = BaseElement::ZERO;
+                columns[36][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 2 {
+                columns[37][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 3 {
+                columns[38][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 4 {
+                columns[39][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 5 {
+                columns[40][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 6 {
+                columns[41][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 7 {
+                columns[42][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 8 {
+                columns[43][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 9 {
+                columns[44][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 10 {
+                columns[45][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 11 {
+                columns[46][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 12 {
+                columns[47][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 13 {
+                columns[48][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 14 {
+                columns[49][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 15 {
+                columns[50][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 16 {
+                columns[51][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 17 {
+                columns[52][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 18 {
+                columns[53][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 19 {
+                columns[54][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 20 {
+                columns[55][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 21 {
+                columns[56][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 22 {
+                columns[57][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 23 {
+                columns[58][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 24 {
+                columns[59][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 25 {
+                columns[60][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 26 {
+                columns[61][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 27 {
+                columns[62][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 28 {
+                columns[63][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 29 {
+                columns[64][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 30 {
+                columns[65][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 31 {
+                columns[66][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 32 {
+                columns[67][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 33 {
+                columns[68][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 34 {
+                columns[69][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 35 {
+                columns[70][row] = BaseElement::ONE;
+            }
+        }
+        columns
     }
 
     fn context(&self) -> &AirContext<Self::BaseField> {
@@ -2375,6 +4246,45 @@ fn build_work_trace(
     omega2_mid7: BaseElement,
     omega2_b16: BaseElement,
     omega2_last7: BaseElement,
+    hmsg_blocks: [Poseidon2RateBlock; HMSG_BLOCK_COUNT],
+    hmsg_outputs: [[BaseElement; COM_LIMBS]; HMSG_BLOCK_COUNT],
+    hmsg_unpack_parts: Poseidon2RateBlock,
+    hmsg_tree_mask_parts: [BaseElement; COM_LIMBS],
+    hmsg_leaf_mask_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_idx0_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_idx1_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_idx2_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_idx3_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_idx4_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_idx5_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_idx6_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_idx7_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_idx8_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_idx9_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_idx10_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_idx11_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_idx12_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_idx13_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_idx14_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_idx15_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_idx16_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_tree0_leaf_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_tree0_parent_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_tree0_parent_h2_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_tree0_parent_h3_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_tree0_parent_h4_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_tree0_parent_h5_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_tree0_parent_h6_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_tree0_parent_h7_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_tree0_parent_h8_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_tree0_parent_h9_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_tree0_parent_h10_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_tree0_parent_h11_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_tree0_parent_h12_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_tree0_parent_h13_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_tree0_parent_h14_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_tree0_addr_final_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_tree0_addr_h13_parts: [BaseElement; COM_LIMBS],
     ciphertext_suffix_state_chain: CiphertextSuffixStateChain,
     n: usize,
 ) -> TraceTable<BaseElement> {
@@ -2457,8 +4367,23 @@ fn build_work_trace(
             state[73] = omega2_b16;
             state[74] = omega2_last7;
             set_ciphertext_suffix_trace_columns(state, &ciphertext_suffix_state_chain);
+            for lane in 0..POSEIDON2_RATE_LANES {
+                state[HMSG_VERIFY_INPUT_COL_START + lane] = hmsg_blocks[0][lane];
+            }
+            state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_outputs[0][0];
+            state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_outputs[0][1];
+            state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_outputs[0][2];
+            state[COMMIT_EXACT_STATE_COL_START] = state[43];
+            state[COMMIT_EXACT_STATE_COL_START + 1] = state[44];
+            state[COMMIT_EXACT_STATE_COL_START + 2] = state[45];
+            state[COMMIT_EXACT_STATE_COL_START + 3] = state[46];
+            state[COMMIT_EXACT_STATE_COL_START + 4] = state[47];
+            state[COMMIT_EXACT_STATE_COL_START + 5] = state[48];
+            for lane in POSEIDON2_RATE_LANES..POSEIDON2_T {
+                state[COMMIT_EXACT_STATE_COL_START + lane] = BaseElement::ZERO;
+            }
         },
-        |_, state| {
+        |row, state| {
             let prev_state = state[0];
             let prev_call = state[1];
             let prev_row = state[2];
@@ -2566,6 +4491,233 @@ fn build_work_trace(
             state[73] = omega2_b16;
             state[74] = omega2_last7;
             set_ciphertext_suffix_trace_columns(state, &ciphertext_suffix_state_chain);
+            let hmsg_input_phase = hmsg_input_phase_index(row);
+            let hmsg_output_phase = hmsg_output_phase_index(row);
+            if row <= HMSG_PHASE2_OUTPUT_ROW {
+                for lane in 0..POSEIDON2_RATE_LANES {
+                    state[HMSG_VERIFY_INPUT_COL_START + lane] = hmsg_blocks[hmsg_input_phase][lane];
+                }
+            } else {
+                for lane in 0..POSEIDON2_RATE_LANES {
+                    state[HMSG_VERIFY_INPUT_COL_START + lane] = hmsg_unpack_parts[lane];
+                }
+            }
+            if row <= HMSG_PHASE2_OUTPUT_ROW {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_outputs[hmsg_output_phase][0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_outputs[hmsg_output_phase][1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_outputs[hmsg_output_phase][2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 1 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_tree_mask_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_tree_mask_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_tree_mask_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 2 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_leaf_mask_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_leaf_mask_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_leaf_mask_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 3 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_idx0_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_idx0_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_idx0_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 4 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_idx1_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_idx1_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_idx1_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 5 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_idx2_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_idx2_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_idx2_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 6 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_idx3_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_idx3_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_idx3_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 7 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_idx4_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_idx4_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_idx4_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 8 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_idx5_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_idx5_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_idx5_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 9 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_idx6_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_idx6_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_idx6_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 10 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_idx7_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_idx7_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_idx7_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 11 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_idx8_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_idx8_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_idx8_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 12 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_idx9_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_idx9_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_idx9_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 13 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_idx10_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_idx10_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_idx10_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 14 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_idx11_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_idx11_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_idx11_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 15 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_idx12_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_idx12_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_idx12_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 16 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_idx13_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_idx13_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_idx13_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 17 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_idx14_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_idx14_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_idx14_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 18 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_idx15_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_idx15_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_idx15_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 19 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_idx16_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_idx16_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_idx16_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 20 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_tree0_leaf_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_tree0_leaf_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_tree0_leaf_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 21 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_tree0_parent_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_tree0_parent_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_tree0_parent_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 22 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_tree0_parent_h2_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_tree0_parent_h2_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_tree0_parent_h2_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 23 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_tree0_parent_h3_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_tree0_parent_h3_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_tree0_parent_h3_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 24 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_tree0_parent_h4_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_tree0_parent_h4_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_tree0_parent_h4_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 25 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_tree0_parent_h5_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_tree0_parent_h5_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_tree0_parent_h5_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 26 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_tree0_parent_h6_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_tree0_parent_h6_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_tree0_parent_h6_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 27 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_tree0_parent_h7_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_tree0_parent_h7_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_tree0_parent_h7_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 28 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_tree0_parent_h8_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_tree0_parent_h8_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_tree0_parent_h8_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 29 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_tree0_parent_h9_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_tree0_parent_h9_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_tree0_parent_h9_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 30 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_tree0_parent_h10_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_tree0_parent_h10_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_tree0_parent_h10_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 31 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_tree0_parent_h11_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_tree0_parent_h11_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_tree0_parent_h11_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 32 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_tree0_parent_h12_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_tree0_parent_h12_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_tree0_parent_h12_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 33 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_tree0_parent_h13_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_tree0_parent_h13_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_tree0_parent_h13_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 34 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_tree0_parent_h14_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_tree0_parent_h14_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_tree0_parent_h14_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 35 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_tree0_addr_final_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_tree0_addr_final_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_tree0_addr_final_parts[2];
+            } else {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_tree0_addr_h13_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_tree0_addr_h13_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_tree0_addr_h13_parts[2];
+            }
+            if row == COMMIT_EXACT_OUTPUT_ROW {
+                for lane in 0..POSEIDON2_RATE_LANES {
+                    state[COMMIT_EXACT_STATE_COL_START + lane] = hmsg_blocks[0][lane];
+                }
+                for lane in POSEIDON2_RATE_LANES..POSEIDON2_T {
+                    state[COMMIT_EXACT_STATE_COL_START + lane] = BaseElement::ZERO;
+                }
+            } else if row == HMSG_PHASE0_OUTPUT_ROW {
+                for lane in 0..POSEIDON2_RATE_LANES {
+                    state[COMMIT_EXACT_STATE_COL_START + lane] = hmsg_blocks[1][lane];
+                }
+                for lane in POSEIDON2_RATE_LANES..POSEIDON2_T {
+                    state[COMMIT_EXACT_STATE_COL_START + lane] = BaseElement::ZERO;
+                }
+            } else if row == HMSG_PHASE1_OUTPUT_ROW {
+                for lane in 0..POSEIDON2_RATE_LANES {
+                    state[COMMIT_EXACT_STATE_COL_START + lane] = hmsg_blocks[2][lane];
+                }
+                for lane in POSEIDON2_RATE_LANES..POSEIDON2_T {
+                    state[COMMIT_EXACT_STATE_COL_START + lane] = BaseElement::ZERO;
+                }
+            } else if row >= HMSG_PHASE0_START_ROW && row < HMSG_PHASE0_OUTPUT_ROW {
+                let mut commit_state = [0u64; POSEIDON2_T];
+                for lane in 0..POSEIDON2_T {
+                    commit_state[lane] = state[COMMIT_EXACT_STATE_COL_START + lane].as_int();
+                }
+                crate::thash_poseidon2_exact::poseidon2_round_u64(
+                    &mut commit_state,
+                    row - HMSG_PHASE0_START_ROW,
+                );
+                for lane in 0..POSEIDON2_T {
+                    state[COMMIT_EXACT_STATE_COL_START + lane] = goldilocks_fe(commit_state[lane]);
+                }
+            } else if row >= HMSG_PHASE1_START_ROW && row < HMSG_PHASE1_OUTPUT_ROW {
+                let mut commit_state = [0u64; POSEIDON2_T];
+                for lane in 0..POSEIDON2_T {
+                    commit_state[lane] = state[COMMIT_EXACT_STATE_COL_START + lane].as_int();
+                }
+                crate::thash_poseidon2_exact::poseidon2_round_u64(
+                    &mut commit_state,
+                    row - HMSG_PHASE1_START_ROW,
+                );
+                for lane in 0..POSEIDON2_T {
+                    state[COMMIT_EXACT_STATE_COL_START + lane] = goldilocks_fe(commit_state[lane]);
+                }
+            } else if row >= HMSG_PHASE2_START_ROW && row < HMSG_PHASE2_OUTPUT_ROW {
+                let mut commit_state = [0u64; POSEIDON2_T];
+                for lane in 0..POSEIDON2_T {
+                    commit_state[lane] = state[COMMIT_EXACT_STATE_COL_START + lane].as_int();
+                }
+                crate::thash_poseidon2_exact::poseidon2_round_u64(
+                    &mut commit_state,
+                    row - HMSG_PHASE2_START_ROW,
+                );
+                for lane in 0..POSEIDON2_T {
+                    state[COMMIT_EXACT_STATE_COL_START + lane] = goldilocks_fe(commit_state[lane]);
+                }
+            } else if row < crate::thash_poseidon2_exact::POSEIDON2_ROUNDS {
+                let mut commit_state = [0u64; POSEIDON2_T];
+                for lane in 0..POSEIDON2_T {
+                    commit_state[lane] = state[COMMIT_EXACT_STATE_COL_START + lane].as_int();
+                }
+                crate::thash_poseidon2_exact::poseidon2_round_u64(&mut commit_state, row);
+                for lane in 0..POSEIDON2_T {
+                    state[COMMIT_EXACT_STATE_COL_START + lane] = goldilocks_fe(commit_state[lane]);
+                }
+            }
         },
     );
     trace
@@ -2888,6 +5040,14 @@ pub unsafe extern "C" fn spx_p2_rust_validate_strict_witness_relation_v1(
         }
         return SPX_P2_RUST_ERR_PROVE;
     }
+    if spx_p2_relation_eval_verify_full_guard(pubi.pk, pubi.com, witv.sigma_com) != 0 {
+        if rust_verify_debug_enabled() {
+            eprintln!(
+                "[stark-rs prove] strict witness precheck failed: legacy verify_full AIR guard rejected sigma_com trace"
+            );
+        }
+        return SPX_P2_RUST_ERR_PROVE;
+    }
     let sigma_c = std::slice::from_raw_parts(pubi.sigma_c, pubi.sigma_c_len);
     let expected = match rust_build_sigma_c_ciphertext_native(pubi, witv) {
         Ok(v) => v,
@@ -3096,6 +5256,64 @@ pub unsafe extern "C" fn spx_p2_rust_generate_pi_f_v1(
         Some(v) => v,
         None => return SPX_P2_RUST_ERR_INPUT,
     };
+    let hmsg_blocks = match derive_verify_hmsg_exact_blocks(sigma_com_wit, pk, com) {
+        Some(v) => v,
+        None => return SPX_P2_RUST_ERR_INPUT,
+    };
+    let hmsg_outputs = derive_verify_hmsg_exact_outputs(&hmsg_blocks);
+    let hmsg_final_rate_lanes = derive_verify_hmsg_final_rate_lanes(&hmsg_blocks);
+    let hmsg_unpack_parts = derive_verify_hmsg_unpack_parts(&hmsg_final_rate_lanes);
+    let hmsg_tree_mask_parts = derive_verify_hmsg_tree_mask_parts(&hmsg_unpack_parts);
+    let hmsg_leaf_mask_parts = derive_verify_hmsg_leaf_mask_parts(&hmsg_unpack_parts);
+    let hmsg_fors_idx0_parts = derive_verify_fors_idx0_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_idx1_parts = derive_verify_fors_idx1_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_idx2_parts = derive_verify_fors_idx2_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_idx3_parts = derive_verify_fors_idx3_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_idx4_parts = derive_verify_fors_idx4_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_idx5_parts = derive_verify_fors_idx5_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_idx6_parts = derive_verify_fors_idx6_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_idx7_parts = derive_verify_fors_idx7_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_idx8_parts = derive_verify_fors_idx8_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_idx9_parts = derive_verify_fors_idx9_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_idx10_parts = derive_verify_fors_idx10_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_idx11_parts = derive_verify_fors_idx11_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_idx12_parts = derive_verify_fors_idx12_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_idx13_parts = derive_verify_fors_idx13_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_idx14_parts = derive_verify_fors_idx14_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_idx15_parts = derive_verify_fors_idx15_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_idx16_parts = derive_verify_fors_idx16_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_tree0_leaf_parts = derive_verify_fors_tree0_leaf_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_tree0_parent_parts = derive_verify_fors_tree0_parent_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_tree0_parent_h2_parts =
+        derive_verify_fors_tree0_parent_h2_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_tree0_parent_h3_parts =
+        derive_verify_fors_tree0_parent_h3_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_tree0_parent_h4_parts =
+        derive_verify_fors_tree0_parent_h4_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_tree0_parent_h5_parts =
+        derive_verify_fors_tree0_parent_h5_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_tree0_parent_h6_parts =
+        derive_verify_fors_tree0_parent_h6_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_tree0_parent_h7_parts =
+        derive_verify_fors_tree0_parent_h7_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_tree0_parent_h8_parts =
+        derive_verify_fors_tree0_parent_h8_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_tree0_parent_h9_parts =
+        derive_verify_fors_tree0_parent_h9_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_tree0_parent_h10_parts =
+        derive_verify_fors_tree0_parent_h10_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_tree0_parent_h11_parts =
+        derive_verify_fors_tree0_parent_h11_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_tree0_parent_h12_parts =
+        derive_verify_fors_tree0_parent_h12_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_tree0_parent_h13_parts =
+        derive_verify_fors_tree0_parent_h13_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_tree0_parent_h14_parts =
+        derive_verify_fors_tree0_parent_h14_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_tree0_addr_final_parts =
+        derive_verify_fors_tree0_addr_final_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_tree0_addr_h13_parts =
+        derive_verify_fors_tree0_addr_h13_parts(&hmsg_final_rate_lanes);
     if rust_verify_debug_enabled() {
         eprintln!("[stark-rs prove] entering trace build and Winterfell proving");
     }
@@ -3236,6 +5454,45 @@ pub unsafe extern "C" fn spx_p2_rust_generate_pi_f_v1(
         omega2_mid7,
         omega2_b16,
         omega2_last7,
+        hmsg_blocks,
+        hmsg_outputs,
+        hmsg_unpack_parts,
+        hmsg_tree_mask_parts,
+        hmsg_leaf_mask_parts,
+        hmsg_fors_idx0_parts,
+        hmsg_fors_idx1_parts,
+        hmsg_fors_idx2_parts,
+        hmsg_fors_idx3_parts,
+        hmsg_fors_idx4_parts,
+        hmsg_fors_idx5_parts,
+        hmsg_fors_idx6_parts,
+        hmsg_fors_idx7_parts,
+        hmsg_fors_idx8_parts,
+        hmsg_fors_idx9_parts,
+        hmsg_fors_idx10_parts,
+        hmsg_fors_idx11_parts,
+        hmsg_fors_idx12_parts,
+        hmsg_fors_idx13_parts,
+        hmsg_fors_idx14_parts,
+        hmsg_fors_idx15_parts,
+        hmsg_fors_idx16_parts,
+        hmsg_fors_tree0_leaf_parts,
+        hmsg_fors_tree0_parent_parts,
+        hmsg_fors_tree0_parent_h2_parts,
+        hmsg_fors_tree0_parent_h3_parts,
+        hmsg_fors_tree0_parent_h4_parts,
+        hmsg_fors_tree0_parent_h5_parts,
+        hmsg_fors_tree0_parent_h6_parts,
+        hmsg_fors_tree0_parent_h7_parts,
+        hmsg_fors_tree0_parent_h8_parts,
+        hmsg_fors_tree0_parent_h9_parts,
+        hmsg_fors_tree0_parent_h10_parts,
+        hmsg_fors_tree0_parent_h11_parts,
+        hmsg_fors_tree0_parent_h12_parts,
+        hmsg_fors_tree0_parent_h13_parts,
+        hmsg_fors_tree0_parent_h14_parts,
+        hmsg_fors_tree0_addr_final_parts,
+        hmsg_fors_tree0_addr_h13_parts,
         ciphertext_suffix_state_chain,
         TRACE_LEN,
     );
@@ -3477,6 +5734,552 @@ mod tests {
                 assert_eq!(chain.pre_states[block_idx][lane], prev_post[lane]);
             }
         }
+    }
+
+    #[test]
+    fn commit_opening_exact_rounds_match_commit_domain() {
+        let m_pub = [0x27u8; COMMIT_M_PUB_LEN];
+        let r = [0x64u8; COMMIT_R_LEN];
+        let (public_limbs, m_tail) = derive_commit_open_public_parts(&m_pub).expect("m_pub limbs");
+        let (r_prefix7, r_middle8, r_last) = derive_commit_open_witness_parts(&r).expect("r limbs");
+        let mut state = [0u64; POSEIDON2_T];
+        state[0] = public_limbs[0].as_int();
+        state[1] = public_limbs[1].as_int();
+        state[2] = public_limbs[2].as_int();
+        state[3] = (m_tail + r_prefix7 * BaseElement::new(256)).as_int();
+        state[4] = r_middle8.as_int();
+        state[5] = (r_last + goldilocks_fe(COMMIT_PAD_LANE5_BASE)).as_int();
+
+        for round in 0..crate::thash_poseidon2_exact::POSEIDON2_ROUNDS {
+            crate::thash_poseidon2_exact::poseidon2_round_u64(&mut state, round);
+        }
+
+        let mut expected_com = [0u8; SPX_N];
+        unsafe {
+            rust_commit_domain(&mut expected_com, &m_pub, &r);
+        }
+        let expected_limbs = decode_public_limbs::<COM_LIMBS>(&expected_com).expect("expected com limbs");
+        assert_eq!(state[0], expected_limbs[0].as_int());
+        assert_eq!(state[1], expected_limbs[1].as_int());
+        assert_eq!(state[2], expected_limbs[2].as_int());
+    }
+
+    #[test]
+    fn verify_hmsg_exact_blocks_match_stream_layout() {
+        let sigma_com = vec![0x3au8; SPX_SIGMA_COM_LEN];
+        let pk = [0x52u8; PK_LEN];
+        let com = [0x91u8; COM_LEN];
+        let blocks = derive_verify_hmsg_exact_blocks(&sigma_com, &pk, &com).expect("exact hmsg blocks");
+        let outputs = derive_verify_hmsg_exact_outputs(&blocks);
+        let final_rate_lanes = derive_verify_hmsg_final_rate_lanes(&blocks);
+        let unpack = derive_verify_hmsg_unpack_parts(&final_rate_lanes);
+        let tree_mask = derive_verify_hmsg_tree_mask_parts(&unpack);
+        let leaf_mask = derive_verify_hmsg_leaf_mask_parts(&unpack);
+        let fors_idx0 = derive_verify_fors_idx0_parts(&final_rate_lanes);
+        let fors_idx1 = derive_verify_fors_idx1_parts(&final_rate_lanes);
+        let fors_idx2 = derive_verify_fors_idx2_parts(&final_rate_lanes);
+        let fors_idx3 = derive_verify_fors_idx3_parts(&final_rate_lanes);
+        let fors_idx4 = derive_verify_fors_idx4_parts(&final_rate_lanes);
+        let fors_idx5 = derive_verify_fors_idx5_parts(&final_rate_lanes);
+        let fors_idx6 = derive_verify_fors_idx6_parts(&final_rate_lanes);
+        let fors_idx7 = derive_verify_fors_idx7_parts(&final_rate_lanes);
+        let fors_idx8 = derive_verify_fors_idx8_parts(&final_rate_lanes);
+        let fors_idx9 = derive_verify_fors_idx9_parts(&final_rate_lanes);
+        let fors_idx10 = derive_verify_fors_idx10_parts(&final_rate_lanes);
+        let fors_idx11 = derive_verify_fors_idx11_parts(&final_rate_lanes);
+        let fors_idx12 = derive_verify_fors_idx12_parts(&final_rate_lanes);
+        let fors_idx13 = derive_verify_fors_idx13_parts(&final_rate_lanes);
+        let fors_idx14 = derive_verify_fors_idx14_parts(&final_rate_lanes);
+        let fors_idx15 = derive_verify_fors_idx15_parts(&final_rate_lanes);
+        let fors_idx16 = derive_verify_fors_idx16_parts(&final_rate_lanes);
+        let fors_tree0_leaf = derive_verify_fors_tree0_leaf_parts(&final_rate_lanes);
+        let fors_tree0_parent = derive_verify_fors_tree0_parent_parts(&final_rate_lanes);
+        let fors_tree0_parent_h2 = derive_verify_fors_tree0_parent_h2_parts(&final_rate_lanes);
+        let fors_tree0_parent_h3 = derive_verify_fors_tree0_parent_h3_parts(&final_rate_lanes);
+        let fors_tree0_parent_h4 = derive_verify_fors_tree0_parent_h4_parts(&final_rate_lanes);
+        let fors_tree0_parent_h5 = derive_verify_fors_tree0_parent_h5_parts(&final_rate_lanes);
+        let fors_tree0_parent_h6 = derive_verify_fors_tree0_parent_h6_parts(&final_rate_lanes);
+        let fors_tree0_parent_h7 = derive_verify_fors_tree0_parent_h7_parts(&final_rate_lanes);
+        let fors_tree0_parent_h8 = derive_verify_fors_tree0_parent_h8_parts(&final_rate_lanes);
+        let fors_tree0_parent_h9 = derive_verify_fors_tree0_parent_h9_parts(&final_rate_lanes);
+        let fors_tree0_parent_h10 = derive_verify_fors_tree0_parent_h10_parts(&final_rate_lanes);
+        let fors_tree0_parent_h11 = derive_verify_fors_tree0_parent_h11_parts(&final_rate_lanes);
+        let fors_tree0_parent_h12 = derive_verify_fors_tree0_parent_h12_parts(&final_rate_lanes);
+        let fors_tree0_parent_h13 = derive_verify_fors_tree0_parent_h13_parts(&final_rate_lanes);
+        let fors_tree0_parent_h14 = derive_verify_fors_tree0_parent_h14_parts(&final_rate_lanes);
+        let fors_tree0_addr_final = derive_verify_fors_tree0_addr_final_parts(&final_rate_lanes);
+        let fors_tree0_addr_h13 = derive_verify_fors_tree0_addr_h13_parts(&final_rate_lanes);
+        let mut stream = Vec::new();
+        stream.push(SPX_P2_DOMAIN_HASH_MESSAGE as u8);
+        stream.extend_from_slice(&sigma_com[..SPX_N]);
+        stream.extend_from_slice(&pk);
+        stream.extend_from_slice(&com);
+        let expected_blocks = build_poseidon2_padded_absorb_blocks(&stream);
+        assert_eq!(expected_blocks.len(), HMSG_BLOCK_COUNT);
+        assert_eq!(blocks[0], expected_blocks[0]);
+        assert_eq!(blocks[1], expected_blocks[1]);
+        assert_eq!(blocks[2], expected_blocks[2]);
+
+        let mut state = [0u64; POSEIDON2_T];
+        for block_idx in 0..HMSG_BLOCK_COUNT {
+            for lane in 0..POSEIDON2_RATE_LANES {
+                let (sum, _) = goldilocks_add_with_carry(state[lane], expected_blocks[block_idx][lane].as_int());
+                state[lane] = sum;
+            }
+            for round in 0..crate::thash_poseidon2_exact::POSEIDON2_ROUNDS {
+                crate::thash_poseidon2_exact::poseidon2_round_u64(&mut state, round);
+            }
+            assert_eq!(outputs[block_idx][0], goldilocks_fe(state[0]));
+            assert_eq!(outputs[block_idx][1], goldilocks_fe(state[1]));
+            assert_eq!(outputs[block_idx][2], goldilocks_fe(state[2]));
+        }
+        for lane in 0..POSEIDON2_RATE_LANES {
+            assert_eq!(final_rate_lanes[lane], goldilocks_fe(state[lane]));
+        }
+        assert_eq!(state[3], unpack[0].as_int() + (unpack[1].as_int() << 48));
+        assert_eq!(
+            state[4],
+            unpack[2].as_int()
+                + (unpack[3].as_int() << 32)
+                + (unpack[4].as_int() << 40)
+                + (unpack[5].as_int() << 56)
+        );
+        assert_eq!(unpack[3].as_int(), tree_mask[0].as_int() + (tree_mask[1].as_int() << 6));
+        assert!(tree_mask[0].as_int() < 64);
+        assert!(tree_mask[1].as_int() < 4);
+        assert_eq!(tree_mask[2], BaseElement::ZERO);
+        assert_eq!(unpack[4].as_int(), leaf_mask[0].as_int() + (leaf_mask[1].as_int() << 9));
+        assert!(leaf_mask[0].as_int() < 512);
+        assert!(leaf_mask[1].as_int() < 128);
+        assert_eq!(leaf_mask[2], BaseElement::ZERO);
+        let digest_lane0 = final_rate_lanes[0].as_int();
+        let digest_lane1 = final_rate_lanes[1].as_int();
+        let digest_lane2 = final_rate_lanes[2].as_int();
+        let digest_lane3_low48 = final_rate_lanes[3].as_int() & ((1u64 << 48) - 1);
+        assert_eq!(
+            digest_lane0,
+            fors_idx0[0].as_int() + (fors_idx0[2].as_int() << SPX_FORS_HEIGHT)
+        );
+        assert!(fors_idx0[1].as_int() < 64);
+        assert!(fors_idx0[0].as_int() >= (fors_idx0[1].as_int() << 8));
+        assert!(fors_idx0[0].as_int() - (fors_idx0[1].as_int() << 8) < 256);
+        let mut digest_prefix_bytes = Vec::with_capacity(30);
+        digest_prefix_bytes.extend_from_slice(&state[0].to_le_bytes());
+        digest_prefix_bytes.extend_from_slice(&state[1].to_le_bytes());
+        digest_prefix_bytes.extend_from_slice(&state[2].to_le_bytes());
+        digest_prefix_bytes.extend_from_slice(&state[3].to_le_bytes()[..6]);
+        let mut expected_fors_idx0 = 0u32;
+        for bit in 0..SPX_FORS_HEIGHT {
+            expected_fors_idx0 |= (((digest_prefix_bytes[bit >> 3] >> (bit & 7)) & 1u8) as u32) << bit;
+        }
+        assert_eq!(fors_idx0[0].as_int() as u32, expected_fors_idx0);
+        assert_eq!(
+            digest_lane0,
+            fors_idx0[0].as_int()
+                + (fors_idx1[0].as_int() << SPX_FORS_HEIGHT)
+                + (fors_idx1[2].as_int() << (2 * SPX_FORS_HEIGHT))
+        );
+        assert!(fors_idx1[1].as_int() < 64);
+        assert!(fors_idx1[0].as_int() >= (fors_idx1[1].as_int() << 8));
+        assert!(fors_idx1[0].as_int() - (fors_idx1[1].as_int() << 8) < 256);
+        let mut expected_fors_idx1 = 0u32;
+        for bit in 0..SPX_FORS_HEIGHT {
+            let offset = SPX_FORS_HEIGHT + bit;
+            expected_fors_idx1 |= (((digest_prefix_bytes[offset >> 3] >> (offset & 7)) & 1u8) as u32) << bit;
+        }
+        assert_eq!(fors_idx1[0].as_int() as u32, expected_fors_idx1);
+        assert_eq!(
+            digest_lane0,
+            fors_idx0[0].as_int()
+                + (fors_idx1[0].as_int() << SPX_FORS_HEIGHT)
+                + (fors_idx2[0].as_int() << (2 * SPX_FORS_HEIGHT))
+                + (fors_idx2[2].as_int() << (3 * SPX_FORS_HEIGHT))
+        );
+        assert_eq!(
+            fors_idx1[2].as_int(),
+            fors_idx2[0].as_int() + (fors_idx2[2].as_int() << SPX_FORS_HEIGHT)
+        );
+        assert!(fors_idx2[1].as_int() < 64);
+        assert!(fors_idx2[0].as_int() >= (fors_idx2[1].as_int() << 8));
+        assert!(fors_idx2[0].as_int() - (fors_idx2[1].as_int() << 8) < 256);
+        let mut expected_fors_idx2 = 0u32;
+        for bit in 0..SPX_FORS_HEIGHT {
+            let offset = 2 * SPX_FORS_HEIGHT + bit;
+            expected_fors_idx2 |= (((digest_prefix_bytes[offset >> 3] >> (offset & 7)) & 1u8) as u32) << bit;
+        }
+        assert_eq!(fors_idx2[0].as_int() as u32, expected_fors_idx2);
+        assert_eq!(
+            digest_lane0,
+            fors_idx0[0].as_int()
+                + (fors_idx1[0].as_int() << SPX_FORS_HEIGHT)
+                + (fors_idx2[0].as_int() << (2 * SPX_FORS_HEIGHT))
+                + (fors_idx3[0].as_int() << (3 * SPX_FORS_HEIGHT))
+                + (fors_idx3[2].as_int() << (4 * SPX_FORS_HEIGHT))
+        );
+        assert_eq!(
+            fors_idx2[2].as_int(),
+            fors_idx3[0].as_int() + (fors_idx3[2].as_int() << SPX_FORS_HEIGHT)
+        );
+        assert!(fors_idx3[1].as_int() < 64);
+        assert!(fors_idx3[0].as_int() >= (fors_idx3[1].as_int() << 8));
+        assert!(fors_idx3[0].as_int() - (fors_idx3[1].as_int() << 8) < 256);
+        assert_eq!(
+            fors_idx3[2].as_int(),
+            digest_lane0 >> (4 * SPX_FORS_HEIGHT)
+        );
+        assert_eq!(
+            digest_lane1,
+            fors_idx4[1].as_int()
+                + (fors_idx4[2].as_int() << 6)
+        );
+        assert_eq!(
+            fors_idx4[0].as_int(),
+            fors_idx3[2].as_int() + (fors_idx4[1].as_int() << 8)
+        );
+        assert_eq!(
+            fors_idx4[2].as_int(),
+            fors_idx5[0].as_int() + (fors_idx5[2].as_int() << SPX_FORS_HEIGHT)
+        );
+        assert!(fors_idx4[1].as_int() < 64);
+        assert!(fors_idx5[1].as_int() < 64);
+        assert!(fors_idx5[0].as_int() >= (fors_idx5[1].as_int() << 8));
+        assert!(fors_idx5[0].as_int() - (fors_idx5[1].as_int() << 8) < 256);
+        let mut expected_fors_idx3 = 0u32;
+        for bit in 0..SPX_FORS_HEIGHT {
+            let offset = 3 * SPX_FORS_HEIGHT + bit;
+            expected_fors_idx3 |= (((digest_prefix_bytes[offset >> 3] >> (offset & 7)) & 1u8) as u32) << bit;
+        }
+        assert_eq!(fors_idx3[0].as_int() as u32, expected_fors_idx3);
+        let mut expected_fors_idx4 = 0u32;
+        for bit in 0..SPX_FORS_HEIGHT {
+            let offset = 4 * SPX_FORS_HEIGHT + bit;
+            expected_fors_idx4 |= (((digest_prefix_bytes[offset >> 3] >> (offset & 7)) & 1u8) as u32) << bit;
+        }
+        assert_eq!(fors_idx4[0].as_int() as u32, expected_fors_idx4);
+        let mut expected_fors_idx5 = 0u32;
+        for bit in 0..SPX_FORS_HEIGHT {
+            let offset = 5 * SPX_FORS_HEIGHT + bit;
+            expected_fors_idx5 |= (((digest_prefix_bytes[offset >> 3] >> (offset & 7)) & 1u8) as u32) << bit;
+        }
+        assert_eq!(fors_idx5[0].as_int() as u32, expected_fors_idx5);
+        assert_eq!(
+            fors_idx5[2].as_int(),
+            fors_idx6[0].as_int() + (fors_idx6[2].as_int() << SPX_FORS_HEIGHT)
+        );
+        assert!(fors_idx6[1].as_int() < 64);
+        assert!(fors_idx6[0].as_int() >= (fors_idx6[1].as_int() << 8));
+        assert!(fors_idx6[0].as_int() - (fors_idx6[1].as_int() << 8) < 256);
+        let mut expected_fors_idx6 = 0u32;
+        for bit in 0..SPX_FORS_HEIGHT {
+            let offset = 6 * SPX_FORS_HEIGHT + bit;
+            expected_fors_idx6 |= (((digest_prefix_bytes[offset >> 3] >> (offset & 7)) & 1u8) as u32) << bit;
+        }
+        assert_eq!(fors_idx6[0].as_int() as u32, expected_fors_idx6);
+        assert_eq!(
+            fors_idx6[2].as_int(),
+            fors_idx7[0].as_int() + (fors_idx7[2].as_int() << SPX_FORS_HEIGHT)
+        );
+        assert!(fors_idx7[1].as_int() < 64);
+        assert!(fors_idx7[0].as_int() >= (fors_idx7[1].as_int() << 8));
+        assert!(fors_idx7[0].as_int() - (fors_idx7[1].as_int() << 8) < 256);
+        let mut expected_fors_idx7 = 0u32;
+        for bit in 0..SPX_FORS_HEIGHT {
+            let offset = 7 * SPX_FORS_HEIGHT + bit;
+            expected_fors_idx7 |= (((digest_prefix_bytes[offset >> 3] >> (offset & 7)) & 1u8) as u32) << bit;
+        }
+        assert_eq!(fors_idx7[0].as_int() as u32, expected_fors_idx7);
+        assert_eq!(
+            fors_idx7[2].as_int(),
+            fors_idx8[0].as_int() + (fors_idx8[2].as_int() << SPX_FORS_HEIGHT)
+        );
+        assert!(fors_idx8[1].as_int() < 64);
+        assert!(fors_idx8[0].as_int() >= (fors_idx8[1].as_int() << 8));
+        assert!(fors_idx8[0].as_int() - (fors_idx8[1].as_int() << 8) < 256);
+        let mut expected_fors_idx8 = 0u32;
+        for bit in 0..SPX_FORS_HEIGHT {
+            let offset = 8 * SPX_FORS_HEIGHT + bit;
+            expected_fors_idx8 |= (((digest_prefix_bytes[offset >> 3] >> (offset & 7)) & 1u8) as u32) << bit;
+        }
+        assert_eq!(fors_idx8[0].as_int() as u32, expected_fors_idx8);
+        assert_eq!(
+            fors_idx9[0].as_int(),
+            fors_idx8[2].as_int() + (fors_idx9[1].as_int() << 2)
+        );
+        assert!(fors_idx8[2].as_int() < 4);
+        assert!(fors_idx9[1].as_int() < 4096);
+        assert_eq!(
+            digest_lane2,
+            fors_idx9[1].as_int() + (fors_idx9[2].as_int() << 12)
+        );
+        let mut expected_fors_idx9 = 0u32;
+        for bit in 0..SPX_FORS_HEIGHT {
+            let offset = 9 * SPX_FORS_HEIGHT + bit;
+            expected_fors_idx9 |= (((digest_prefix_bytes[offset >> 3] >> (offset & 7)) & 1u8) as u32) << bit;
+        }
+        assert_eq!(fors_idx9[0].as_int() as u32, expected_fors_idx9);
+        assert_eq!(
+            fors_idx9[2].as_int(),
+            fors_idx10[0].as_int() + (fors_idx10[2].as_int() << SPX_FORS_HEIGHT)
+        );
+        assert!(fors_idx10[1].as_int() < 64);
+        assert!(fors_idx10[0].as_int() >= (fors_idx10[1].as_int() << 8));
+        assert!(fors_idx10[0].as_int() - (fors_idx10[1].as_int() << 8) < 256);
+        let mut expected_fors_idx10 = 0u32;
+        for bit in 0..SPX_FORS_HEIGHT {
+            let offset = 10 * SPX_FORS_HEIGHT + bit;
+            expected_fors_idx10 |= (((digest_prefix_bytes[offset >> 3] >> (offset & 7)) & 1u8) as u32) << bit;
+        }
+        assert_eq!(fors_idx10[0].as_int() as u32, expected_fors_idx10);
+        assert_eq!(
+            fors_idx10[2].as_int(),
+            fors_idx11[0].as_int() + (fors_idx11[2].as_int() << SPX_FORS_HEIGHT)
+        );
+        assert!(fors_idx11[1].as_int() < 64);
+        assert!(fors_idx11[0].as_int() >= (fors_idx11[1].as_int() << 8));
+        assert!(fors_idx11[0].as_int() - (fors_idx11[1].as_int() << 8) < 256);
+        let mut expected_fors_idx11 = 0u32;
+        for bit in 0..SPX_FORS_HEIGHT {
+            let offset = 11 * SPX_FORS_HEIGHT + bit;
+            expected_fors_idx11 |= (((digest_prefix_bytes[offset >> 3] >> (offset & 7)) & 1u8) as u32) << bit;
+        }
+        assert_eq!(fors_idx11[0].as_int() as u32, expected_fors_idx11);
+        assert_eq!(
+            fors_idx11[2].as_int(),
+            fors_idx12[0].as_int() + (fors_idx12[2].as_int() << SPX_FORS_HEIGHT)
+        );
+        assert!(fors_idx12[1].as_int() < 64);
+        assert!(fors_idx12[0].as_int() >= (fors_idx12[1].as_int() << 8));
+        assert!(fors_idx12[0].as_int() - (fors_idx12[1].as_int() << 8) < 256);
+        let mut expected_fors_idx12 = 0u32;
+        for bit in 0..SPX_FORS_HEIGHT {
+            let offset = 12 * SPX_FORS_HEIGHT + bit;
+            expected_fors_idx12 |= (((digest_prefix_bytes[offset >> 3] >> (offset & 7)) & 1u8) as u32) << bit;
+        }
+        assert_eq!(fors_idx12[0].as_int() as u32, expected_fors_idx12);
+        assert_eq!(
+            fors_idx13[0].as_int(),
+            fors_idx12[2].as_int() + (fors_idx13[1].as_int() << 10)
+        );
+        assert!(fors_idx12[2].as_int() < 1024);
+        assert!(fors_idx13[1].as_int() < 16);
+        assert_eq!(
+            digest_lane3_low48,
+            fors_idx13[1].as_int() + (fors_idx13[2].as_int() << 4)
+        );
+        let mut expected_fors_idx13 = 0u32;
+        for bit in 0..SPX_FORS_HEIGHT {
+            let offset = 13 * SPX_FORS_HEIGHT + bit;
+            expected_fors_idx13 |= (((digest_prefix_bytes[offset >> 3] >> (offset & 7)) & 1u8) as u32) << bit;
+        }
+        assert_eq!(fors_idx13[0].as_int() as u32, expected_fors_idx13);
+        assert_eq!(
+            fors_idx13[2].as_int(),
+            fors_idx14[0].as_int() + (fors_idx14[2].as_int() << SPX_FORS_HEIGHT)
+        );
+        assert!(fors_idx14[1].as_int() < 64);
+        assert!(fors_idx14[0].as_int() >= (fors_idx14[1].as_int() << 8));
+        assert!(fors_idx14[0].as_int() - (fors_idx14[1].as_int() << 8) < 256);
+        let mut expected_fors_idx14 = 0u32;
+        for bit in 0..SPX_FORS_HEIGHT {
+            let offset = 14 * SPX_FORS_HEIGHT + bit;
+            expected_fors_idx14 |= (((digest_prefix_bytes[offset >> 3] >> (offset & 7)) & 1u8) as u32) << bit;
+        }
+        assert_eq!(fors_idx14[0].as_int() as u32, expected_fors_idx14);
+        assert_eq!(
+            fors_idx14[2].as_int(),
+            fors_idx15[0].as_int() + (fors_idx15[2].as_int() << SPX_FORS_HEIGHT)
+        );
+        assert!(fors_idx15[1].as_int() < 64);
+        assert!(fors_idx15[0].as_int() >= (fors_idx15[1].as_int() << 8));
+        assert!(fors_idx15[0].as_int() - (fors_idx15[1].as_int() << 8) < 256);
+        let mut expected_fors_idx15 = 0u32;
+        for bit in 0..SPX_FORS_HEIGHT {
+            let offset = 15 * SPX_FORS_HEIGHT + bit;
+            expected_fors_idx15 |= (((digest_prefix_bytes[offset >> 3] >> (offset & 7)) & 1u8) as u32) << bit;
+        }
+        assert_eq!(fors_idx15[0].as_int() as u32, expected_fors_idx15);
+        assert_eq!(
+            fors_idx15[2].as_int(),
+            fors_idx16[0].as_int() + (fors_idx16[2].as_int() << SPX_FORS_HEIGHT)
+        );
+        assert!(fors_idx16[1].as_int() < 64);
+        assert!(fors_idx16[0].as_int() >= (fors_idx16[1].as_int() << 8));
+        assert!(fors_idx16[0].as_int() - (fors_idx16[1].as_int() << 8) < 256);
+        assert!(fors_idx16[2].as_int() < 4);
+        let mut expected_fors_idx16 = 0u32;
+        for bit in 0..SPX_FORS_HEIGHT {
+            let offset = 16 * SPX_FORS_HEIGHT + bit;
+            expected_fors_idx16 |= (((digest_prefix_bytes[offset >> 3] >> (offset & 7)) & 1u8) as u32) << bit;
+        }
+        assert_eq!(fors_idx16[0].as_int() as u32, expected_fors_idx16);
+        assert_eq!(fors_tree0_leaf[0], fors_idx0[0]);
+        assert_eq!(fors_tree0_leaf[1], fors_idx0[2]);
+        assert_eq!(fors_tree0_leaf[2], BaseElement::ZERO);
+        let tree0_parent_index =
+            fors_tree0_parent[0].as_int() + (fors_tree0_parent[1].as_int() << 8);
+        assert_eq!(fors_tree0_parent[2].as_int(), fors_idx0[0].as_int() & 1);
+        assert_eq!(tree0_parent_index, fors_idx0[0].as_int() >> 1);
+        assert!(fors_tree0_parent[0].as_int() < 256);
+        assert!(fors_tree0_parent[1].as_int() < 32);
+        assert!(fors_tree0_parent[2].as_int() < 2);
+        assert_eq!(
+            fors_tree0_leaf[0].as_int(),
+            fors_tree0_parent[2].as_int() + (tree0_parent_index << 1)
+        );
+        let tree0_parent_h2_index =
+            fors_tree0_parent_h2[0].as_int() + (fors_tree0_parent_h2[1].as_int() << 8);
+        assert_eq!(fors_tree0_parent_h2[2].as_int(), tree0_parent_index & 1);
+        assert_eq!(tree0_parent_h2_index, tree0_parent_index >> 1);
+        assert!(fors_tree0_parent_h2[0].as_int() < 256);
+        assert!(fors_tree0_parent_h2[1].as_int() < 16);
+        assert!(fors_tree0_parent_h2[2].as_int() < 2);
+        assert_eq!(
+            tree0_parent_index,
+            fors_tree0_parent_h2[2].as_int() + (tree0_parent_h2_index << 1)
+        );
+        let tree0_parent_h3_index =
+            fors_tree0_parent_h3[0].as_int() + (fors_tree0_parent_h3[1].as_int() << 8);
+        assert_eq!(fors_tree0_parent_h3[2].as_int(), tree0_parent_h2_index & 1);
+        assert_eq!(tree0_parent_h3_index, tree0_parent_h2_index >> 1);
+        assert!(fors_tree0_parent_h3[0].as_int() < 256);
+        assert!(fors_tree0_parent_h3[1].as_int() < 8);
+        assert!(fors_tree0_parent_h3[2].as_int() < 2);
+        assert_eq!(
+            tree0_parent_h2_index,
+            fors_tree0_parent_h3[2].as_int() + (tree0_parent_h3_index << 1)
+        );
+        let tree0_parent_h4_index =
+            fors_tree0_parent_h4[0].as_int() + (fors_tree0_parent_h4[1].as_int() << 8);
+        assert_eq!(fors_tree0_parent_h4[2].as_int(), tree0_parent_h3_index & 1);
+        assert_eq!(tree0_parent_h4_index, tree0_parent_h3_index >> 1);
+        assert!(fors_tree0_parent_h4[0].as_int() < 256);
+        assert!(fors_tree0_parent_h4[1].as_int() < 4);
+        assert!(fors_tree0_parent_h4[2].as_int() < 2);
+        assert_eq!(
+            tree0_parent_h3_index,
+            fors_tree0_parent_h4[2].as_int() + (tree0_parent_h4_index << 1)
+        );
+        let tree0_parent_h5_index =
+            fors_tree0_parent_h5[0].as_int() + (fors_tree0_parent_h5[1].as_int() << 8);
+        assert_eq!(fors_tree0_parent_h5[2].as_int(), tree0_parent_h4_index & 1);
+        assert_eq!(tree0_parent_h5_index, tree0_parent_h4_index >> 1);
+        assert!(fors_tree0_parent_h5[0].as_int() < 256);
+        assert!(fors_tree0_parent_h5[1].as_int() < 2);
+        assert!(fors_tree0_parent_h5[2].as_int() < 2);
+        assert_eq!(
+            tree0_parent_h4_index,
+            fors_tree0_parent_h5[2].as_int() + (tree0_parent_h5_index << 1)
+        );
+        let tree0_parent_h6_index =
+            fors_tree0_parent_h6[0].as_int() + (fors_tree0_parent_h6[1].as_int() << 8);
+        assert_eq!(fors_tree0_parent_h6[2].as_int(), tree0_parent_h5_index & 1);
+        assert_eq!(tree0_parent_h6_index, tree0_parent_h5_index >> 1);
+        assert!(fors_tree0_parent_h6[0].as_int() < 256);
+        assert_eq!(fors_tree0_parent_h6[1], BaseElement::ZERO);
+        assert!(fors_tree0_parent_h6[2].as_int() < 2);
+        assert_eq!(
+            tree0_parent_h5_index,
+            fors_tree0_parent_h6[2].as_int() + (tree0_parent_h6_index << 1)
+        );
+        let tree0_parent_h7_index =
+            fors_tree0_parent_h7[0].as_int() + (fors_tree0_parent_h7[1].as_int() << 8);
+        assert_eq!(fors_tree0_parent_h7[2].as_int(), tree0_parent_h6_index & 1);
+        assert_eq!(tree0_parent_h7_index, tree0_parent_h6_index >> 1);
+        assert!(fors_tree0_parent_h7[0].as_int() < 128);
+        assert_eq!(fors_tree0_parent_h7[1], BaseElement::ZERO);
+        assert!(fors_tree0_parent_h7[2].as_int() < 2);
+        assert_eq!(
+            tree0_parent_h6_index,
+            fors_tree0_parent_h7[2].as_int() + (tree0_parent_h7_index << 1)
+        );
+        let tree0_parent_h8_index =
+            fors_tree0_parent_h8[0].as_int() + (fors_tree0_parent_h8[1].as_int() << 8);
+        assert_eq!(fors_tree0_parent_h8[2].as_int(), tree0_parent_h7_index & 1);
+        assert_eq!(tree0_parent_h8_index, tree0_parent_h7_index >> 1);
+        assert!(fors_tree0_parent_h8[0].as_int() < 64);
+        assert_eq!(fors_tree0_parent_h8[1], BaseElement::ZERO);
+        assert!(fors_tree0_parent_h8[2].as_int() < 2);
+        assert_eq!(
+            tree0_parent_h7_index,
+            fors_tree0_parent_h8[2].as_int() + (tree0_parent_h8_index << 1)
+        );
+        let tree0_parent_h9_index =
+            fors_tree0_parent_h9[0].as_int() + (fors_tree0_parent_h9[1].as_int() << 8);
+        assert_eq!(fors_tree0_parent_h9[2].as_int(), tree0_parent_h8_index & 1);
+        assert_eq!(tree0_parent_h9_index, tree0_parent_h8_index >> 1);
+        assert!(fors_tree0_parent_h9[0].as_int() < 32);
+        assert_eq!(fors_tree0_parent_h9[1], BaseElement::ZERO);
+        assert!(fors_tree0_parent_h9[2].as_int() < 2);
+        assert_eq!(
+            tree0_parent_h8_index,
+            fors_tree0_parent_h9[2].as_int() + (tree0_parent_h9_index << 1)
+        );
+        let tree0_parent_h10_index =
+            fors_tree0_parent_h10[0].as_int() + (fors_tree0_parent_h10[1].as_int() << 8);
+        assert_eq!(fors_tree0_parent_h10[2].as_int(), tree0_parent_h9_index & 1);
+        assert_eq!(tree0_parent_h10_index, tree0_parent_h9_index >> 1);
+        assert!(fors_tree0_parent_h10[0].as_int() < 16);
+        assert_eq!(fors_tree0_parent_h10[1], BaseElement::ZERO);
+        assert!(fors_tree0_parent_h10[2].as_int() < 2);
+        assert_eq!(
+            tree0_parent_h9_index,
+            fors_tree0_parent_h10[2].as_int() + (tree0_parent_h10_index << 1)
+        );
+        let tree0_parent_h11_index =
+            fors_tree0_parent_h11[0].as_int() + (fors_tree0_parent_h11[1].as_int() << 8);
+        assert_eq!(fors_tree0_parent_h11[2].as_int(), tree0_parent_h10_index & 1);
+        assert_eq!(tree0_parent_h11_index, tree0_parent_h10_index >> 1);
+        assert!(fors_tree0_parent_h11[0].as_int() < 8);
+        assert_eq!(fors_tree0_parent_h11[1], BaseElement::ZERO);
+        assert!(fors_tree0_parent_h11[2].as_int() < 2);
+        assert_eq!(
+            tree0_parent_h10_index,
+            fors_tree0_parent_h11[2].as_int() + (tree0_parent_h11_index << 1)
+        );
+        let tree0_parent_h12_index =
+            fors_tree0_parent_h12[0].as_int() + (fors_tree0_parent_h12[1].as_int() << 8);
+        assert_eq!(fors_tree0_parent_h12[2].as_int(), tree0_parent_h11_index & 1);
+        assert_eq!(tree0_parent_h12_index, tree0_parent_h11_index >> 1);
+        assert!(fors_tree0_parent_h12[0].as_int() < 4);
+        assert_eq!(fors_tree0_parent_h12[1], BaseElement::ZERO);
+        assert!(fors_tree0_parent_h12[2].as_int() < 2);
+        assert_eq!(
+            tree0_parent_h11_index,
+            fors_tree0_parent_h12[2].as_int() + (tree0_parent_h12_index << 1)
+        );
+        let tree0_parent_h13_index =
+            fors_tree0_parent_h13[0].as_int() + (fors_tree0_parent_h13[1].as_int() << 8);
+        assert_eq!(fors_tree0_parent_h13[2].as_int(), tree0_parent_h12_index & 1);
+        assert_eq!(tree0_parent_h13_index, tree0_parent_h12_index >> 1);
+        assert!(fors_tree0_parent_h13[0].as_int() < 2);
+        assert_eq!(fors_tree0_parent_h13[1], BaseElement::ZERO);
+        assert!(fors_tree0_parent_h13[2].as_int() < 2);
+        assert_eq!(
+            tree0_parent_h12_index,
+            fors_tree0_parent_h13[2].as_int() + (tree0_parent_h13_index << 1)
+        );
+        let tree0_parent_h14_index =
+            fors_tree0_parent_h14[0].as_int() + (fors_tree0_parent_h14[1].as_int() << 8);
+        assert_eq!(tree0_parent_h14_index, 0);
+        assert_eq!(fors_tree0_parent_h14[2].as_int(), tree0_parent_h13_index & 1);
+        assert_eq!(fors_tree0_parent_h14[0], BaseElement::ZERO);
+        assert_eq!(fors_tree0_parent_h14[1], BaseElement::ZERO);
+        assert!(fors_tree0_parent_h14[2].as_int() < 2);
+        assert_eq!(
+            tree0_parent_h13_index,
+            fors_tree0_parent_h14[2].as_int() + (tree0_parent_h14_index << 1)
+        );
+        assert_eq!(fors_tree0_addr_final[0].as_int(), SPX_FORS_HEIGHT as u64);
+        assert_eq!(fors_tree0_addr_final[1], BaseElement::ZERO);
+        assert_eq!(fors_tree0_addr_final[2].as_int(), tree0_parent_h13_index);
+        assert_eq!(tree0_parent_h14_index, fors_tree0_addr_final[1].as_int());
+        assert_eq!(fors_tree0_addr_h13[0].as_int(), (SPX_FORS_HEIGHT - 1) as u64);
+        assert_eq!(fors_tree0_addr_h13[1].as_int(), tree0_parent_h13_index);
+        assert_eq!(fors_tree0_addr_h13[2].as_int(), tree0_parent_h12_index & 1);
+        assert_eq!(
+            fors_tree0_addr_h13[1].as_int(),
+            fors_tree0_addr_final[2].as_int() + (fors_tree0_addr_final[1].as_int() << 1)
+        );
     }
 }
 
