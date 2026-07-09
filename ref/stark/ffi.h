@@ -62,4 +62,19 @@ int spx_p2_ffi_generate_pi_f(spx_p2_ffi_blob *out_proof,
 int spx_p2_ffi_verify_pi_f(const spx_p2_ffi_blob *proof,
                            const spx_p2_ffi_public_inputs *pub);
 
+/* Full-AIR FFI (no external guards, self-contained STARK proof) */
+#define SPX_P2_FULL_AIR_ABI_VERSION 1u
+
+#define spx_p2_ffi_generate_pi_f_full_air SPX_NAMESPACE(spx_p2_ffi_generate_pi_f_full_air)
+int spx_p2_ffi_generate_pi_f_full_air(spx_p2_ffi_blob *out_proof,
+                                       const spx_p2_ffi_public_inputs *pub,
+                                       const spx_p2_ffi_private_witness *wit);
+
+#define spx_p2_ffi_verify_pi_f_full_air SPX_NAMESPACE(spx_p2_ffi_verify_pi_f_full_air)
+int spx_p2_ffi_verify_pi_f_full_air(const spx_p2_ffi_blob *proof,
+                                     const spx_p2_ffi_public_inputs *pub);
+
+#define spx_p2_ffi_get_abi_version_full_air SPX_NAMESPACE(spx_p2_ffi_get_abi_version_full_air)
+int spx_p2_ffi_get_abi_version_full_air(uint32_t *out_version);
+
 #endif

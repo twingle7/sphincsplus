@@ -139,8 +139,100 @@ impl Prover for SpxVerifyProver {
     { DefaultConstraintEvaluator::new(air, are, ccc) }
 }
 
+// ── FFI exports ──
+
+pub const SPX_P2_FULL_AIR_ABI_VERSION: u32 = 1;
+pub const SPX_P2_FULL_AIR_OK: i32 = 0;
+pub const SPX_P2_FULL_AIR_ERR_NULL: i32 = -1;
+pub const SPX_P2_FULL_AIR_ERR_INPUT: i32 = -2;
+pub const SPX_P2_FULL_AIR_ERR_PROVE: i32 = -3;
+pub const SPX_P2_FULL_AIR_ERR_VERIFY: i32 = -4;
+
+/// Generate a pi_F proof using the full-AIR (no external guards).
+/// Proof format: [8-byte total_perms LE] [8-byte start_state LE] [8-byte result_state LE] [Winterfell proof]
+#[no_mangle]
+pub unsafe extern "C" fn spx_p2_rust_generate_pi_f_full_air(
+    out_proof: *mut crate::SpxP2FfiBlobV1,
+    pub_inputs: *const crate::SpxP2FfiPublicInputsV1,
+    wit: *const crate::SpxP2FfiPrivateWitnessV1,
+) -> i32 {
+    if out_proof.is_null() || pub_inputs.is_null() || wit.is_null() { return SPX_P2_FULL_AIR_ERR_NULL; }
+    let out = &mut *out_proof; let pubi = &*pub_inputs; let witv = &*wit;
+    if out.data.is_null() || pubi.pk.is_null() || pubi.com.is_null() || witv.sigma_com.is_null() {
+        return SPX_P2_FULL_AIR_ERR_INPUT;
+    }
+    let pk = std::slice::from_raw_parts(pubi.pk, trace_builder::PK_BYTES);
+    let m_pub = if pubi.m_pub_len > 0 && !pubi.m_pub.is_null() {
+        std::slice::from_raw_parts(pubi.m_pub, pubi.m_pub_len) } else { &[] };
+    let sigma_com = std::slice::from_raw_parts(witv.sigma_com, trace_builder::SIG_BYTES);
+    let (trace_data, _, total_perms) = trace_builder::build_verification_trace(pk, sigma_com, m_pub);
+    let trace_len = trace_data.len();
+    let start_state = trace_data[0][0].as_int();
+    let result_state = trace_data[trace_len - 1][0].as_int();
+    // Build TraceTable and prove
+    let mut tt = TraceTable::new(TRACE_WIDTH, trace_len);
+    for r in 0..trace_len { for c in 0..TRACE_WIDTH { tt.set(c, r, trace_data[r][c]); } }
+    let pi = SpxVerifyPublicInputs::from_values(trace_data[0][0], trace_data[trace_len-1][0], total_perms, BaseElement::ZERO, BaseElement::ZERO);
+    let opts = ProofOptions::new(32, 32, 0, FieldExtension::None, 8, 31, BatchingMethod::Linear, BatchingMethod::Linear);
+    let prover = SpxVerifyProver{options:opts, pub_inputs:pi, trace:tt};
+    match prover.prove(prover.trace.clone()) {
+        Ok(proof) => {
+            let proof_bytes = proof.to_bytes();
+            let header_len = 24;
+            if proof_bytes.len() + header_len > out.cap { return SPX_P2_FULL_AIR_ERR_INPUT; }
+            // Write header
+            let out_bytes = std::slice::from_raw_parts_mut(out.data, out.cap);
+            out_bytes[0..8].copy_from_slice(&total_perms.to_le_bytes());
+            out_bytes[8..16].copy_from_slice(&start_state.to_le_bytes());
+            out_bytes[16..24].copy_from_slice(&result_state.to_le_bytes());
+            out_bytes[header_len..header_len+proof_bytes.len()].copy_from_slice(&proof_bytes);
+            out.len = header_len + proof_bytes.len();
+            SPX_P2_FULL_AIR_OK
+        }
+        Err(_) => SPX_P2_FULL_AIR_ERR_PROVE,
+    }
+}
+
+/// Verify a pi_F proof using the full-AIR.
+#[no_mangle]
+pub unsafe extern "C" fn spx_p2_rust_verify_pi_f_full_air(
+    proof_blob: *const crate::SpxP2FfiBlobV1,
+    _pub_inputs: *const crate::SpxP2FfiPublicInputsV1,
+) -> i32 {
+    if proof_blob.is_null() { return SPX_P2_FULL_AIR_ERR_NULL; }
+    let pf = &*proof_blob;
+    if pf.data.is_null() || pf.len < 24 { return SPX_P2_FULL_AIR_ERR_INPUT; }
+    let data = std::slice::from_raw_parts(pf.data, pf.len);
+    let total_perms = u64::from_le_bytes(data[0..8].try_into().unwrap());
+    let start_state = u64::from_le_bytes(data[8..16].try_into().unwrap());
+    let result_state = u64::from_le_bytes(data[16..24].try_into().unwrap());
+    let proof_bytes = &data[24..];
+    let proof_obj = match Proof::from_bytes(proof_bytes) { Ok(p) => p, Err(_) => return SPX_P2_FULL_AIR_ERR_VERIFY };
+    let pi = SpxVerifyPublicInputs::from_values(
+        BaseElement::new(start_state), BaseElement::new(result_state), total_perms,
+        BaseElement::ZERO, BaseElement::ZERO,
+    );
+    let min_opts = AcceptableOptions::MinConjecturedSecurity(63);
+    match winterfell::verify::<SpxVerifyAir, Blake3_256<BaseElement>, DefaultRandomCoin<_>, MerkleTree<_>>(
+        proof_obj, pi, &min_opts,
+    ) {
+        Ok(()) => SPX_P2_FULL_AIR_OK,
+        Err(_) => SPX_P2_FULL_AIR_ERR_VERIFY,
+    }
+}
+
+/// Get ABI version for full-AIR path.
+#[no_mangle]
+pub unsafe extern "C" fn spx_p2_rust_get_abi_version_full_air(out_version: *mut u32) -> i32 {
+    if out_version.is_null() { return SPX_P2_FULL_AIR_ERR_NULL; }
+    *out_version = SPX_P2_FULL_AIR_ABI_VERSION;
+    SPX_P2_FULL_AIR_OK
+}
+
 #[cfg(test)] mod tests {
     use super::*;
+    use crate::{SpxP2FfiBlobV1, SpxP2FfiPublicInputsV1, SpxP2FfiPrivateWitnessV1};
+
     fn prove_verify() -> bool {
         let pk = vec![0x42u8; trace_builder::PK_BYTES]; let m_pub = vec![0x27u8; trace_builder::N];
         let sigma_com = vec![0x00u8; trace_builder::SIG_BYTES];
@@ -152,10 +244,41 @@ impl Prover for SpxVerifyProver {
         let opts = ProofOptions::new(32, 32, 0, FieldExtension::None, 8, 31, BatchingMethod::Linear, BatchingMethod::Linear);
         let p = SpxVerifyProver{options:opts.clone(), pub_inputs:pi.clone(), trace:tt};
         let proof = p.prove(p.trace.clone()).unwrap();
-        eprintln!("proof={}B", proof.to_bytes().len());
         let pd = Proof::from_bytes(&proof.to_bytes()).unwrap();
         winterfell::verify::<SpxVerifyAir, Blake3_256<BaseElement>, DefaultRandomCoin<_>, MerkleTree<_>>(
             pd, pi, &AcceptableOptions::MinConjecturedSecurity(63)).is_ok()
     }
+
     #[test] fn test_e2e() { assert!(prove_verify()); }
+
+    #[test] fn test_ffi_generate_verify() {
+        let mut pk = vec![0x42u8; trace_builder::PK_BYTES];
+        let m_pub = vec![0x27u8; trace_builder::N];
+        let mut sigma_com = vec![0x00u8; trace_builder::SIG_BYTES];
+        let mut proof_buf = vec![0u8; 512 * 1024];
+
+        let mut out_blob = SpxP2FfiBlobV1 { data: proof_buf.as_mut_ptr(), len: 0, cap: proof_buf.len() };
+        let pub_inputs = SpxP2FfiPublicInputsV1 {
+            pk: pk.as_ptr(), pk_e: pk.as_ptr(), pk_e_len: trace_builder::N,
+            com: pk.as_ptr(), m_pub: m_pub.as_ptr(), m_pub_len: m_pub.len(),
+            public_ctx: std::ptr::null(), public_ctx_len: 0,
+            sigma_c: std::ptr::null(), sigma_c_len: 0,
+        };
+        let wit = SpxP2FfiPrivateWitnessV1 {
+            sigma_com: sigma_com.as_mut_ptr(), m: m_pub.as_ptr(), mlen: m_pub.len(),
+            r: pk.as_ptr(), rlen: trace_builder::N,
+            omega2: pk.as_ptr(), omega2_len: trace_builder::N,
+        };
+
+        unsafe {
+            let ret = spx_p2_rust_generate_pi_f_full_air(&mut out_blob, &pub_inputs, &wit);
+            assert_eq!(ret, SPX_P2_FULL_AIR_OK, "generate must succeed");
+            assert!(out_blob.len > 24, "proof must have header");
+
+            eprintln!("FFI proof: {} bytes", out_blob.len);
+
+            let verify_ret = spx_p2_rust_verify_pi_f_full_air(&out_blob, &pub_inputs);
+            assert_eq!(verify_ret, SPX_P2_FULL_AIR_OK, "verify must succeed");
+        }
+    }
 }
