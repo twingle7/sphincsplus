@@ -1,5 +1,6 @@
 #![allow(clippy::missing_safety_doc)]
 
+mod air_engine;
 mod thash_bench;
 mod thash_sha2_f_exact;
 mod thash_poseidon2_exact;

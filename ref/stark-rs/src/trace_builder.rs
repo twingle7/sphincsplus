@@ -42,7 +42,8 @@ pub const SIG_BYTES: usize = N + FORS_BYTES + D * WOTS_BYTES + H * N;
 pub const P2_T: usize = 12;
 pub const P2_RATE: usize = 6;
 pub const TOTAL_ROUNDS: usize = 30; // RF=4 + RP=22 ... wait, RF=8, RP=22 → 30 total
-pub const ROWS_PER_PERM: usize = TOTAL_ROUNDS;
+pub const PERM_PERIOD: usize = 32; // power of 2 for periodic columns
+pub const ROWS_PER_PERM: usize = PERM_PERIOD;
 
 // Address offsets
 const OFF_LAYER: usize = 3;
@@ -135,7 +136,7 @@ pub struct TraceRecorder {
 
 impl TraceRecorder {
     pub fn new() -> Self {
-        let num_cols = 18; // 12 state + 6 control/meta
+        let num_cols = 32; // 12 state + 6 control/meta + 14 padding
         // Estimate: ~3600 perms × 30 rows ≈ 108K → next pow2 = 131K
         let est_rows = 3600 * ROWS_PER_PERM;
         Self { trace: Vec::with_capacity(est_rows), num_cols, row: 0, perm_index: 0 }
@@ -166,6 +167,9 @@ impl TraceRecorder {
             self.push_row(&state, (round + 1) as u64, call_type);
         }
 
+        // Pad to ROWS_PER_PERM (32): add 1 more row (round=31, identity)
+        self.push_row(&state, (TOTAL_ROUNDS + 1) as u64, call_type);
+
         // Output: rate lanes after last round
         let mut out = [BaseElement::ZERO; P2_RATE];
         out.copy_from_slice(&state[0..P2_RATE]);
@@ -187,15 +191,24 @@ impl TraceRecorder {
         self.row += 1;
     }
 
-    pub fn into_trace(mut self) -> (Vec<Vec<BaseElement>>, usize) {
+    pub fn into_trace(mut self) -> (Vec<Vec<BaseElement>>, usize, u64) {
         let rows = self.trace.len();
         let target = rows.next_power_of_two();
-        while self.trace.len() < target {
-            self.trace.push(vec![BaseElement::ZERO; self.num_cols]);
+        let total_perms = self.perm_index as u64;
+        // Pad to target with complete 32-row dummy permutations
+        // Each dummy group has round 0..31, perm increments per group
+        let remaining = target - rows;
+        for i in 0..remaining {
+            let mut pad_row = vec![BaseElement::ZERO; self.num_cols];
+            let cycle_pos = i % PERM_PERIOD;
+            let pad_perm = total_perms + (i / PERM_PERIOD) as u64;
+            pad_row[12] = BaseElement::new(cycle_pos as u64);
+            pad_row[13] = BaseElement::new(pad_perm);
+            self.trace.push(pad_row);
         }
-        eprintln!("[trace] recorded_rows={} target_rows={} num_cols={} perms={}",
-                  rows, target, self.num_cols, self.perm_index);
-        (self.trace, self.num_cols)
+        eprintln!("[trace] recorded_rows={} target_rows={} num_cols={} perms={} row_counter={}",
+                  rows, target, self.num_cols, self.perm_index, self.row);
+        (self.trace, self.num_cols, total_perms)
     }
 }
 
@@ -366,7 +379,7 @@ fn hash_message(
 // ── Main: full SPHINCS+ verification trace ──
 pub fn build_verification_trace(
     pk: &[u8], sigma_com: &[u8], m_pub: &[u8],
-) -> (Vec<Vec<BaseElement>>, usize) {
+) -> (Vec<Vec<BaseElement>>, usize, u64) {
     assert_eq!(pk.len(), PK_BYTES);
     assert_eq!(sigma_com.len(), SIG_BYTES);
     let pub_seed = &pk[0..N];
@@ -422,7 +435,8 @@ pub fn build_verification_trace(
     trace.record_permutation(&state, &absorb, CallType::FinalCheck);
     let _ = pub_root;
 
-    trace.into_trace()
+    let (trace_data, num_cols, total_perms) = trace.into_trace();
+    (trace_data, num_cols, total_perms)
 }
 
 // ── Tests ──
@@ -435,7 +449,7 @@ mod tests {
         let pk = vec![0x42u8; PK_BYTES];
         let m_pub = vec![0x27u8; N];
         let sigma_com = vec![0x00u8; SIG_BYTES]; // all-zero sig → max WOTS steps
-        let (trace, num_cols) = build_verification_trace(&pk, &sigma_com, &m_pub);
+        let (trace, num_cols, _total_perms) = build_verification_trace(&pk, &sigma_com, &m_pub);
         assert!(trace.len().is_power_of_two());
         assert!(num_cols <= 255);
         assert!(!trace.is_empty());
