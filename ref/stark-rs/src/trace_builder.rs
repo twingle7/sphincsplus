@@ -136,7 +136,8 @@ pub struct TraceRecorder {
 
 impl TraceRecorder {
     pub fn new() -> Self {
-        let num_cols = 32; // 12 state + 6 control/meta + 14 padding
+        let num_cols = 32; // 12 state + 3 control + 1 padding_flag + 16 reserved
+        // col 15 = 0 for real rows, 1 for padding rows
         // Estimate: ~3600 perms × 30 rows ≈ 108K → next pow2 = 131K
         let est_rows = 3600 * ROWS_PER_PERM;
         Self { trace: Vec::with_capacity(est_rows), num_cols, row: 0, perm_index: 0 }
@@ -196,7 +197,6 @@ impl TraceRecorder {
         let target = rows.next_power_of_two();
         let total_perms = self.perm_index as u64;
         // Pad to target with complete 32-row dummy permutations
-        // Each dummy group has round 0..31, perm increments per group
         let remaining = target - rows;
         for i in 0..remaining {
             let mut pad_row = vec![BaseElement::ZERO; self.num_cols];
@@ -204,6 +204,7 @@ impl TraceRecorder {
             let pad_perm = total_perms + (i / PERM_PERIOD) as u64;
             pad_row[12] = BaseElement::new(cycle_pos as u64);
             pad_row[13] = BaseElement::new(pad_perm);
+            pad_row[15] = BaseElement::ONE; // padding flag = 1
             self.trace.push(pad_row);
         }
         eprintln!("[trace] recorded_rows={} target_rows={} num_cols={} perms={} row_counter={}",
