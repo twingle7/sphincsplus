@@ -13,7 +13,7 @@
 use crate::thash_poseidon2_exact;
 use winterfell::math::{fields::f64::BaseElement, FieldElement};
 
-// ── SPHINCS+ dev params ──
+// ── SPHINCS+ dev params (default) ──
 pub const N: usize = 16; pub const H: usize = 40; pub const D: usize = 4;
 pub const A: usize = 6; pub const K: usize = 8; pub const W: usize = 16; pub const LOGW: usize = 4;
 pub const TREE_HEIGHT: usize = H / D;
@@ -23,6 +23,18 @@ pub const PK_BYTES: usize = 2 * N; pub const FORS_BYTES: usize = (A + 1) * K * N
 pub const WOTS_BYTES: usize = WOTS_LEN * N;
 pub const SIG_BYTES: usize = N + FORS_BYTES + D * WOTS_BYTES + H * N;
 pub const FORS_MSG_BYTES: usize = (A * K + 7) / 8;
+
+// ── Bench params (candidate 9: n=16, h=60, d=6, k=14, a=10, w=16) ──
+pub const N_BENCH: usize = 16; pub const H_BENCH: usize = 60; pub const D_BENCH: usize = 6;
+pub const A_BENCH: usize = 10; pub const K_BENCH: usize = 14; pub const W_BENCH: usize = 16;
+pub const LOGW_BENCH: usize = 4; pub const TREE_HEIGHT_BENCH: usize = H_BENCH / D_BENCH;
+pub const WOTS_LEN1_BENCH: usize = 8 * N_BENCH / LOGW_BENCH;
+pub const WOTS_LEN2_BENCH: usize = 3;
+pub const WOTS_LEN_BENCH: usize = WOTS_LEN1_BENCH + WOTS_LEN2_BENCH;
+pub const PK_BYTES_BENCH: usize = 2 * N_BENCH;
+pub const FORS_BYTES_BENCH: usize = (A_BENCH + 1) * K_BENCH * N_BENCH;
+pub const WOTS_BYTES_BENCH: usize = WOTS_LEN_BENCH * N_BENCH;
+pub const SIG_BYTES_BENCH: usize = N_BENCH + FORS_BYTES_BENCH + D_BENCH * WOTS_BYTES_BENCH + H_BENCH * N_BENCH;
 pub const P2_T: usize = 12; pub const P2_RATE: usize = 6;
 pub const TOTAL_ROUNDS: usize = 30; pub const PERM_PERIOD: usize = 32;
 pub const TRACE_COLS: usize = 64;
