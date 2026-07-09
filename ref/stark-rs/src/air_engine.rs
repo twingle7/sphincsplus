@@ -22,12 +22,19 @@ pub const TRACE_WIDTH: usize = 64;
 #[derive(Debug, Clone)]
 pub struct SpxVerifyPublicInputs {
     pub start_state_0: BaseElement, pub result_state_0: BaseElement, pub total_perms: u64,
+    pub pk_root_l0: BaseElement, pub pk_root_l1: BaseElement,
 }
 impl SpxVerifyPublicInputs {
-    pub fn from_values(s: BaseElement, r: BaseElement, p: u64) -> Self { Self{start_state_0:s, result_state_0:r, total_perms:p} }
+    pub fn from_values(s: BaseElement, r: BaseElement, p: u64,
+                       rl0: BaseElement, rl1: BaseElement) -> Self {
+        Self{start_state_0:s, result_state_0:r, total_perms:p, pk_root_l0:rl0, pk_root_l1:rl1}
+    }
 }
 impl ToElements<BaseElement> for SpxVerifyPublicInputs {
-    fn to_elements(&self) -> Vec<BaseElement> { vec![self.start_state_0, self.result_state_0, BaseElement::new(self.total_perms)] }
+    fn to_elements(&self) -> Vec<BaseElement> {
+        vec![self.start_state_0, self.result_state_0, BaseElement::new(self.total_perms),
+             self.pk_root_l0, self.pk_root_l1]
+    }
 }
 
 pub struct SpxVerifyAir {
@@ -140,7 +147,8 @@ impl Prover for SpxVerifyProver {
         let (td, _, tp) = trace_builder::build_verification_trace(&pk, &sigma_com, &m_pub);
         let tl = td.len(); let mut tt = TraceTable::new(TRACE_WIDTH, tl);
         for r in 0..tl { for c in 0..TRACE_WIDTH { tt.set(c, r, td[r][c]); } }
-        let pi = SpxVerifyPublicInputs::from_values(td[0][0], td[tl-1][0], tp);
+        let pi = SpxVerifyPublicInputs::from_values(td[0][0], td[tl-1][0], tp,
+            BaseElement::ZERO, BaseElement::ZERO);
         let opts = ProofOptions::new(32, 32, 0, FieldExtension::None, 8, 31, BatchingMethod::Linear, BatchingMethod::Linear);
         let p = SpxVerifyProver{options:opts.clone(), pub_inputs:pi.clone(), trace:tt};
         let proof = p.prove(p.trace.clone()).unwrap();

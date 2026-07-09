@@ -263,7 +263,6 @@ pub fn build_verification_trace(pk: &[u8], sigma_com: &[u8], m_pub: &[u8]) -> (V
         root = compute_root(&mut state, pub_seed, &leaf, cur_idx, 0, auth_path, TREE_HEIGHT as u32, &tree_addr, &mut trace);
         cur_idx = cur_tree as u32 & ((1u32<<TREE_HEIGHT)-1); cur_tree >>= TREE_HEIGHT;
     }
-    trace.record_permutation(&state, &[BaseElement::ZERO; P2_RATE], CallType::FinalCheck);
     trace.into_trace()
 }
 
