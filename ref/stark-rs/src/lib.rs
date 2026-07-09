@@ -25,7 +25,7 @@ pub const SPX_P2_RUST_ERR_PROVE: i32 = -4;
 pub const SPX_P2_RUST_ERR_VERIFY: i32 = -5;
 pub const SPX_P2_RUST_ERR_FORMAT: i32 = -6;
 
-const TRACE_LEN: usize = 128;
+const TRACE_LEN: usize = 256;
 const PK_LEN: usize = 48;
 const COM_LEN: usize = 24;
 const SPX_N: usize = 24;
@@ -53,7 +53,7 @@ const HMSG_VERIFY_INPUT_COL_START: usize = MAIN_TRACE_WIDTH;
 const HMSG_VERIFY_OUTPUT_COL_START: usize = HMSG_VERIFY_INPUT_COL_START + POSEIDON2_RATE_LANES;
 const COMMIT_EXACT_STATE_COL_START: usize = HMSG_VERIFY_OUTPUT_COL_START + COM_LIMBS;
 const COMMIT_EXACT_PERIOD: usize = TRACE_LEN;
-const COMMIT_EXACT_PERIODIC_COLS: usize = 71;
+const COMMIT_EXACT_PERIODIC_COLS: usize = 84;
 const COMMIT_EXACT_OUTPUT_ROW: usize = crate::thash_poseidon2_exact::POSEIDON2_ROUNDS;
 const HMSG_PHASE0_START_ROW: usize = COMMIT_EXACT_OUTPUT_ROW + 1;
 const HMSG_PHASE0_OUTPUT_ROW: usize =
@@ -418,6 +418,9 @@ extern "C" {
 const SPX_P2_DOMAIN_CUSTOM: i32 = 0xff;
 const SPX_P2_DOMAIN_COMMIT: i32 = 0x20;
 const SPX_P2_DOMAIN_HASH_MESSAGE: i32 = 0x03;
+const SPX_ADDR_TYPE_FORSTREE: u64 = 3;
+const VERIFY_FORS_TREE0_THASH_INBLOCKS: u64 = 2;
+const VERIFY_FORS_TREE0_THASH_ADDR_TYPE: u64 = SPX_ADDR_TYPE_FORSTREE;
 const COMMIT_M_PUB_LEN: usize = 24;
 const COMMIT_R_LEN: usize = 16;
 const CIPHERTEXT_DOMAIN_BYTE: u8 = SPX_P2_DOMAIN_CUSTOM as u8;
@@ -984,6 +987,201 @@ fn derive_verify_fors_tree0_addr_h13_parts(
         goldilocks_fe(parent_h13),
         goldilocks_fe(parent_h12 & 1),
     ]
+}
+
+fn derive_verify_fors_tree0_addr_h12_parts(
+    final_rate_lanes: &Poseidon2RateBlock,
+) -> [BaseElement; COM_LIMBS] {
+    let idx0 = final_rate_lanes[0].as_int() & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let parent_h11 = idx0 >> 11;
+    let parent_h12 = parent_h11 >> 1;
+    [
+        goldilocks_fe((SPX_FORS_HEIGHT - 2) as u64),
+        goldilocks_fe(parent_h12),
+        goldilocks_fe(parent_h11 & 1),
+    ]
+}
+
+fn derive_verify_fors_tree0_addr_h11_parts(
+    final_rate_lanes: &Poseidon2RateBlock,
+) -> [BaseElement; COM_LIMBS] {
+    let idx0 = final_rate_lanes[0].as_int() & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let parent_h10 = idx0 >> 10;
+    let parent_h11 = parent_h10 >> 1;
+    [
+        goldilocks_fe((SPX_FORS_HEIGHT - 3) as u64),
+        goldilocks_fe(parent_h11),
+        goldilocks_fe(parent_h10 & 1),
+    ]
+}
+
+fn derive_verify_fors_tree0_addr_h10_parts(
+    final_rate_lanes: &Poseidon2RateBlock,
+) -> [BaseElement; COM_LIMBS] {
+    let idx0 = final_rate_lanes[0].as_int() & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let parent_h9 = idx0 >> 9;
+    let parent_h10 = parent_h9 >> 1;
+    [
+        goldilocks_fe((SPX_FORS_HEIGHT - 4) as u64),
+        goldilocks_fe(parent_h10),
+        goldilocks_fe(parent_h9 & 1),
+    ]
+}
+
+fn derive_verify_fors_tree0_addr_h9_parts(
+    final_rate_lanes: &Poseidon2RateBlock,
+) -> [BaseElement; COM_LIMBS] {
+    let idx0 = final_rate_lanes[0].as_int() & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let parent_h8 = idx0 >> 8;
+    let parent_h9 = parent_h8 >> 1;
+    [
+        goldilocks_fe((SPX_FORS_HEIGHT - 5) as u64),
+        goldilocks_fe(parent_h9),
+        goldilocks_fe(parent_h8 & 1),
+    ]
+}
+
+fn derive_verify_fors_tree0_addr_h8_parts(
+    final_rate_lanes: &Poseidon2RateBlock,
+) -> [BaseElement; COM_LIMBS] {
+    let idx0 = final_rate_lanes[0].as_int() & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let parent_h7 = idx0 >> 7;
+    let parent_h8 = parent_h7 >> 1;
+    [
+        goldilocks_fe((SPX_FORS_HEIGHT - 6) as u64),
+        goldilocks_fe(parent_h8),
+        goldilocks_fe(parent_h7 & 1),
+    ]
+}
+
+fn derive_verify_fors_tree0_addr_h7_parts(
+    final_rate_lanes: &Poseidon2RateBlock,
+) -> [BaseElement; COM_LIMBS] {
+    let idx0 = final_rate_lanes[0].as_int() & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let parent_h6 = idx0 >> 6;
+    let parent_h7 = parent_h6 >> 1;
+    [
+        goldilocks_fe((SPX_FORS_HEIGHT - 7) as u64),
+        goldilocks_fe(parent_h7),
+        goldilocks_fe(parent_h6 & 1),
+    ]
+}
+
+fn derive_verify_fors_tree0_addr_h6_parts(
+    final_rate_lanes: &Poseidon2RateBlock,
+) -> [BaseElement; COM_LIMBS] {
+    let idx0 = final_rate_lanes[0].as_int() & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let parent_h5 = idx0 >> 5;
+    let parent_h6 = parent_h5 >> 1;
+    [
+        goldilocks_fe((SPX_FORS_HEIGHT - 8) as u64),
+        goldilocks_fe(parent_h6),
+        goldilocks_fe(parent_h5 & 1),
+    ]
+}
+
+fn derive_verify_fors_tree0_addr_h5_parts(
+    final_rate_lanes: &Poseidon2RateBlock,
+) -> [BaseElement; COM_LIMBS] {
+    let idx0 = final_rate_lanes[0].as_int() & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let parent_h4 = idx0 >> 4;
+    let parent_h5 = parent_h4 >> 1;
+    [
+        goldilocks_fe((SPX_FORS_HEIGHT - 9) as u64),
+        goldilocks_fe(parent_h5),
+        goldilocks_fe(parent_h4 & 1),
+    ]
+}
+
+fn derive_verify_fors_tree0_addr_h4_parts(
+    final_rate_lanes: &Poseidon2RateBlock,
+) -> [BaseElement; COM_LIMBS] {
+    let idx0 = final_rate_lanes[0].as_int() & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let parent_h3 = idx0 >> 3;
+    let parent_h4 = parent_h3 >> 1;
+    [
+        goldilocks_fe((SPX_FORS_HEIGHT - 10) as u64),
+        goldilocks_fe(parent_h4),
+        goldilocks_fe(parent_h3 & 1),
+    ]
+}
+
+fn derive_verify_fors_tree0_addr_h3_parts(
+    final_rate_lanes: &Poseidon2RateBlock,
+) -> [BaseElement; COM_LIMBS] {
+    let idx0 = final_rate_lanes[0].as_int() & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let parent_h2 = idx0 >> 2;
+    let parent_h3 = parent_h2 >> 1;
+    [
+        goldilocks_fe((SPX_FORS_HEIGHT - 11) as u64),
+        goldilocks_fe(parent_h3),
+        goldilocks_fe(parent_h2 & 1),
+    ]
+}
+
+fn derive_verify_fors_tree0_addr_h2_parts(
+    final_rate_lanes: &Poseidon2RateBlock,
+) -> [BaseElement; COM_LIMBS] {
+    let idx0 = final_rate_lanes[0].as_int() & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let parent_h1 = idx0 >> 1;
+    let parent_h2 = parent_h1 >> 1;
+    [
+        goldilocks_fe((SPX_FORS_HEIGHT - 12) as u64),
+        goldilocks_fe(parent_h2),
+        goldilocks_fe(parent_h1 & 1),
+    ]
+}
+
+fn derive_verify_fors_tree0_addr_h1_parts(
+    final_rate_lanes: &Poseidon2RateBlock,
+) -> [BaseElement; COM_LIMBS] {
+    let idx0 = final_rate_lanes[0].as_int() & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let parent_h1 = idx0 >> 1;
+    [
+        goldilocks_fe((SPX_FORS_HEIGHT - 13) as u64),
+        goldilocks_fe(parent_h1),
+        goldilocks_fe(idx0 & 1),
+    ]
+}
+
+fn derive_verify_fors_tree0_h1_leaf_node_parts(
+    final_rate_lanes: &Poseidon2RateBlock,
+) -> [BaseElement; COM_LIMBS] {
+    [
+        goldilocks_fe(final_rate_lanes[0].as_int()),
+        goldilocks_fe(final_rate_lanes[1].as_int()),
+        goldilocks_fe(final_rate_lanes[2].as_int()),
+    ]
+}
+
+fn derive_verify_fors_tree0_h1_auth0_node_parts(
+    final_rate_lanes: &Poseidon2RateBlock,
+) -> [BaseElement; COM_LIMBS] {
+    [
+        goldilocks_fe(final_rate_lanes[3].as_int()),
+        goldilocks_fe(final_rate_lanes[4].as_int()),
+        goldilocks_fe(final_rate_lanes[5].as_int()),
+    ]
+}
+
+fn derive_verify_fors_tree0_h1_left_node_parts(
+    final_rate_lanes: &Poseidon2RateBlock,
+) -> [BaseElement; COM_LIMBS] {
+    let idx0 = final_rate_lanes[0].as_int() & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let parity = idx0 & 1;
+    let leaf = derive_verify_fors_tree0_h1_leaf_node_parts(final_rate_lanes);
+    let auth0 = derive_verify_fors_tree0_h1_auth0_node_parts(final_rate_lanes);
+    if parity == 1 { auth0 } else { leaf }
+}
+
+fn derive_verify_fors_tree0_h1_right_node_parts(
+    final_rate_lanes: &Poseidon2RateBlock,
+) -> [BaseElement; COM_LIMBS] {
+    let idx0 = final_rate_lanes[0].as_int() & ((1u64 << SPX_FORS_HEIGHT) - 1);
+    let parity = idx0 & 1;
+    let leaf = derive_verify_fors_tree0_h1_leaf_node_parts(final_rate_lanes);
+    let auth0 = derive_verify_fors_tree0_h1_auth0_node_parts(final_rate_lanes);
+    if parity == 1 { leaf } else { auth0 }
 }
 
 fn poseidon2_state_from_u64(words: [u64; POSEIDON2_T]) -> Poseidon2State {
@@ -1725,6 +1923,54 @@ impl Air for WorkAir {
         degrees.push(TransitionConstraintDegree::new(2));
         degrees.push(TransitionConstraintDegree::new(2));
         degrees.push(TransitionConstraintDegree::new(2));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(4));
+        degrees.push(TransitionConstraintDegree::new(2));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(8));
+        degrees.push(TransitionConstraintDegree::new(2));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(16));
+        degrees.push(TransitionConstraintDegree::new(2));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(32));
+        degrees.push(TransitionConstraintDegree::new(2));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(64));
+        degrees.push(TransitionConstraintDegree::new(2));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(2));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(2));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(2));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(2));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(2));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(2));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(1));
+        degrees.push(TransitionConstraintDegree::new(2));
+        degrees.push(TransitionConstraintDegree::new(2));
+        degrees.push(TransitionConstraintDegree::new(2));
+        degrees.push(TransitionConstraintDegree::new(2));
+        degrees.push(TransitionConstraintDegree::new(2));
+        degrees.push(TransitionConstraintDegree::new(2));
+        degrees.push(TransitionConstraintDegree::new(2));
+        degrees.push(TransitionConstraintDegree::new(2));
         let num_assertions = 80;
         Self {
             context: AirContext::new(trace_info, degrees, num_assertions, options),
@@ -2074,6 +2320,19 @@ impl Air for WorkAir {
         let hmsg_fors_tree0_parent_h14_flag = periodic_values[68];
         let hmsg_fors_tree0_addr_final_flag = periodic_values[69];
         let hmsg_fors_tree0_addr_h13_flag = periodic_values[70];
+        let hmsg_fors_tree0_addr_h12_flag = periodic_values[71];
+        let hmsg_fors_tree0_addr_h11_flag = periodic_values[72];
+        let hmsg_fors_tree0_addr_h10_flag = periodic_values[73];
+        let hmsg_fors_tree0_addr_h9_flag = periodic_values[74];
+        let hmsg_fors_tree0_addr_h8_flag = periodic_values[75];
+        let hmsg_fors_tree0_addr_h7_flag = periodic_values[76];
+        let hmsg_fors_tree0_addr_h6_flag = periodic_values[77];
+        let hmsg_fors_tree0_addr_h5_flag = periodic_values[78];
+        let hmsg_fors_tree0_addr_h4_flag = periodic_values[79];
+        let hmsg_fors_tree0_addr_h3_flag = periodic_values[80];
+        let hmsg_fors_tree0_addr_h2_flag = periodic_values[81];
+        let hmsg_fors_tree0_addr_h1_flag = periodic_values[82];
+        let hmsg_fors_tree0_h1_swap_flag = periodic_values[83];
         for col in HMSG_VERIFY_INPUT_COL_START..HMSG_VERIFY_OUTPUT_COL_START {
             result[idx] = (E::ONE - hmsg_input_switch_flag) * (next[col] - current[col]);
             idx += 1;
@@ -2987,6 +3246,231 @@ impl Air for WorkAir {
         result[idx] = hmsg_fors_tree0_addr_h13_flag
             * fors_tree0_addr_h13_aux
             * (fors_tree0_addr_h13_aux - E::ONE);
+        idx += 1;
+        let fors_tree0_addr_h12_height = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_tree0_addr_h12_index = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_tree0_addr_h12_aux = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_tree0_addr_h12_flag
+            * (current[HMSG_VERIFY_OUTPUT_COL_START] - E::ONE - fors_tree0_addr_h12_height);
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_addr_h12_flag
+            * ((current[HMSG_VERIFY_OUTPUT_COL_START + 2]
+                + E::from(goldilocks_fe(2)) * current[HMSG_VERIFY_OUTPUT_COL_START + 1])
+                - fors_tree0_addr_h12_index);
+        idx += 1;
+        let mut range4 = E::ONE;
+        for value in 0u64..4 {
+            range4 *= fors_tree0_addr_h12_index - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_tree0_addr_h12_flag * range4;
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_addr_h12_flag
+            * fors_tree0_addr_h12_aux
+            * (fors_tree0_addr_h12_aux - E::ONE);
+        idx += 1;
+        let fors_tree0_addr_h11_height = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_tree0_addr_h11_index = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_tree0_addr_h11_aux = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_tree0_addr_h11_flag
+            * (current[HMSG_VERIFY_OUTPUT_COL_START] - E::ONE - fors_tree0_addr_h11_height);
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_addr_h11_flag
+            * ((current[HMSG_VERIFY_OUTPUT_COL_START + 2]
+                + E::from(goldilocks_fe(2)) * current[HMSG_VERIFY_OUTPUT_COL_START + 1])
+                - fors_tree0_addr_h11_index);
+        idx += 1;
+        let mut range8 = E::ONE;
+        for value in 0u64..8 {
+            range8 *= fors_tree0_addr_h11_index - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_tree0_addr_h11_flag * range8;
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_addr_h11_flag
+            * fors_tree0_addr_h11_aux
+            * (fors_tree0_addr_h11_aux - E::ONE);
+        idx += 1;
+        let fors_tree0_addr_h10_height = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_tree0_addr_h10_index = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_tree0_addr_h10_aux = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_tree0_addr_h10_flag
+            * (current[HMSG_VERIFY_OUTPUT_COL_START] - E::ONE - fors_tree0_addr_h10_height);
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_addr_h10_flag
+            * ((current[HMSG_VERIFY_OUTPUT_COL_START + 2]
+                + E::from(goldilocks_fe(2)) * current[HMSG_VERIFY_OUTPUT_COL_START + 1])
+                - fors_tree0_addr_h10_index);
+        idx += 1;
+        let mut range16 = E::ONE;
+        for value in 0u64..16 {
+            range16 *= fors_tree0_addr_h10_index - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_tree0_addr_h10_flag * range16;
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_addr_h10_flag
+            * fors_tree0_addr_h10_aux
+            * (fors_tree0_addr_h10_aux - E::ONE);
+        idx += 1;
+        let fors_tree0_addr_h9_height = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_tree0_addr_h9_index = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_tree0_addr_h9_aux = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_tree0_addr_h9_flag
+            * (current[HMSG_VERIFY_OUTPUT_COL_START] - E::ONE - fors_tree0_addr_h9_height);
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_addr_h9_flag
+            * ((current[HMSG_VERIFY_OUTPUT_COL_START + 2]
+                + E::from(goldilocks_fe(2)) * current[HMSG_VERIFY_OUTPUT_COL_START + 1])
+                - fors_tree0_addr_h9_index);
+        idx += 1;
+        let mut range32 = E::ONE;
+        for value in 0u64..32 {
+            range32 *= fors_tree0_addr_h9_index - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_tree0_addr_h9_flag * range32;
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_addr_h9_flag
+            * fors_tree0_addr_h9_aux
+            * (fors_tree0_addr_h9_aux - E::ONE);
+        idx += 1;
+        let fors_tree0_addr_h8_height = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_tree0_addr_h8_index = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_tree0_addr_h8_aux = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_tree0_addr_h8_flag
+            * (current[HMSG_VERIFY_OUTPUT_COL_START] - E::ONE - fors_tree0_addr_h8_height);
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_addr_h8_flag
+            * ((current[HMSG_VERIFY_OUTPUT_COL_START + 2]
+                + E::from(goldilocks_fe(2)) * current[HMSG_VERIFY_OUTPUT_COL_START + 1])
+                - fors_tree0_addr_h8_index);
+        idx += 1;
+        let mut range64 = E::ONE;
+        for value in 0u64..64 {
+            range64 *= fors_tree0_addr_h8_index - E::from(goldilocks_fe(value));
+        }
+        result[idx] = hmsg_fors_tree0_addr_h8_flag * range64;
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_addr_h8_flag
+            * fors_tree0_addr_h8_aux
+            * (fors_tree0_addr_h8_aux - E::ONE);
+        idx += 1;
+        let fors_tree0_addr_h7_height = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_tree0_addr_h7_index = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_tree0_addr_h7_aux = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_tree0_addr_h7_flag
+            * (current[HMSG_VERIFY_OUTPUT_COL_START] - E::ONE - fors_tree0_addr_h7_height);
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_addr_h7_flag
+            * ((current[HMSG_VERIFY_OUTPUT_COL_START + 2]
+                + E::from(goldilocks_fe(2)) * current[HMSG_VERIFY_OUTPUT_COL_START + 1])
+                - fors_tree0_addr_h7_index);
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_addr_h7_flag
+            * fors_tree0_addr_h7_aux
+            * (fors_tree0_addr_h7_aux - E::ONE);
+        idx += 1;
+        let fors_tree0_addr_h6_height = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_tree0_addr_h6_index = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_tree0_addr_h6_aux = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_tree0_addr_h6_flag
+            * (current[HMSG_VERIFY_OUTPUT_COL_START] - E::ONE - fors_tree0_addr_h6_height);
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_addr_h6_flag
+            * ((current[HMSG_VERIFY_OUTPUT_COL_START + 2]
+                + E::from(goldilocks_fe(2)) * current[HMSG_VERIFY_OUTPUT_COL_START + 1])
+                - fors_tree0_addr_h6_index);
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_addr_h6_flag
+            * fors_tree0_addr_h6_aux
+            * (fors_tree0_addr_h6_aux - E::ONE);
+        idx += 1;
+        let fors_tree0_addr_h5_height = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_tree0_addr_h5_index = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_tree0_addr_h5_aux = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_tree0_addr_h5_flag
+            * (current[HMSG_VERIFY_OUTPUT_COL_START] - E::ONE - fors_tree0_addr_h5_height);
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_addr_h5_flag
+            * ((current[HMSG_VERIFY_OUTPUT_COL_START + 2]
+                + E::from(goldilocks_fe(2)) * current[HMSG_VERIFY_OUTPUT_COL_START + 1])
+                - fors_tree0_addr_h5_index);
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_addr_h5_flag
+            * fors_tree0_addr_h5_aux
+            * (fors_tree0_addr_h5_aux - E::ONE);
+        idx += 1;
+        let fors_tree0_addr_h4_height = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_tree0_addr_h4_index = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_tree0_addr_h4_aux = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_tree0_addr_h4_flag
+            * (current[HMSG_VERIFY_OUTPUT_COL_START] - E::ONE - fors_tree0_addr_h4_height);
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_addr_h4_flag
+            * ((current[HMSG_VERIFY_OUTPUT_COL_START + 2]
+                + E::from(goldilocks_fe(2)) * current[HMSG_VERIFY_OUTPUT_COL_START + 1])
+                - fors_tree0_addr_h4_index);
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_addr_h4_flag
+            * fors_tree0_addr_h4_aux
+            * (fors_tree0_addr_h4_aux - E::ONE);
+        idx += 1;
+        let fors_tree0_addr_h3_height = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_tree0_addr_h3_index = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_tree0_addr_h3_aux = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_tree0_addr_h3_flag
+            * (current[HMSG_VERIFY_OUTPUT_COL_START] - E::ONE - fors_tree0_addr_h3_height);
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_addr_h3_flag
+            * ((current[HMSG_VERIFY_OUTPUT_COL_START + 2]
+                + E::from(goldilocks_fe(2)) * current[HMSG_VERIFY_OUTPUT_COL_START + 1])
+                - fors_tree0_addr_h3_index);
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_addr_h3_flag
+            * fors_tree0_addr_h3_aux
+            * (fors_tree0_addr_h3_aux - E::ONE);
+        idx += 1;
+        let fors_tree0_addr_h2_height = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_tree0_addr_h2_index = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_tree0_addr_h2_aux = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_tree0_addr_h2_flag
+            * (current[HMSG_VERIFY_OUTPUT_COL_START] - E::ONE - fors_tree0_addr_h2_height);
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_addr_h2_flag
+            * ((current[HMSG_VERIFY_OUTPUT_COL_START + 2]
+                + E::from(goldilocks_fe(2)) * current[HMSG_VERIFY_OUTPUT_COL_START + 1])
+                - fors_tree0_addr_h2_index);
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_addr_h2_flag
+            * fors_tree0_addr_h2_aux
+            * (fors_tree0_addr_h2_aux - E::ONE);
+        idx += 1;
+        let fors_tree0_addr_h1_height = next[HMSG_VERIFY_OUTPUT_COL_START];
+        let fors_tree0_addr_h1_index = next[HMSG_VERIFY_OUTPUT_COL_START + 1];
+        let fors_tree0_addr_h1_aux = next[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        result[idx] = hmsg_fors_tree0_addr_h1_flag
+            * (current[HMSG_VERIFY_OUTPUT_COL_START] - E::ONE - fors_tree0_addr_h1_height);
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_addr_h1_flag
+            * ((current[HMSG_VERIFY_OUTPUT_COL_START + 2]
+                + E::from(goldilocks_fe(2)) * current[HMSG_VERIFY_OUTPUT_COL_START + 1])
+                - fors_tree0_addr_h1_index);
+        idx += 1;
+        result[idx] = hmsg_fors_tree0_addr_h1_flag
+            * fors_tree0_addr_h1_aux
+            * (fors_tree0_addr_h1_aux - E::ONE);
+        idx += 1;
+        let p = current[HMSG_VERIFY_OUTPUT_COL_START + 2];
+        for limb in 0..COM_LIMBS {
+            let leaf = current[HMSG_VERIFY_INPUT_COL_START + limb];
+            let auth0 = current[HMSG_VERIFY_INPUT_COL_START + COM_LIMBS + limb];
+            let left_next = next[HMSG_VERIFY_INPUT_COL_START + limb];
+            let right_next = next[HMSG_VERIFY_INPUT_COL_START + COM_LIMBS + limb];
+            result[idx] = hmsg_fors_tree0_h1_swap_flag
+                * (left_next - (p * auth0 + (E::ONE - p) * leaf));
+            idx += 1;
+            result[idx] = hmsg_fors_tree0_h1_swap_flag
+                * (right_next - (p * leaf + (E::ONE - p) * auth0));
+            idx += 1;
+        }
+        result[idx] = hmsg_fors_tree0_h1_swap_flag * p * (p - E::ONE);
     }
 
     fn get_assertions(&self) -> Vec<Assertion<Self::BaseField>> {
@@ -3143,6 +3627,8 @@ impl Air for WorkAir {
             if row == (HMSG_PHASE0_OUTPUT_ROW - 1)
                 || row == (HMSG_PHASE1_OUTPUT_ROW - 1)
                 || row == HMSG_PHASE2_OUTPUT_ROW
+                || row == HMSG_PHASE2_OUTPUT_ROW + 47
+                || row == HMSG_PHASE2_OUTPUT_ROW + 48
             {
                 columns[32][row] = BaseElement::ONE;
             }
@@ -3184,6 +3670,18 @@ impl Air for WorkAir {
                 || row == HMSG_PHASE2_OUTPUT_ROW + 33
                 || row == HMSG_PHASE2_OUTPUT_ROW + 34
                 || row == HMSG_PHASE2_OUTPUT_ROW + 35
+                || row == HMSG_PHASE2_OUTPUT_ROW + 36
+                || row == HMSG_PHASE2_OUTPUT_ROW + 37
+                || row == HMSG_PHASE2_OUTPUT_ROW + 38
+                || row == HMSG_PHASE2_OUTPUT_ROW + 39
+                || row == HMSG_PHASE2_OUTPUT_ROW + 40
+                || row == HMSG_PHASE2_OUTPUT_ROW + 41
+                || row == HMSG_PHASE2_OUTPUT_ROW + 42
+                || row == HMSG_PHASE2_OUTPUT_ROW + 43
+                || row == HMSG_PHASE2_OUTPUT_ROW + 44
+                || row == HMSG_PHASE2_OUTPUT_ROW + 45
+                || row == HMSG_PHASE2_OUTPUT_ROW + 46
+                || row == HMSG_PHASE2_OUTPUT_ROW + 47
             {
                 columns[33][row] = BaseElement::ONE;
             }
@@ -3296,6 +3794,45 @@ impl Air for WorkAir {
             }
             if row == HMSG_PHASE2_OUTPUT_ROW + 35 {
                 columns[70][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 36 {
+                columns[71][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 37 {
+                columns[72][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 38 {
+                columns[73][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 39 {
+                columns[74][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 40 {
+                columns[75][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 41 {
+                columns[76][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 42 {
+                columns[77][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 43 {
+                columns[78][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 44 {
+                columns[79][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 45 {
+                columns[80][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 46 {
+                columns[81][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 47 {
+                columns[82][row] = BaseElement::ONE;
+            }
+            if row == HMSG_PHASE2_OUTPUT_ROW + 48 {
+                columns[83][row] = BaseElement::ONE;
             }
         }
         columns
@@ -3831,8 +4368,8 @@ fn derive_statement_inputs(
     let addr_start = derive_module_part_start(&public_input_digest, &ctx_binding, root_hint, b"addr-acc-v1");
     let thash_rule_start =
         derive_module_part_start(&public_input_digest, &ctx_binding, root_hint, b"thash-rule-v1");
-    let thash_inblocks_hint = goldilocks_fe(((public_input_digest[0] % 3) + 1) as u64);
-    let thash_addr_type_hint = goldilocks_fe((public_input_digest[1] % 5) as u64);
+    let thash_inblocks_hint = goldilocks_fe(VERIFY_FORS_TREE0_THASH_INBLOCKS);
+    let thash_addr_type_hint = goldilocks_fe(VERIFY_FORS_TREE0_THASH_ADDR_TYPE);
     let prf_rule_start = derive_module_part_start(&public_input_digest, &ctx_binding, root_hint, b"prf-rule-v1");
     let prf_addr_type_hint = goldilocks_fe((public_input_digest[2] % 5) as u64);
     let hmsg_rule_start =
@@ -4285,6 +4822,22 @@ fn build_work_trace(
     hmsg_fors_tree0_parent_h14_parts: [BaseElement; COM_LIMBS],
     hmsg_fors_tree0_addr_final_parts: [BaseElement; COM_LIMBS],
     hmsg_fors_tree0_addr_h13_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_tree0_addr_h12_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_tree0_addr_h11_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_tree0_addr_h10_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_tree0_addr_h9_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_tree0_addr_h8_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_tree0_addr_h7_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_tree0_addr_h6_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_tree0_addr_h5_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_tree0_addr_h4_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_tree0_addr_h3_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_tree0_addr_h2_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_tree0_addr_h1_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_tree0_h1_leaf_node_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_tree0_h1_auth0_node_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_tree0_h1_left_node_parts: [BaseElement; COM_LIMBS],
+    hmsg_fors_tree0_h1_right_node_parts: [BaseElement; COM_LIMBS],
     ciphertext_suffix_state_chain: CiphertextSuffixStateChain,
     n: usize,
 ) -> TraceTable<BaseElement> {
@@ -4497,6 +5050,20 @@ fn build_work_trace(
                 for lane in 0..POSEIDON2_RATE_LANES {
                     state[HMSG_VERIFY_INPUT_COL_START + lane] = hmsg_blocks[hmsg_input_phase][lane];
                 }
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 48 {
+                state[HMSG_VERIFY_INPUT_COL_START] = hmsg_fors_tree0_h1_leaf_node_parts[0];
+                state[HMSG_VERIFY_INPUT_COL_START + 1] = hmsg_fors_tree0_h1_leaf_node_parts[1];
+                state[HMSG_VERIFY_INPUT_COL_START + 2] = hmsg_fors_tree0_h1_leaf_node_parts[2];
+                state[HMSG_VERIFY_INPUT_COL_START + 3] = hmsg_fors_tree0_h1_auth0_node_parts[0];
+                state[HMSG_VERIFY_INPUT_COL_START + 4] = hmsg_fors_tree0_h1_auth0_node_parts[1];
+                state[HMSG_VERIFY_INPUT_COL_START + 5] = hmsg_fors_tree0_h1_auth0_node_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 49 {
+                state[HMSG_VERIFY_INPUT_COL_START] = hmsg_fors_tree0_h1_left_node_parts[0];
+                state[HMSG_VERIFY_INPUT_COL_START + 1] = hmsg_fors_tree0_h1_left_node_parts[1];
+                state[HMSG_VERIFY_INPUT_COL_START + 2] = hmsg_fors_tree0_h1_left_node_parts[2];
+                state[HMSG_VERIFY_INPUT_COL_START + 3] = hmsg_fors_tree0_h1_right_node_parts[0];
+                state[HMSG_VERIFY_INPUT_COL_START + 4] = hmsg_fors_tree0_h1_right_node_parts[1];
+                state[HMSG_VERIFY_INPUT_COL_START + 5] = hmsg_fors_tree0_h1_right_node_parts[2];
             } else {
                 for lane in 0..POSEIDON2_RATE_LANES {
                     state[HMSG_VERIFY_INPUT_COL_START + lane] = hmsg_unpack_parts[lane];
@@ -4646,10 +5213,58 @@ fn build_work_trace(
                 state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_tree0_addr_final_parts[0];
                 state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_tree0_addr_final_parts[1];
                 state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_tree0_addr_final_parts[2];
-            } else {
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 36 {
                 state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_tree0_addr_h13_parts[0];
                 state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_tree0_addr_h13_parts[1];
                 state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_tree0_addr_h13_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 37 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_tree0_addr_h12_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_tree0_addr_h12_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_tree0_addr_h12_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 38 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_tree0_addr_h11_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_tree0_addr_h11_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_tree0_addr_h11_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 39 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_tree0_addr_h10_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_tree0_addr_h10_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_tree0_addr_h10_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 40 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_tree0_addr_h9_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_tree0_addr_h9_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_tree0_addr_h9_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 41 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_tree0_addr_h8_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_tree0_addr_h8_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_tree0_addr_h8_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 42 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_tree0_addr_h7_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_tree0_addr_h7_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_tree0_addr_h7_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 43 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_tree0_addr_h6_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_tree0_addr_h6_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_tree0_addr_h6_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 44 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_tree0_addr_h5_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_tree0_addr_h5_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_tree0_addr_h5_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 45 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_tree0_addr_h4_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_tree0_addr_h4_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_tree0_addr_h4_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 46 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_tree0_addr_h3_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_tree0_addr_h3_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_tree0_addr_h3_parts[2];
+            } else if row == HMSG_PHASE2_OUTPUT_ROW + 47 {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_tree0_addr_h2_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_tree0_addr_h2_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_tree0_addr_h2_parts[2];
+            } else {
+                state[HMSG_VERIFY_OUTPUT_COL_START] = hmsg_fors_tree0_addr_h1_parts[0];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 1] = hmsg_fors_tree0_addr_h1_parts[1];
+                state[HMSG_VERIFY_OUTPUT_COL_START + 2] = hmsg_fors_tree0_addr_h1_parts[2];
             }
             if row == COMMIT_EXACT_OUTPUT_ROW {
                 for lane in 0..POSEIDON2_RATE_LANES {
@@ -5314,6 +5929,38 @@ pub unsafe extern "C" fn spx_p2_rust_generate_pi_f_v1(
         derive_verify_fors_tree0_addr_final_parts(&hmsg_final_rate_lanes);
     let hmsg_fors_tree0_addr_h13_parts =
         derive_verify_fors_tree0_addr_h13_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_tree0_addr_h12_parts =
+        derive_verify_fors_tree0_addr_h12_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_tree0_addr_h11_parts =
+        derive_verify_fors_tree0_addr_h11_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_tree0_addr_h10_parts =
+        derive_verify_fors_tree0_addr_h10_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_tree0_addr_h9_parts =
+        derive_verify_fors_tree0_addr_h9_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_tree0_addr_h8_parts =
+        derive_verify_fors_tree0_addr_h8_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_tree0_addr_h7_parts =
+        derive_verify_fors_tree0_addr_h7_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_tree0_addr_h6_parts =
+        derive_verify_fors_tree0_addr_h6_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_tree0_addr_h5_parts =
+        derive_verify_fors_tree0_addr_h5_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_tree0_addr_h4_parts =
+        derive_verify_fors_tree0_addr_h4_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_tree0_addr_h3_parts =
+        derive_verify_fors_tree0_addr_h3_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_tree0_addr_h2_parts =
+        derive_verify_fors_tree0_addr_h2_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_tree0_addr_h1_parts =
+        derive_verify_fors_tree0_addr_h1_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_tree0_h1_leaf_node_parts =
+        derive_verify_fors_tree0_h1_leaf_node_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_tree0_h1_auth0_node_parts =
+        derive_verify_fors_tree0_h1_auth0_node_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_tree0_h1_left_node_parts =
+        derive_verify_fors_tree0_h1_left_node_parts(&hmsg_final_rate_lanes);
+    let hmsg_fors_tree0_h1_right_node_parts =
+        derive_verify_fors_tree0_h1_right_node_parts(&hmsg_final_rate_lanes);
     if rust_verify_debug_enabled() {
         eprintln!("[stark-rs prove] entering trace build and Winterfell proving");
     }
@@ -5493,6 +6140,22 @@ pub unsafe extern "C" fn spx_p2_rust_generate_pi_f_v1(
         hmsg_fors_tree0_parent_h14_parts,
         hmsg_fors_tree0_addr_final_parts,
         hmsg_fors_tree0_addr_h13_parts,
+        hmsg_fors_tree0_addr_h12_parts,
+        hmsg_fors_tree0_addr_h11_parts,
+        hmsg_fors_tree0_addr_h10_parts,
+        hmsg_fors_tree0_addr_h9_parts,
+        hmsg_fors_tree0_addr_h8_parts,
+        hmsg_fors_tree0_addr_h7_parts,
+        hmsg_fors_tree0_addr_h6_parts,
+        hmsg_fors_tree0_addr_h5_parts,
+        hmsg_fors_tree0_addr_h4_parts,
+        hmsg_fors_tree0_addr_h3_parts,
+        hmsg_fors_tree0_addr_h2_parts,
+        hmsg_fors_tree0_addr_h1_parts,
+        hmsg_fors_tree0_h1_leaf_node_parts,
+        hmsg_fors_tree0_h1_auth0_node_parts,
+        hmsg_fors_tree0_h1_left_node_parts,
+        hmsg_fors_tree0_h1_right_node_parts,
         ciphertext_suffix_state_chain,
         TRACE_LEN,
     );
@@ -5765,6 +6428,26 @@ mod tests {
     }
 
     #[test]
+    fn verify_statement_inputs_fix_thash_hints_to_tree0_h1_slice() {
+        let pk = [0x52u8; PK_LEN];
+        let pk_e = [0x11u8; SPX_N];
+        let com = [0x91u8; COM_LEN];
+        let m_pub = [0x27u8; COMMIT_M_PUB_LEN];
+        let public_ctx = b"ctx";
+        let stmt =
+            derive_statement_inputs(&pk, &pk_e, &com, &m_pub, public_ctx, None).expect("statement inputs");
+
+        assert_eq!(
+            stmt.thash_inblocks_hint,
+            goldilocks_fe(VERIFY_FORS_TREE0_THASH_INBLOCKS)
+        );
+        assert_eq!(
+            stmt.thash_addr_type_hint,
+            goldilocks_fe(VERIFY_FORS_TREE0_THASH_ADDR_TYPE)
+        );
+    }
+
+    #[test]
     fn verify_hmsg_exact_blocks_match_stream_layout() {
         let sigma_com = vec![0x3au8; SPX_SIGMA_COM_LEN];
         let pk = [0x52u8; PK_LEN];
@@ -5809,6 +6492,22 @@ mod tests {
         let fors_tree0_parent_h14 = derive_verify_fors_tree0_parent_h14_parts(&final_rate_lanes);
         let fors_tree0_addr_final = derive_verify_fors_tree0_addr_final_parts(&final_rate_lanes);
         let fors_tree0_addr_h13 = derive_verify_fors_tree0_addr_h13_parts(&final_rate_lanes);
+        let fors_tree0_addr_h12 = derive_verify_fors_tree0_addr_h12_parts(&final_rate_lanes);
+        let fors_tree0_addr_h11 = derive_verify_fors_tree0_addr_h11_parts(&final_rate_lanes);
+        let fors_tree0_addr_h10 = derive_verify_fors_tree0_addr_h10_parts(&final_rate_lanes);
+        let fors_tree0_addr_h9 = derive_verify_fors_tree0_addr_h9_parts(&final_rate_lanes);
+        let fors_tree0_addr_h8 = derive_verify_fors_tree0_addr_h8_parts(&final_rate_lanes);
+        let fors_tree0_addr_h7 = derive_verify_fors_tree0_addr_h7_parts(&final_rate_lanes);
+        let fors_tree0_addr_h6 = derive_verify_fors_tree0_addr_h6_parts(&final_rate_lanes);
+        let fors_tree0_addr_h5 = derive_verify_fors_tree0_addr_h5_parts(&final_rate_lanes);
+        let fors_tree0_addr_h4 = derive_verify_fors_tree0_addr_h4_parts(&final_rate_lanes);
+        let fors_tree0_addr_h3 = derive_verify_fors_tree0_addr_h3_parts(&final_rate_lanes);
+        let fors_tree0_addr_h2 = derive_verify_fors_tree0_addr_h2_parts(&final_rate_lanes);
+        let fors_tree0_addr_h1 = derive_verify_fors_tree0_addr_h1_parts(&final_rate_lanes);
+        let fors_tree0_h1_leaf = derive_verify_fors_tree0_h1_leaf_node_parts(&final_rate_lanes);
+        let fors_tree0_h1_auth0 = derive_verify_fors_tree0_h1_auth0_node_parts(&final_rate_lanes);
+        let fors_tree0_h1_left = derive_verify_fors_tree0_h1_left_node_parts(&final_rate_lanes);
+        let fors_tree0_h1_right = derive_verify_fors_tree0_h1_right_node_parts(&final_rate_lanes);
         let mut stream = Vec::new();
         stream.push(SPX_P2_DOMAIN_HASH_MESSAGE as u8);
         stream.extend_from_slice(&sigma_com[..SPX_N]);
@@ -6280,6 +6979,99 @@ mod tests {
             fors_tree0_addr_h13[1].as_int(),
             fors_tree0_addr_final[2].as_int() + (fors_tree0_addr_final[1].as_int() << 1)
         );
+        assert_eq!(fors_tree0_addr_h12[0].as_int(), (SPX_FORS_HEIGHT - 2) as u64);
+        assert_eq!(fors_tree0_addr_h12[1].as_int(), tree0_parent_h12_index);
+        assert_eq!(fors_tree0_addr_h12[2].as_int(), tree0_parent_h11_index & 1);
+        assert_eq!(
+            fors_tree0_addr_h12[1].as_int(),
+            fors_tree0_addr_h13[2].as_int() + (fors_tree0_addr_h13[1].as_int() << 1)
+        );
+        assert_eq!(fors_tree0_addr_h11[0].as_int(), (SPX_FORS_HEIGHT - 3) as u64);
+        assert_eq!(fors_tree0_addr_h11[1].as_int(), tree0_parent_h11_index);
+        assert_eq!(fors_tree0_addr_h11[2].as_int(), tree0_parent_h10_index & 1);
+        assert_eq!(
+            fors_tree0_addr_h11[1].as_int(),
+            fors_tree0_addr_h12[2].as_int() + (fors_tree0_addr_h12[1].as_int() << 1)
+        );
+        assert_eq!(fors_tree0_addr_h10[0].as_int(), (SPX_FORS_HEIGHT - 4) as u64);
+        assert_eq!(fors_tree0_addr_h10[1].as_int(), tree0_parent_h10_index);
+        assert_eq!(fors_tree0_addr_h10[2].as_int(), tree0_parent_h9_index & 1);
+        assert_eq!(
+            fors_tree0_addr_h10[1].as_int(),
+            fors_tree0_addr_h11[2].as_int() + (fors_tree0_addr_h11[1].as_int() << 1)
+        );
+        assert_eq!(fors_tree0_addr_h9[0].as_int(), (SPX_FORS_HEIGHT - 5) as u64);
+        assert_eq!(fors_tree0_addr_h9[1].as_int(), tree0_parent_h9_index);
+        assert_eq!(fors_tree0_addr_h9[2].as_int(), tree0_parent_h8_index & 1);
+        assert_eq!(
+            fors_tree0_addr_h9[1].as_int(),
+            fors_tree0_addr_h10[2].as_int() + (fors_tree0_addr_h10[1].as_int() << 1)
+        );
+        assert_eq!(fors_tree0_addr_h8[0].as_int(), (SPX_FORS_HEIGHT - 6) as u64);
+        assert_eq!(fors_tree0_addr_h8[1].as_int(), tree0_parent_h8_index);
+        assert_eq!(fors_tree0_addr_h8[2].as_int(), tree0_parent_h7_index & 1);
+        assert_eq!(
+            fors_tree0_addr_h8[1].as_int(),
+            fors_tree0_addr_h9[2].as_int() + (fors_tree0_addr_h9[1].as_int() << 1)
+        );
+        assert_eq!(fors_tree0_addr_h7[0].as_int(), (SPX_FORS_HEIGHT - 7) as u64);
+        assert_eq!(fors_tree0_addr_h7[1].as_int(), tree0_parent_h7_index);
+        assert_eq!(fors_tree0_addr_h7[2].as_int(), tree0_parent_h6_index & 1);
+        assert_eq!(
+            fors_tree0_addr_h7[1].as_int(),
+            fors_tree0_addr_h8[2].as_int() + (fors_tree0_addr_h8[1].as_int() << 1)
+        );
+        assert_eq!(fors_tree0_addr_h6[0].as_int(), (SPX_FORS_HEIGHT - 8) as u64);
+        assert_eq!(fors_tree0_addr_h6[1].as_int(), tree0_parent_h6_index);
+        assert_eq!(fors_tree0_addr_h6[2].as_int(), tree0_parent_h5_index & 1);
+        assert_eq!(
+            fors_tree0_addr_h6[1].as_int(),
+            fors_tree0_addr_h7[2].as_int() + (fors_tree0_addr_h7[1].as_int() << 1)
+        );
+        assert_eq!(fors_tree0_addr_h5[0].as_int(), (SPX_FORS_HEIGHT - 9) as u64);
+        assert_eq!(fors_tree0_addr_h5[1].as_int(), tree0_parent_h5_index);
+        assert_eq!(fors_tree0_addr_h5[2].as_int(), tree0_parent_h4_index & 1);
+        assert_eq!(
+            fors_tree0_addr_h5[1].as_int(),
+            fors_tree0_addr_h6[2].as_int() + (fors_tree0_addr_h6[1].as_int() << 1)
+        );
+        assert_eq!(fors_tree0_addr_h4[0].as_int(), (SPX_FORS_HEIGHT - 10) as u64);
+        assert_eq!(fors_tree0_addr_h4[1].as_int(), tree0_parent_h4_index);
+        assert_eq!(fors_tree0_addr_h4[2].as_int(), tree0_parent_h3_index & 1);
+        assert_eq!(
+            fors_tree0_addr_h4[1].as_int(),
+            fors_tree0_addr_h5[2].as_int() + (fors_tree0_addr_h5[1].as_int() << 1)
+        );
+        assert_eq!(fors_tree0_addr_h3[0].as_int(), (SPX_FORS_HEIGHT - 11) as u64);
+        assert_eq!(fors_tree0_addr_h3[1].as_int(), tree0_parent_h3_index);
+        assert_eq!(fors_tree0_addr_h3[2].as_int(), tree0_parent_h2_index & 1);
+        assert_eq!(
+            fors_tree0_addr_h3[1].as_int(),
+            fors_tree0_addr_h4[2].as_int() + (fors_tree0_addr_h4[1].as_int() << 1)
+        );
+        assert_eq!(fors_tree0_addr_h2[0].as_int(), (SPX_FORS_HEIGHT - 12) as u64);
+        assert_eq!(fors_tree0_addr_h2[1].as_int(), tree0_parent_h2_index);
+        assert_eq!(fors_tree0_addr_h2[2].as_int(), tree0_parent_index & 1);
+        assert_eq!(
+            fors_tree0_addr_h2[1].as_int(),
+            fors_tree0_addr_h3[2].as_int() + (fors_tree0_addr_h3[1].as_int() << 1)
+        );
+        assert_eq!(fors_tree0_addr_h1[0].as_int(), (SPX_FORS_HEIGHT - 13) as u64);
+        assert_eq!(fors_tree0_addr_h1[1].as_int(), tree0_parent_index);
+        assert_eq!(fors_tree0_addr_h1[2].as_int(), fors_idx0[0].as_int() & 1);
+        assert_eq!(
+            fors_tree0_addr_h1[1].as_int(),
+            fors_tree0_addr_h2[2].as_int() + (fors_tree0_addr_h2[1].as_int() << 1)
+        );
+        let parity = fors_tree0_addr_h1[2].as_int();
+        for limb in 0..COM_LIMBS {
+            let leaf = fors_tree0_h1_leaf[limb].as_int();
+            let auth0 = fors_tree0_h1_auth0[limb].as_int();
+            let left = fors_tree0_h1_left[limb].as_int();
+            let right = fors_tree0_h1_right[limb].as_int();
+            assert_eq!(left, parity * auth0 + (1 - parity) * leaf);
+            assert_eq!(right, parity * leaf + (1 - parity) * auth0);
+        }
     }
 }
 
