@@ -204,7 +204,7 @@ fn pow7_ext<E: FieldElement>(x: E) -> E {
     (x4 * x2) * x
 }
 
-fn poseidon2_round(state: &mut [BaseElement; POSEIDON2_T], round: usize) {
+pub(crate) fn poseidon2_round(state: &mut [BaseElement; POSEIDON2_T], round: usize) {
     let mut tmp = [BaseElement::ZERO; POSEIDON2_T];
     for i in 0..POSEIDON2_T {
         tmp[i] = state[i] + BaseElement::new(P2_ROUND_CONSTANTS[round][i]);
@@ -1039,3 +1039,7 @@ pub unsafe extern "C" fn spx_p2_rust_run_poseidon2_thash_exact_v1(
     };
     SPX_P2_RUST_OK
 }
+
+#[cfg(test)]
+#[no_mangle]
+pub unsafe extern "C" fn SPX_poseidon2_permute(_state: *mut u64) {}

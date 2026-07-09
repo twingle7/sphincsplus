@@ -4,6 +4,7 @@ mod thash_bench;
 mod thash_sha2_f_exact;
 mod thash_poseidon2_exact;
 mod thash_sha2_exact;
+mod trace_builder;
 
 use winterfell::{
     crypto::{hashers::Blake3_256, DefaultRandomCoin, MerkleTree},
@@ -7374,4 +7375,33 @@ pub unsafe extern "C" fn spx_p2_rust_verify_pi_f_v1(
             SPX_P2_RUST_ERR_VERIFY
         }
     }
+}
+
+// ── Test stubs for C FFI (allow `cargo test` to link without C library) ──
+
+#[cfg(test)]
+mod ffi_test_stubs {
+    #[no_mangle]
+    pub unsafe extern "C" fn SPX_poseidon2_hash_bytes_domain(
+        _output: *mut u8, _outlen: usize, _domain_tag: i32,
+        _input: *const u8, _inlen: usize,
+    ) {}
+
+    #[no_mangle]
+    pub unsafe extern "C" fn SPX_spx_p2_verify_com(
+        _pk: *const u8, _com: *const u8, _sigma_com: *const u8,
+    ) -> i32 { 0 }
+
+    #[no_mangle]
+    pub unsafe extern "C" fn SPX_spx_p2_relation_eval_verify_full_guard(
+        _pk: *const u8, _com: *const u8, _sigma_com: *const u8,
+    ) -> i32 { 0 }
+
+    #[no_mangle]
+    pub unsafe extern "C" fn SPX_spx_p2_build_sigma_c_ciphertext(
+        _out_sigma_c: *mut u8, _out_sigma_c_len: *mut usize,
+        _com: *const u8, _sigma_com: *const u8,
+        _pk_e: *const u8, _pk_e_len: usize,
+        _omega2: *const u8, _omega2_len: usize,
+    ) -> i32 { 0 }
 }
