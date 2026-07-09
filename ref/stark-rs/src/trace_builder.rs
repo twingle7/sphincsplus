@@ -13,7 +13,38 @@
 use crate::thash_poseidon2_exact;
 use winterfell::math::{fields::f64::BaseElement, FieldElement};
 
-// ── SPHINCS+ dev params (default) ──
+// ── SPHINCS+ parameters (configurable) ──
+
+#[derive(Debug, Clone, Copy)]
+pub struct SpxParams {
+    pub n: usize, pub h: usize, pub d: usize, pub k: usize, pub a: usize, pub w: usize,
+}
+
+impl SpxParams {
+    pub fn logw(&self) -> usize { if self.w == 256 { 8 } else { 4 } }
+    pub fn wots_len1(&self) -> usize { 8 * self.n / self.logw() }
+    pub fn wots_len2(&self) -> usize { if self.w == 16 && self.n <= 136 { 3 } else { 2 } }
+    pub fn wots_len(&self) -> usize { self.wots_len1() + self.wots_len2() }
+    pub fn tree_height(&self) -> usize { self.h / self.d }
+    pub fn pk_bytes(&self) -> usize { 2 * self.n }
+    pub fn fors_bytes(&self) -> usize { (self.a + 1) * self.k * self.n }
+    pub fn wots_bytes(&self) -> usize { self.wots_len() * self.n }
+    pub fn sig_bytes(&self) -> usize {
+        self.n + self.fors_bytes() + self.d * self.wots_bytes() + self.h * self.n
+    }
+    pub fn fors_msg_bytes(&self) -> usize { (self.a * self.k + 7) / 8 }
+}
+
+// Dev params (fast iteration, no security claims)
+pub const PARAMS_DEV: SpxParams = SpxParams { n: 16, h: 40, d: 4, k: 8, a: 6, w: 16 };
+
+// Candidate 13: balanced (recommended for paper)
+pub const PARAMS_C13: SpxParams = SpxParams { n: 16, h: 60, d: 6, k: 14, a: 12, w: 16 };
+
+// Prove-fast variant (d=4, fewer layers → faster proving)
+pub const PARAMS_FAST: SpxParams = SpxParams { n: 16, h: 60, d: 4, k: 14, a: 12, w: 16 };
+
+// Default: dev params (fast iteration, no security claims)
 pub const N: usize = 16; pub const H: usize = 40; pub const D: usize = 4;
 pub const A: usize = 6; pub const K: usize = 8; pub const W: usize = 16; pub const LOGW: usize = 4;
 pub const TREE_HEIGHT: usize = H / D;
@@ -23,18 +54,6 @@ pub const PK_BYTES: usize = 2 * N; pub const FORS_BYTES: usize = (A + 1) * K * N
 pub const WOTS_BYTES: usize = WOTS_LEN * N;
 pub const SIG_BYTES: usize = N + FORS_BYTES + D * WOTS_BYTES + H * N;
 pub const FORS_MSG_BYTES: usize = (A * K + 7) / 8;
-
-// ── Bench params (candidate 9: n=16, h=60, d=6, k=14, a=10, w=16) ──
-pub const N_BENCH: usize = 16; pub const H_BENCH: usize = 60; pub const D_BENCH: usize = 6;
-pub const A_BENCH: usize = 10; pub const K_BENCH: usize = 14; pub const W_BENCH: usize = 16;
-pub const LOGW_BENCH: usize = 4; pub const TREE_HEIGHT_BENCH: usize = H_BENCH / D_BENCH;
-pub const WOTS_LEN1_BENCH: usize = 8 * N_BENCH / LOGW_BENCH;
-pub const WOTS_LEN2_BENCH: usize = 3;
-pub const WOTS_LEN_BENCH: usize = WOTS_LEN1_BENCH + WOTS_LEN2_BENCH;
-pub const PK_BYTES_BENCH: usize = 2 * N_BENCH;
-pub const FORS_BYTES_BENCH: usize = (A_BENCH + 1) * K_BENCH * N_BENCH;
-pub const WOTS_BYTES_BENCH: usize = WOTS_LEN_BENCH * N_BENCH;
-pub const SIG_BYTES_BENCH: usize = N_BENCH + FORS_BYTES_BENCH + D_BENCH * WOTS_BYTES_BENCH + H_BENCH * N_BENCH;
 pub const P2_T: usize = 12; pub const P2_RATE: usize = 6;
 pub const TOTAL_ROUNDS: usize = 30; pub const PERM_PERIOD: usize = 32;
 pub const TRACE_COLS: usize = 64;
@@ -237,23 +256,32 @@ fn fors_pk_from_sig(state: &mut [BaseElement; P2_T], pub_seed: &[u8], sig: &[u8]
     thash(state, DOMAIN_THASH_TL, pub_seed, &pk_addr, &blocks, N, trace, CallType::ForsPk)
 }
 fn hash_message(state: &mut [BaseElement; P2_T], r: &[u8], pk: &[u8], m: &[u8],
-                trace: &mut TraceRecorder) -> Vec<u8> {
+                trace: &mut TraceRecorder) -> (Vec<u8>, usize) {
     let mut input = Vec::new(); input.push(DOMAIN_HASH_MESSAGE); input.extend_from_slice(r);
     input.extend_from_slice(pk); input.extend_from_slice(m);
-    poseidon2_hash(state, &input, N+8, trace, CallType::Hmsg)
+    let out_len = FORS_MSG_BYTES + 16; // mhash + tree(8) + idx_leaf(4) + margin
+    (poseidon2_hash(state, &input, out_len, trace, CallType::Hmsg), out_len)
 }
 
-// ── Main ──
+// ── Main (dev params, backward compat) ──
 pub fn build_verification_trace(pk: &[u8], sigma_com: &[u8], m_pub: &[u8]) -> (Vec<Vec<BaseElement>>, usize, u64) {
     assert_eq!(pk.len(), PK_BYTES); assert_eq!(sigma_com.len(), SIG_BYTES);
     let pub_seed = &pk[0..N]; let sig_r = &sigma_com[0..N];
     let fors_sig = &sigma_com[N..N+FORS_BYTES]; let ht_sig = &sigma_com[N+FORS_BYTES..];
     let mut state = [BaseElement::ZERO; P2_T]; let mut trace = TraceRecorder::new();
 
-    let hmsg_out = hash_message(&mut state, sig_r, pk, m_pub, &mut trace);
-    let mhash = &hmsg_out[..FORS_MSG_BYTES]; let ti = &hmsg_out[FORS_MSG_BYTES..];
-    let tree = u64::from_be_bytes(ti[..8].try_into().unwrap());
-    let idx_leaf = u32::from_be_bytes(ti[8..12].try_into().unwrap());
+    let (hmsg_out, _hmsg_len) = hash_message(&mut state, sig_r, pk, m_pub, &mut trace);
+    let mhash = &hmsg_out[..FORS_MSG_BYTES];
+    // tree and idx_leaf extracted from hash output (exact format from C's hash_message)
+    let tree = if hmsg_out.len() >= FORS_MSG_BYTES + 8 {
+        u64::from_be_bytes(hmsg_out[FORS_MSG_BYTES..FORS_MSG_BYTES+8].try_into().unwrap_or([0;8]))
+    } else { 0 };
+    let idx_leaf = if hmsg_out.len() >= FORS_MSG_BYTES + 12 {
+        u32::from_be_bytes(hmsg_out[FORS_MSG_BYTES+8..FORS_MSG_BYTES+12].try_into().unwrap_or([0;4]))
+    } else { 0 };
+    // Clamp to valid range
+    let tree = tree & ((1u64 << (H - H/D)) - 1);
+    let idx_leaf = idx_leaf & ((1u32 << TREE_HEIGHT) - 1);
 
     let mut fors_addr = SpxAddr::new(); fors_addr.set_type(ADDR_WOTS); fors_addr.set_tree(tree); fors_addr.set_keypair(idx_leaf);
     let mut wots_addr = SpxAddr::new(); wots_addr.set_type(ADDR_WOTS);
