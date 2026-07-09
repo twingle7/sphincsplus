@@ -17,8 +17,8 @@
 
 /*
  * Poseidon2 backend flag.
- * Current code path is a buildable placeholder and will be replaced
- * by a concrete Poseidon2 field/permutation instantiation next.
+ * Full Goldilocks field implementation with x^7 S-box,
+ * sponge absorption, and THASH integration.
  */
 #define SPX_POSEIDON2 1
 

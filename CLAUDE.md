@@ -4,14 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Environment
 
-Development happens on WSL. All paths assume `ref/` as the working directory:
+Development happens on WSL or MinGW64. All paths assume `ref/` as the working directory:
 
 ```bash
-cd /mnt/d/Desktop/My_Sphincs+/sphincsplus/ref
-export PARAMS=sphincs-poseidon2-192s
+cd /d/Desktop/sphincsplus/ref
+export PARAMS=sphincs-poseidon2-128f-small  # dev params
 export THASH=simple
 export CC=gcc
 ```
+
+For benchmark/safe params use `PARAMS=sphincs-poseidon2-192s` or candidate 9 from param search.
 
 ## Build
 
@@ -176,19 +178,27 @@ There are two statement modes:
 
 ### Rust STARK backend (Winterfell)
 
-The Rust crate `sphincsplus-stark-rs` implements:
+The Rust crate `sphincsplus-stark-rs` implements TWO AIRs:
 
-- **AIR definition**: A single large AIR (`Poseidon2StarkAir`) encoding the full verify-path constraints over the Goldilocks field. This includes Poseidon2 permutation rounds, sponge absorption/squeezing, h_msg derivation, Merkle path verification, and FORS index extraction.
-- **Trace width**: 255 columns (Winterfell 0.13 ceiling), trace length 256 rows.
-- **C FFI exports** (5 `extern "C"` functions):
-  - `spx_p2_rust_get_abi_version_v1` — ABI version check
-  - `spx_p2_rust_generate_pi_f_v1` — Generate STARK proof
-  - `spx_p2_rust_verify_pi_f_v1` — Verify STARK proof
-  - `spx_p2_rust_validate_strict_relation_inputs_v1` — Validate public/private inputs
-  - `spx_p2_rust_validate_strict_witness_relation_v1` — Validate full witness relation
-- **Proof format**: `pi_F_v2` binary encoding with magic `0x32504650` ("PFP2"), framework ID `Fischlin-Strict`, and signature system ID `Poseidon2-SPHINCS+-like`.
+**Legacy mixed-proof AIR** (in `lib.rs`): The original `WorkAir` that proves commitment opening and ciphertext construction, but delegates SPHINCS+ signature verification to external C guards. Trace: 256 rows × 255 columns.
 
-The C side calls the Rust FFI through `stark/ffi.c` — the `SPX_P2_USE_RUST_STARK` compile flag gates this path. When not set, the C fallback prover/verifier in `stark/prover_v1.c` and `stark/verifier_v1.c` is used (placeholder — does not produce real ZK proofs).
+**Full-AIR** (in `air_engine.rs` + `trace_builder.rs`): Self-contained proof of the ENTIRE SPHINCS+ verification trace. No external guards needed.
+- Trace: 131,072 rows × 64 columns (dev params), 3,686 Poseidon2 permutations
+- Approach: trace builder walks through `crypto_sign_verify`, pre-computes expected next state using `poseidon2_round`, stores in trace columns 16..27. AIR checks `nxt == expected` via simple equality constraints.
+- 16 constraints: 6 rate lanes + round counter + perm index + call type + pad flag
+- Proof: ~95 KB, ~127 seconds (dev params)
+- C FFI exports for full-AIR:
+  - `spx_p2_rust_generate_pi_f_full_air` — Generate STARK proof
+  - `spx_p2_rust_verify_pi_f_full_air` — Verify STARK proof
+  - `spx_p2_rust_get_abi_version_full_air` — ABI version check
+- C FFI exports (legacy):
+  - `spx_p2_rust_generate_pi_f_v1` / `verify_pi_f_v1` — mixed-proof path (deprecated)
+  - `spx_p2_rust_validate_strict_relation_inputs_v1` — external guard (not needed by full-AIR)
+  - `spx_p2_rust_validate_strict_witness_relation_v1` — external guard (not needed by full-AIR)
+
+The C side calls the Rust FFI through `stark/ffi.c`. There are now TWO paths:
+- `spx_p2_ffi_generate_pi_f` / `spx_p2_ffi_verify_pi_f` — legacy mixed-proof
+- `spx_p2_ffi_generate_pi_f_full_air` / `spx_p2_ffi_verify_pi_f_full_air` — full-AIR (recommended)
 
 ### Key naming conventions
 
