@@ -251,6 +251,55 @@ pub unsafe extern "C" fn spx_p2_rust_get_abi_version_full_air(out_version: *mut 
 
     #[test] fn test_e2e() { assert!(prove_verify()); }
 
+    #[test] fn test_tamper_state_rejected() {
+        let pk = vec![0x42u8; trace_builder::PK_BYTES];
+        let m_pub = vec![0x27u8; trace_builder::N];
+        let sigma_com = vec![0x00u8; trace_builder::SIG_BYTES];
+        let (mut td, _, tp) = trace_builder::build_verification_trace(&pk, &sigma_com, &m_pub);
+        let tl = td.len();
+
+        // Tamper: flip a state bit in row 10
+        let original = td[10][0];
+        td[10][0] = original + BaseElement::ONE;
+        // Verify the tamper actually breaks the constraint
+        let r = 9usize;
+        let constraint_val = td[r+1][0].as_int().wrapping_sub(td[r][16].as_int());
+        eprintln!("[tamper] row={} cur[16]={} nxt[0]={} diff={}", r, td[r][16].as_int(), td[r+1][0].as_int(), constraint_val);
+
+        let mut tt = TraceTable::new(TRACE_WIDTH, tl);
+        for r in 0..tl { for c in 0..TRACE_WIDTH { tt.set(c, r, td[r][c]); } }
+        let pi = SpxVerifyPublicInputs::from_values(td[0][0], td[tl-1][0], tp, BaseElement::ZERO, BaseElement::ZERO);
+        let opts = ProofOptions::new(32, 32, 0, FieldExtension::None, 8, 31, BatchingMethod::Linear, BatchingMethod::Linear);
+        let pi2 = pi.clone();
+        let p = SpxVerifyProver{options:opts.clone(), pub_inputs:pi, trace:tt};
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            p.prove(p.trace.clone()).unwrap();
+        }));
+        assert!(result.is_err(), "Tampered state should cause prover panic (constraint violated)");
+        let _ = pi2;
+    }
+
+    #[test] fn test_tamper_round_rejected() {
+        let pk = vec![0x42u8; trace_builder::PK_BYTES];
+        let m_pub = vec![0x27u8; trace_builder::N];
+        let sigma_com = vec![0x00u8; trace_builder::SIG_BYTES];
+        let (mut td, _, tp) = trace_builder::build_verification_trace(&pk, &sigma_com, &m_pub);
+        let tl = td.len();
+        let original = td[5][12];
+        td[5][12] = original + BaseElement::new(5);
+        let mut tt = TraceTable::new(TRACE_WIDTH, tl);
+        for r in 0..tl { for c in 0..TRACE_WIDTH { tt.set(c, r, td[r][c]); } }
+        let pi = SpxVerifyPublicInputs::from_values(td[0][0], td[tl-1][0], tp, BaseElement::ZERO, BaseElement::ZERO);
+        let pi2 = pi.clone();
+        let opts = ProofOptions::new(32, 32, 0, FieldExtension::None, 8, 31, BatchingMethod::Linear, BatchingMethod::Linear);
+        let p = SpxVerifyProver{options:opts, pub_inputs:pi, trace:tt};
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            p.prove(p.trace.clone()).unwrap();
+        }));
+        assert!(result.is_err(), "Tampered round should cause prover panic");
+        let _ = pi2;
+    }
+
     #[test] fn test_ffi_generate_verify() {
         let mut pk = vec![0x42u8; trace_builder::PK_BYTES];
         let m_pub = vec![0x27u8; trace_builder::N];
