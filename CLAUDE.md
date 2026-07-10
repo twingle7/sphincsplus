@@ -2,24 +2,41 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Companion documents
+
+These files at the repo root provide critical context — read them when starting new work:
+
+| File | Purpose |
+|------|---------|
+| `MAINLINE.md` | Which files are mainline vs archived; where to start reading |
+| `CURRENT_STATUS.md` | Architecture diagram, what the STARK proof proves, current limitations, key metrics |
+| `SECURITY_ANALYSIS.md` | Modular THF security methodology; why Poseidon2 satisfies SPHINCS+ security bounds |
+| `PARAMETER_SEARCH_PLAN.md` | Cost-model-based parameter search plan (replaces old full-benchmark pipeline) |
+| `ref/TESTING.md` | Canonical test catalog: correctness, format/FFI, benchmark, and param-search scripts |
+| `ref/README.md` | Canonical public API entry points (`show/`, `stark/`, `stark-rs/`) |
+
+`_archive/` at the repo root holds paper materials, historical logs, staged results, and non-mainline code — read `_archive/README.md` if you need history, but do not modify archived files during active development.
+
 ## Environment
 
 Development happens on WSL or MinGW64. All paths assume `ref/` as the working directory:
 
 ```bash
 cd /d/Desktop/sphincsplus/ref
-export PARAMS=sphincs-poseidon2-128f-small  # dev params
+export PARAMS=sphincs-poseidon2-128f-small  # dev params (n=16, h=40, d=4)
 export THASH=simple
 export CC=gcc
 ```
 
-For benchmark/safe params use `PARAMS=sphincs-poseidon2-192s` or candidate 9 from param search.
+For benchmark/safe params use `PARAMS=sphincs-poseidon2-192s` (n=24) or candidate 9 from param search.
+
+Note: some scripts (e.g., `run_strict_regression.sh`) use both `CC` and `CC_BIN` variables. Set both to the same compiler unless cross-compiling.
 
 ## Build
 
 ### C reference implementation
 
-The C code builds via GNU Make. The two critical variables are:
+The C code builds via GNU Make. The critical variables are:
 
 | Variable | Purpose |
 |----------|---------|
@@ -28,6 +45,18 @@ The C code builds via GNU Make. The two critical variables are:
 | `EXTRA_CFLAGS` | Optional flags. For the final Fischlin path, always include `-DSPX_P2_USE_RUST_STARK`. |
 
 The Makefile auto-detects the hash backend from `PARAMS` and sets the corresponding C defines (`SPX_BACKEND_SHAKE`, `SPX_BACKEND_HARAKA`, `SPX_BACKEND_SHA2`, `SPX_BACKEND_POSEIDON2`). It also conditionally compiles `stark/` and `show/` sources when the Poseidon2 backend is detected.
+
+Key Makefile targets:
+
+| Target | Description |
+|--------|-------------|
+| `default` (`PQCgenKAT_sign`) | Build KAT binary |
+| `all` | Build KAT + all tests + all benchmarks |
+| `tests` | Build all test binaries only |
+| `test` | Build and run all tests (`.exec` suffix) |
+| `benchmarks` | Build all benchmark binaries only |
+| `benchmark` | Build and run all benchmarks |
+| `clean` | Remove all built binaries |
 
 Build the KAT (Known Answer Test) binary:
 ```bash
@@ -50,7 +79,11 @@ Then build C tests linked against the Rust static library:
 make -B PARAMS=$PARAMS THASH=$THASH CC=$CC EXTRA_CFLAGS="-DSPX_P2_USE_RUST_STARK" test/<target>
 ```
 
-The Makefile auto-links `stark-rs/target/release/libsphincsplus_stark_rs.a` when `SPX_P2_USE_RUST_STARK` is set.
+The Makefile auto-links `stark-rs/target/release/libsphincsplus_stark_rs.a` when `SPX_P2_USE_RUST_STARK` is set. The Rust crate depends on `winterfell 0.13.1` and builds as both `staticlib` and `rlib`.
+
+### CI/CD
+
+GitHub Actions CI exists (`.github/workflows/`) but tests **only upstream backends** (SHA2, SHAKE, Haraka) across 128/192/256 parameter sets. There is **no CI coverage** for Poseidon2, Fischlin protocol, or STARK proving — local testing via `run_strict_regression.sh` is the sole gate.
 
 ## Testing
 
@@ -78,7 +111,10 @@ make -B PARAMS=$PARAMS THASH=$THASH CC=$CC test/spx test/fors
 bash scripts/run_strict_regression.sh
 ```
 
-This builds the Rust backend, then compiles and runs the core correctness/security test suite.
+This builds the Rust backend, then compiles and runs the core correctness/security test suite:
+`poseidon2_protocol_flow`, `poseidon2_fischlin_statement_spec`, `poseidon2_verify_full_guard`,
+`poseidon2_cross_backend_consistency`, `poseidon2_statement_binding`, `poseidon2_trace_replay_binding`,
+`poseidon2_roles_interaction`, `poseidon2_fischlin_blind_e2e`, `poseidon2_stark_stats`.
 
 ### Additional strict-core negative-case test
 
@@ -89,6 +125,8 @@ make -B PARAMS=$PARAMS THASH=$THASH CC=$CC EXTRA_CFLAGS="-DSPX_P2_USE_RUST_STARK
   test/poseidon2_stark_strict_core_enforcement
 ./test/poseidon2_stark_strict_core_enforcement
 ```
+
+This is the strict witness / public statement / tamper-rejection negative-case test.
 
 ### Cross-backend comparison
 
@@ -113,6 +151,8 @@ Batch collection scripts:
 RUNS=30 bash scripts/collect_benchmark_v2.sh
 RUNS=20 bash scripts/collect_benchmark_4way.sh
 ```
+
+For a complete test catalog including AIR/witness tests, FFI tests, statement-binding tests, and the recommended verification order, see `ref/TESTING.md`.
 
 ## High-Level Architecture
 
@@ -150,18 +190,29 @@ ref/
 ├── stark-rs/          # Rust STARK backend crate (sphincsplus-stark-rs)
 │   ├── Cargo.toml              # Depends on winterfell 0.13.1; builds staticlib + rlib
 │   └── src/
-│       ├── lib.rs              # Main STARK AIR definition, Winterfell prover/verifier, C FFI exports
-│       ├── thash_poseidon2_exact.rs  # Exact Poseidon2 permutation trace for Thash
+│       ├── air_engine.rs       # Full-AIR: self-contained proof of entire SPHINCS+ verification
+│       ├── trace_builder.rs    # Builds verification trace by walking crypto_sign_verify
+│       ├── lib.rs              # Legacy mixed-proof AIR (backward compat)
+│       ├── thash_poseidon2_exact.rs  # Exact Poseidon2 permutation constants/trace
 │       ├── thash_sha2_exact.rs       # Exact SHA2-256 trace for cross-backend comparison
 │       ├── thash_sha2_f_exact.rs     # Exact SHA2-256 compression-function trace
 │       └── thash_bench.rs           # Benchmarking utilities
 ├── test/              # Test programs (one .c per test target)
 ├── scripts/           # Python + Bash scripts for param search, benchmarking, analysis
+│   ├── run_strict_regression.sh        # Primary correctness gate
+│   ├── collect_benchmark_v2.sh         # Protocol benchmark collection
+│   ├── collect_benchmark_4way.sh       # 4-way parallel benchmark collection
+│   ├── search_params_poseidon2.py      # Parameter candidate generation
+│   ├── eval_security_poseidon2.py      # THF security evaluation
+│   ├── eval_security_v2.py            # Updated security model evaluation
+│   ├── cost_model_full_air.py          # Full-AIR cost model (replaces full benchmark)
+│   ├── analyze_pareto_poseidon2.py     # Pareto-frontier analysis
+│   ├── collect_benchmark_params.sh     # Batch parameter benchmark
+│   ├── resume_param_search.sh          # Resume interrupted param search
+│   └── package_final_results.sh        # Results packaging
 ├── logs/              # Runtime logs (gitignored except README)
 └── final-results-v1/  # Delivered results snapshot (gitignored)
 ```
-
-`_archive/` at the repo root contains paper materials, historical logs, staged results, and non-mainline code. Not needed for active development.
 
 ### Protocol architecture: Fischlin strict chain
 
@@ -176,47 +227,64 @@ There are two statement modes:
 - **Statement-unbound** (legacy): verifier sees `pk_sig` and proof.
 - **Statement-bound** (current recommended): verifier additionally sees `pk_E`, `m_pub` — binding the proof to explicit public statements.
 
+The canonical public API entry points are documented in `ref/README.md`.
+
 ### Rust STARK backend (Winterfell)
 
-The Rust crate `sphincsplus-stark-rs` implements TWO AIRs:
+The Rust crate `sphincsplus-stark-rs` implements TWO AIRs — always prefer full-AIR for new work:
 
-**Legacy mixed-proof AIR** (in `lib.rs`): The original `WorkAir` that proves commitment opening and ciphertext construction, but delegates SPHINCS+ signature verification to external C guards. Trace: 256 rows × 255 columns.
-
-**Full-AIR** (in `air_engine.rs` + `trace_builder.rs`): Self-contained proof of the ENTIRE SPHINCS+ verification trace. No external guards needed.
+**Full-AIR** (in `air_engine.rs` + `trace_builder.rs`) — **current recommended path.** Self-contained proof of the ENTIRE SPHINCS+ verification trace. No external C guards needed.
 - Trace: 131,072 rows × 64 columns (dev params), 3,686 Poseidon2 permutations
 - Approach: trace builder walks through `crypto_sign_verify`, pre-computes expected next state using `poseidon2_round`, stores in trace columns 16..27. AIR checks `nxt == expected` via simple equality constraints.
 - 16 constraints: 6 rate lanes + round counter + perm index + call type + pad flag
 - Proof: ~95 KB, ~127 seconds (dev params)
-- C FFI exports for full-AIR:
-  - `spx_p2_rust_generate_pi_f_full_air` — Generate STARK proof
-  - `spx_p2_rust_verify_pi_f_full_air` — Verify STARK proof
-  - `spx_p2_rust_get_abi_version_full_air` — ABI version check
-- C FFI exports (legacy):
-  - `spx_p2_rust_generate_pi_f_v1` / `verify_pi_f_v1` — mixed-proof path (deprecated)
-  - `spx_p2_rust_validate_strict_relation_inputs_v1` — external guard (not needed by full-AIR)
-  - `spx_p2_rust_validate_strict_witness_relation_v1` — external guard (not needed by full-AIR)
+- C FFI: `spx_p2_ffi_generate_pi_f_full_air` / `spx_p2_ffi_verify_pi_f_full_air`
+- Rust FFI: `spx_p2_rust_generate_pi_f_full_air` / `spx_p2_rust_verify_pi_f_full_air` / `spx_p2_rust_get_abi_version_full_air`
 
-The C side calls the Rust FFI through `stark/ffi.c`. There are now TWO paths:
-- `spx_p2_ffi_generate_pi_f` / `spx_p2_ffi_verify_pi_f` — legacy mixed-proof
-- `spx_p2_ffi_generate_pi_f_full_air` / `spx_p2_ffi_verify_pi_f_full_air` — full-AIR (recommended)
+**Legacy mixed-proof AIR** (in `lib.rs`) — **deprecated for new work.** Proves commitment opening and ciphertext construction, but delegates SPHINCS+ signature verification to external C guards. Trace: 256 rows × 255 columns. C FFI: `spx_p2_ffi_generate_pi_f` / `spx_p2_ffi_verify_pi_f`.
 
 ### Key naming conventions
 
 - `spx_p2_*` prefix — all Poseidon2/Fischlin/STARK extensions (distinct from upstream SPHINCS+ `crypto_sign_*`).
 - Files with `_v1` suffix — implementation artifacts; the public API headers (`ffi.h`, `show_poseidon2.h`, `protocol_poseidon2.h`) are unversioned and are the only canonical entry points.
-- `_strict_public` and `_statement_bound` suffixes in Make targets — compatibility aliases sharing the same test source.
+- `_strict_public` and `_statement_bound` suffixes in Make targets — compatibility aliases sharing the same test source (not independent tests).
 - The `SPX_NAMESPACE(s)` macro wraps all public symbols for link-time namespacing.
 
-### Parameter sets
+### Parameter sets and search
 
-The primary development parameter set is `sphincs-poseidon2-192s`:
-- `n = 24` (192-bit security)
-- `h = 63`, `d = 7` (hypertree)
-- `log(t) = 14`, `k = 17` (FORS)
-- `w = 16` (WOTS+ Winternitz)
-- Poseidon2: `t = 12` state words, `capacity = 6`, `rate = 6`, Goldilocks field, `RF = 8`, `RP = 22`, `x^7` S-box
+Active Poseidon2 parameter files:
+
+| File | n | Purpose |
+|------|---|---------|
+| `params-sphincs-poseidon2-128f-small.h` | 16 | Development (fastest prove/verify cycle) |
+| `params-sphincs-poseidon2-192s.h` | 24 | Benchmark/safe (192-bit security target) |
+| `params-sphincs-poseidon2-128f-bench.h` | 16 | Benchmark candidate |
 
 Other parameter files exist for SHA2, SHAKE, and Haraka backends across security levels 128/192/256 but are not the active development focus.
+
+**Parameter search workflow** (see `PARAMETER_SEARCH_PLAN.md` for full details):
+
+The current approach uses a **cost model** to avoid benchmarking every candidate:
+```
+Generate candidates → THF security filter → Cost model estimate → Sort → Benchmark top 3-5 only
+```
+
+Key scripts:
+```bash
+python3 scripts/search_params_poseidon2.py      # Generate candidates
+python3 scripts/eval_security_v2.py             # THF security evaluation
+python3 scripts/cost_model_full_air.py          # Estimate prove time/proof size
+python3 scripts/analyze_pareto_poseidon2.py     # Pareto-frontier analysis
+```
+
+The cost model estimates `total_perms` from structure parameters (k, a, d, h, w, n), then derives `trace_rows = next_pow2(total_perms × 32)` and `prove_seconds ≈ 127 × (trace_rows/131072) × (log₂(trace_rows)/17)`. It achieves ~3.5% error on dev params.
+
+### Security model
+
+The security analysis follows SPHINCS+'s modular THF framework (see `SECURITY_ANALYSIS.md`):
+- Poseidon2 (Goldilocks field, t=12, RF=8, RP=22) instantiates the THF in ROM
+- Security bounds inherit directly from SPHINCS+ spec theorems — no recalibration needed
+- Key: SM-TCR, SM-DSPR, SM-PRE, SM-UD properties all hold for Poseidon2 in ROM
 
 ### Typical workflow for verifying a change
 
@@ -224,3 +292,9 @@ Other parameter files exist for SHA2, SHAKE, and Haraka backends across security
 2. If Rust changed: `cd stark-rs && cargo build --release && cd ..`
 3. Run strict regression: `bash scripts/run_strict_regression.sh`
 4. Run strict-core negative test: `make -B PARAMS=$PARAMS THASH=$THASH CC=$CC EXTRA_CFLAGS="-DSPX_P2_USE_RUST_STARK" test/poseidon2_stark_strict_core_enforcement && ./test/poseidon2_stark_strict_core_enforcement`
+
+For paper-level validation, also run the full test sequence described in `ref/TESTING.md` §8 (Recommended verification order).
+
+## License
+
+This repository inherits the upstream SPHINCS+ licensing: CC0 (public domain dedication) for the reference implementation, with some files under 0BSD, MIT-0, or MIT. See `README.md` (repo root) for the full license table.
