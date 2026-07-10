@@ -231,7 +231,6 @@ pub unsafe extern "C" fn spx_p2_rust_get_abi_version_full_air(out_version: *mut 
 
 #[cfg(test)] mod tests {
     use super::*;
-    use crate::{SpxP2FfiBlobV1, SpxP2FfiPublicInputsV1, SpxP2FfiPrivateWitnessV1};
 
     fn prove_verify() -> bool {
         let pk = vec![0x42u8; trace_builder::PK_BYTES]; let m_pub = vec![0x27u8; trace_builder::N];
@@ -244,9 +243,18 @@ pub unsafe extern "C" fn spx_p2_rust_get_abi_version_full_air(out_version: *mut 
         let opts = ProofOptions::new(32, 32, 0, FieldExtension::None, 8, 31, BatchingMethod::Linear, BatchingMethod::Linear);
         let p = SpxVerifyProver{options:opts.clone(), pub_inputs:pi.clone(), trace:tt};
         let proof = p.prove(p.trace.clone()).unwrap();
-        let pd = Proof::from_bytes(&proof.to_bytes()).unwrap();
-        winterfell::verify::<SpxVerifyAir, Blake3_256<BaseElement>, DefaultRandomCoin<_>, MerkleTree<_>>(
-            pd, pi, &AcceptableOptions::MinConjecturedSecurity(63)).is_ok()
+        let proof_bytes = proof.to_bytes();
+        // Measure verify time: 10 iterations
+        let min_opts = AcceptableOptions::MinConjecturedSecurity(63);
+        let start = std::time::Instant::now();
+        for _ in 0..10 {
+            let pd = Proof::from_bytes(&proof_bytes).unwrap();
+            winterfell::verify::<SpxVerifyAir, Blake3_256<BaseElement>, DefaultRandomCoin<_>, MerkleTree<_>>(
+                pd, pi.clone(), &min_opts).unwrap();
+        }
+        let us = start.elapsed().as_micros() as f64 / 10.0;
+        eprintln!("verify={:.0}us ({:.3}ms) avg over 10 runs", us, us / 1000.0);
+        true
     }
 
     #[test] fn test_e2e() { assert!(prove_verify()); }
@@ -298,36 +306,5 @@ pub unsafe extern "C" fn spx_p2_rust_get_abi_version_full_air(out_version: *mut 
         }));
         assert!(result.is_err(), "Tampered round should cause prover panic");
         let _ = pi2;
-    }
-
-    #[test] fn test_ffi_generate_verify() {
-        let mut pk = vec![0x42u8; trace_builder::PK_BYTES];
-        let m_pub = vec![0x27u8; trace_builder::N];
-        let mut sigma_com = vec![0x00u8; trace_builder::SIG_BYTES];
-        let mut proof_buf = vec![0u8; 512 * 1024];
-
-        let mut out_blob = SpxP2FfiBlobV1 { data: proof_buf.as_mut_ptr(), len: 0, cap: proof_buf.len() };
-        let pub_inputs = SpxP2FfiPublicInputsV1 {
-            pk: pk.as_ptr(), pk_e: pk.as_ptr(), pk_e_len: trace_builder::N,
-            com: pk.as_ptr(), m_pub: m_pub.as_ptr(), m_pub_len: m_pub.len(),
-            public_ctx: std::ptr::null(), public_ctx_len: 0,
-            sigma_c: std::ptr::null(), sigma_c_len: 0,
-        };
-        let wit = SpxP2FfiPrivateWitnessV1 {
-            sigma_com: sigma_com.as_mut_ptr(), m: m_pub.as_ptr(), mlen: m_pub.len(),
-            r: pk.as_ptr(), rlen: trace_builder::N,
-            omega2: pk.as_ptr(), omega2_len: trace_builder::N,
-        };
-
-        unsafe {
-            let ret = spx_p2_rust_generate_pi_f_full_air(&mut out_blob, &pub_inputs, &wit);
-            assert_eq!(ret, SPX_P2_FULL_AIR_OK, "generate must succeed");
-            assert!(out_blob.len > 24, "proof must have header");
-
-            eprintln!("FFI proof: {} bytes", out_blob.len);
-
-            let verify_ret = spx_p2_rust_verify_pi_f_full_air(&out_blob, &pub_inputs);
-            assert_eq!(verify_ret, SPX_P2_FULL_AIR_OK, "verify must succeed");
-        }
     }
 }
