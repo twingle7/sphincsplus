@@ -30,3 +30,12 @@
 /ref/PQCgenKAT_sign
 /ref/PQCsignKAT_*.rsp
 /ref/PQCsignKAT_*.req
+
+# Compiled test binaries (no extension)
+/ref/test/poseidon2_*
+/ref/test/thash_backend_stark_compare
+!/ref/test/*.c
+!/ref/test/*.h
+
+# Downloaded PDFs (large binaries, re-downloadable)
+/papers/_pdfs/
