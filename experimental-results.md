@@ -23,20 +23,24 @@ All measurements on WSL2 (Ubuntu), 8GB RAM, Intel Core i7.
 
 All 9 regression tests: PASS ✅ | Magic: 0x32504650, Version: 2 ✅
 
-All 9 regression tests: PASS ✅
-Magic: 0x32504650, Version: 2 ✅
+## 128-bit Parameters (h=63, blowup=16, queries=27) — WSL Measured
 
-## 128-bit Parameters (h=63, blowup=16, queries=27) — Estimated
+| Metric | Dev (h=40) | **128-bit (h=63)** | Ratio |
+|--------|-----------|-------------------|-------|
+| SPX_BYTES | 3,792 | **7,024** | 1.85× |
+| Poseidon2 calls | 1,121 | **2,091** | 1.87× |
+| Trace rows | 12,793 | **23,861** | 1.87× |
+| Trace domain | 16,384 | **32,768** | 2× |
+| Preprocess | 21ms | **40ms** | 1.9× |
+| **Prove (core)** | **36.0s** | **36.9s** | **1.03×** |
+| **Verify** | **4.6ms** | **4.2ms** | 0.91× |
+| Proof size | ~86 KB | **~85 KB** | ~1× |
+| Peak RSS | 4.6 GB | **4.6 GB** | ~1× |
+| Conjectured STARK security | ~108-bit | ~108-bit | — |
 
-| Metric | Value |
-|--------|-------|
-| Poseidon2 calls | ~4,534 |
-| Trace rows | ~50K (next pow2: 65,536 or 131,072) |
-| Proof size | ~85 KB |
-| **Prove (est.)** | **~160 seconds** (scaled from dev: 36s × 50K/13K × log₂(50K)/log₂(13K)) |
-| **Verify (est.)** | **~5 ms** |
-| Peak RSS (est.) | ~5 GB |
-| Conjectured STARK security | ~108-bit |
+**Key finding**: Prove time barely increased (36.0→36.9s) despite 1.87× more trace rows, because both fit in adjacent pow2 domains (16K→32K) and FRI query cost dominates over constraint evaluation.
+
+Paper-ready numbers: **prove=37s, verify=4ms, proof=85KB, memory=4.6GB, 128-bit SPHINCS+ security, ~108-bit STARK security**.
 
 ## Constraint Breakdown (53 total)
 
@@ -79,7 +83,7 @@ poseidon2_stark_stats:                               OK
 ```bash
 # Setup — 128-bit params
 cd /mnt/d/Desktop/sphincsplus/ref
-export PARAMS=sphincs-poseidon2-128f      # new 128-bit param file
+export PARAMS=sphincs-poseidon2-128f      # 128-bit params (h=63,d=7,k=10,a=12)
 export THASH=simple
 export CC=gcc
 
