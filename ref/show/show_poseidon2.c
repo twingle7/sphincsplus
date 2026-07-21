@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "show_poseidon2.h"
+#include "../hash_poseidon2_adapter.h"
 
 int spx_p2_show_extract_commitment(uint8_t out_com[SPX_N],
                                    const spx_p2_show *show)
@@ -129,6 +130,11 @@ int spx_p2_show_prove_statement_bound(spx_p2_show *out,
         return -1;
     }
     if (cred->mlen == 0 || cred->rlen == 0 || cred->omega2_len != SPX_N || !spx_p2_cred_opening_matches_com(cred))
+    {
+        return -1;
+    }
+    /* Verify sigma_com is a valid SPHINCS+ signature on com before proving */
+    if (spx_p2_verify_com(pk_sig, cred->com, cred->sigma_com) != 0)
     {
         return -1;
     }

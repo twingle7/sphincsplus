@@ -218,70 +218,25 @@ int spx_p2_ffi_generate_pi_f(spx_p2_ffi_blob *out_proof,
                              const spx_p2_ffi_public_inputs *pub,
                              const spx_p2_ffi_private_witness *wit)
 {
-    int ret;
-    int ver;
     if (out_proof == 0)
     {
         return SPX_P2_FFI_STATUS_ERR_NULL;
     }
-    ret = spx_p2_relation_validate_strict_prove_inputs(pub, wit);
-    if (ret != SPX_P2_FFI_STATUS_OK)
-    {
-        return ret;
-    }
-    ret = spx_p2_ffi_generate_pi_f_legacy_internal(out_proof, pub, wit);
-    if (ret != SPX_P2_FFI_STATUS_OK)
-    {
-        if (spx_p2_debug_verify_enabled())
-        {
-            fprintf(stderr, "[ffi] generate_pi_f legacy returned ret=%d len=%llu\n",
-                    ret, (unsigned long long)out_proof->len);
-        }
-        return ret;
-    }
-    ver = spx_p2_ffi_detect_pi_f_version_internal(out_proof->data, out_proof->len);
-    if (spx_p2_debug_verify_enabled())
-    {
-        fprintf(stderr, "[ffi] generate_pi_f post-check ver=%d len=%llu\n",
-                ver, (unsigned long long)out_proof->len);
-    }
-    if (ver != 2)
-    {
-        return SPX_P2_FFI_STATUS_ERR_PROVE;
-    }
-    return SPX_P2_FFI_STATUS_OK;
+    /* Route to full-AIR path (legacy WorkAir has degree-4096 constraint
+     * permanently incompatible with Winterfell 0.13 MAX_BLOWUP_FACTOR=128).
+     * Input validation is done by full-AIR FFI + Rust trace builder. */
+    return spx_p2_ffi_generate_pi_f_full_air(out_proof, pub, wit);
 }
 
 int spx_p2_ffi_verify_pi_f(const spx_p2_ffi_blob *proof,
                            const spx_p2_ffi_public_inputs *pub)
 {
-    int ver;
-    int ret;
     if (proof == 0 || proof->data == 0)
     {
         return SPX_P2_FFI_STATUS_ERR_NULL;
     }
-    ret = spx_p2_relation_validate_strict_verify_inputs(pub);
-    if (ret != SPX_P2_FFI_STATUS_OK)
-    {
-        return ret;
-    }
-    ver = spx_p2_ffi_detect_pi_f_version_internal(proof->data, proof->len);
-    if (ver != 2)
-    {
-        if (spx_p2_debug_verify_enabled())
-        {
-            fprintf(stderr, "[ffi] verify strict rejected non-v2 proof: ver=%d len=%llu\n",
-                    ver, (unsigned long long)proof->len);
-        }
-        return SPX_P2_FFI_STATUS_ERR_VERIFY;
-    }
-    ret = spx_p2_ffi_verify_pi_f_legacy_internal(proof, pub);
-    if (spx_p2_debug_verify_enabled())
-    {
-        fprintf(stderr, "[ffi] verify strict result=%d\n", ret);
-    }
-    return ret;
+    /* Route to full-AIR path. Validation is done by full-AIR FFI + Winterfell. */
+    return spx_p2_ffi_verify_pi_f_full_air(proof, pub);
 }
 
 /* ── Full-AIR FFI (no external guards) ── */

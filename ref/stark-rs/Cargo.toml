@@ -7,4 +7,5 @@ edition = "2021"
 crate-type = ["staticlib", "rlib"]
 
 [dependencies]
+blake3 = "1"
 winterfell = "0.13.1"

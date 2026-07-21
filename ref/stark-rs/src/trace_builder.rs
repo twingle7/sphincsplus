@@ -66,6 +66,7 @@ const ADDR_WOTS: u8 = 0; const ADDR_WOTSPK: u8 = 1; const ADDR_HASHTREE: u8 = 2;
 const ADDR_FORSTREE: u8 = 3; const ADDR_FORSPK: u8 = 4;
 const DOMAIN_HASH_MESSAGE: u8 = 0x03; const DOMAIN_THASH_F: u8 = 0x10;
 const DOMAIN_THASH_H: u8 = 0x11; const DOMAIN_THASH_TL: u8 = 0x12;
+const DOMAIN_COMMIT: u8 = 0x20; const DOMAIN_CUSTOM: u8 = 0xFF;
 
 // ── Address ──
 #[derive(Debug, Clone, Copy, Default)]
@@ -103,7 +104,7 @@ fn lanes_to_bytes(lanes: &[BaseElement; P2_RATE]) -> [u8; 48] {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
-pub enum CallType { Hmsg=0, ForsLeaf=1, ForsAuth=2, ForsPk=3, WotsChain=4, WotsPk=5, WotsLeafHash=6, Merkle=7, FinalCheck=8 }
+pub enum CallType { Hmsg=0, ForsLeaf=1, ForsAuth=2, ForsPk=3, WotsChain=4, WotsPk=5, WotsLeafHash=6, Merkle=7, FinalCheck=8, Commit=9, Encrypt=10 }
 
 // ── Trace Recorder ──
 pub struct TraceRecorder {
@@ -116,7 +117,8 @@ impl TraceRecorder {
     }
 
     fn push_row(&mut self, state: &[BaseElement; P2_T], expected_next: &[BaseElement; P2_T],
-                 round: u64, ct: CallType) {
+                 round: u64, ct: CallType, absorb: &[BaseElement; P2_RATE],
+                 domain_tag: u8, addr: &SpxAddr) {
         if self.row >= self.trace.len() { self.trace.push(vec![BaseElement::ZERO; self.num_cols]); }
         let r = &mut self.trace[self.row];
         for c in 0..P2_T { r[c] = state[c]; }
@@ -124,30 +126,44 @@ impl TraceRecorder {
         r[13] = BaseElement::new(self.perm_index as u64);
         r[14] = BaseElement::new(ct as u64);
         for c in 0..P2_T { r[16 + c] = expected_next[c]; }
+        if round == 0 { for i in 0..P2_RATE { r[28 + i] = absorb[i]; } }
+        // Store domain tag (col 34) and address (cols 35-38) at row 0 of each permutation
+        if round == 0 {
+            r[34] = BaseElement::new(domain_tag as u64);
+            let ab = addr.bytes();
+            for w in 0..4 {
+                let mut val: u64 = 0;
+                for b in 0..8 { val |= (ab[w*8 + b] as u64) << (8 * b); }
+                r[35 + w] = BaseElement::new(val);
+            }
+        }
         self.row += 1;
     }
 
     pub fn record_permutation(&mut self, init_state: &[BaseElement; P2_T],
-                               absorb: &[BaseElement; P2_RATE], call_type: CallType) -> [BaseElement; P2_RATE] {
+                               absorb: &[BaseElement; P2_RATE], call_type: CallType,
+                               domain_tag: u8, addr: &SpxAddr) -> [BaseElement; P2_RATE] {
         let mut state = *init_state;
         for i in 0..P2_RATE { state[i] += absorb[i]; }
-        // Row 0: initial state. Expected next = after round 0
+        let zero_absorb = [BaseElement::ZERO; P2_RATE];
+        let zero_addr = SpxAddr::new();
+        // Row 0: initial state. Expected next = after round 0. Record absorb, domain, addr.
         let mut after_r0 = state;
         thash_poseidon2_exact::poseidon2_round(&mut after_r0, 0);
-        self.push_row(&state, &after_r0, 0, call_type);
+        self.push_row(&state, &after_r0, 0, call_type, absorb, domain_tag, addr);
         state = after_r0;
 
-        // Rows 1..29: after rounds 0..28. Expected next = after rounds 1..29
+        // Rows 1..29
         for round in 1..TOTAL_ROUNDS {
             let mut next_state = state;
             thash_poseidon2_exact::poseidon2_round(&mut next_state, round);
-            self.push_row(&state, &next_state, round as u64, call_type);
+            self.push_row(&state, &next_state, round as u64, call_type, &zero_absorb, 0, &zero_addr);
             state = next_state;
         }
-        // Row 30: after round 29. Expected next = pad (identity, same state)
-        self.push_row(&state, &state, TOTAL_ROUNDS as u64, call_type);
-        // Row 31: pad row. Expected next = fresh start (zeros, for boundary transition)
-        self.push_row(&state, &[BaseElement::ZERO; P2_T], (TOTAL_ROUNDS+1) as u64, call_type);
+        // Row 30: identity pad
+        self.push_row(&state, &state, TOTAL_ROUNDS as u64, call_type, &zero_absorb, 0, &zero_addr);
+        // Row 31: terminating pad
+        self.push_row(&state, &[BaseElement::ZERO; P2_T], (TOTAL_ROUNDS+1) as u64, call_type, &zero_absorb, 0, &zero_addr);
 
         let mut out = [BaseElement::ZERO; P2_RATE];
         out.copy_from_slice(&state[0..P2_RATE]);
@@ -174,20 +190,21 @@ impl TraceRecorder {
 
 // ── Poseidon2 hash ──
 fn poseidon2_hash(state: &mut [BaseElement; P2_T], input: &[u8], out_len: usize,
-                  trace: &mut TraceRecorder, call_type: CallType) -> Vec<u8> {
+                  trace: &mut TraceRecorder, call_type: CallType,
+                  domain_tag: u8, addr: &SpxAddr) -> Vec<u8> {
     let rate = P2_RATE * 8; let mut output = Vec::new(); let mut offset = 0;
     while offset < input.len() {
         let end = (offset + rate).min(input.len()); let len = end - offset;
         let mut chunk = [0u8; 48]; chunk[..len].copy_from_slice(&input[offset..end]);
         if len < rate { chunk[len] = 0x01; chunk[rate-1] |= 0x80; }
         let absorb = bytes_to_rate(&chunk);
-        let out_lanes = trace.record_permutation(state, &absorb, call_type);
+        let out_lanes = trace.record_permutation(state, &absorb, call_type, domain_tag, addr);
         output.extend_from_slice(&lanes_to_bytes(&out_lanes));
         offset = end;
     }
     { let mut chunk = [0u8; 48]; chunk[0] = 0x01; chunk[47] |= 0x80;
       let absorb = bytes_to_rate(&chunk);
-      let out_lanes = trace.record_permutation(state, &absorb, call_type);
+      let out_lanes = trace.record_permutation(state, &absorb, call_type, domain_tag, addr);
       output.extend_from_slice(&lanes_to_bytes(&out_lanes)); }
     output.truncate(out_len); output
 }
@@ -200,7 +217,7 @@ fn thash_input(domain: u8, pub_seed: &[u8], addr: &SpxAddr, blocks: &[&[u8]]) ->
 fn thash(state: &mut [BaseElement; P2_T], domain: u8, pub_seed: &[u8], addr: &SpxAddr,
          blocks: &[&[u8]], out_len: usize, trace: &mut TraceRecorder, call_type: CallType) -> Vec<u8> {
     let input = thash_input(domain, pub_seed, addr, blocks);
-    poseidon2_hash(state, &input, out_len, trace, call_type)
+    poseidon2_hash(state, &input, out_len, trace, call_type, domain, addr)
 }
 
 // ── WOTS+, Merkle, FORS, H_msg (same as before, using CallType variants) ──
@@ -259,16 +276,27 @@ fn hash_message(state: &mut [BaseElement; P2_T], r: &[u8], pk: &[u8], m: &[u8],
                 trace: &mut TraceRecorder) -> (Vec<u8>, usize) {
     let mut input = Vec::new(); input.push(DOMAIN_HASH_MESSAGE); input.extend_from_slice(r);
     input.extend_from_slice(pk); input.extend_from_slice(m);
-    let out_len = FORS_MSG_BYTES + 16; // mhash + tree(8) + idx_leaf(4) + margin
-    (poseidon2_hash(state, &input, out_len, trace, CallType::Hmsg), out_len)
+    let out_len = FORS_MSG_BYTES + 16;
+    let addr = SpxAddr::new(); // H_msg uses zero address
+    (poseidon2_hash(state, &input, out_len, trace, CallType::Hmsg, DOMAIN_HASH_MESSAGE, &addr), out_len)
 }
 
 // ── Main (dev params, backward compat) ──
-pub fn build_verification_trace(pk: &[u8], sigma_com: &[u8], m_pub: &[u8]) -> (Vec<Vec<BaseElement>>, usize, u64) {
+pub fn build_verification_trace(pk: &[u8], sigma_com: &[u8], m_pub: &[u8],
+    m: &[u8], r: &[u8], pk_e: &[u8], omega2: &[u8]) -> (Vec<Vec<BaseElement>>, usize, u64, BaseElement, BaseElement, BaseElement, BaseElement) {
     assert_eq!(pk.len(), PK_BYTES); assert_eq!(sigma_com.len(), SIG_BYTES);
     let pub_seed = &pk[0..N]; let sig_r = &sigma_com[0..N];
     let fors_sig = &sigma_com[N..N+FORS_BYTES]; let ht_sig = &sigma_com[N+FORS_BYTES..];
     let mut state = [BaseElement::ZERO; P2_T]; let mut trace = TraceRecorder::new();
+
+    // ── Commit: com = Poseidon2(domain=0x20, m || r) ──
+    let mut com_input = Vec::new();
+    com_input.push(DOMAIN_COMMIT);
+    com_input.extend_from_slice(m);
+    com_input.extend_from_slice(r);
+    let addr = SpxAddr::new();
+    let com_output = poseidon2_hash(&mut state, &com_input, N, &mut trace,
+        CallType::Commit, DOMAIN_COMMIT, &addr);
 
     let (hmsg_out, _hmsg_len) = hash_message(&mut state, sig_r, pk, m_pub, &mut trace);
     let mhash = &hmsg_out[..FORS_MSG_BYTES];
@@ -303,7 +331,27 @@ pub fn build_verification_trace(pk: &[u8], sigma_com: &[u8], m_pub: &[u8]) -> (V
         root = compute_root(&mut state, pub_seed, &leaf, cur_idx, 0, auth_path, TREE_HEIGHT as u32, &tree_addr, &mut trace);
         cur_idx = cur_tree as u32 & ((1u32<<TREE_HEIGHT)-1); cur_tree >>= TREE_HEIGHT;
     }
-    trace.into_trace()
+    // ── Encrypt: sigma_C_enc = Poseidon2(domain=0xFF, label || pk_e || com || sigma_com || omega2) ──
+    let label = b"m20-pke-ct-v1";
+    let mut enc_input = Vec::new();
+    enc_input.push(DOMAIN_CUSTOM);
+    enc_input.extend_from_slice(label);
+    enc_input.extend_from_slice(pk_e);
+    enc_input.extend_from_slice(&com_output);
+    enc_input.extend_from_slice(sigma_com);
+    enc_input.extend_from_slice(omega2);
+    let addr_enc = SpxAddr::new();
+    let _enc_output = poseidon2_hash(&mut state, &enc_input, N, &mut trace,
+        CallType::Encrypt, DOMAIN_CUSTOM, &addr_enc);
+
+    // Extract pk_root from the final HT root computation (2 BaseElements for N=16)
+    let pk_root_l0 = BaseElement::new(u64::from_le_bytes(root[0..8].try_into().unwrap_or([0;8])));
+    let pk_root_l1 = BaseElement::new(u64::from_le_bytes(root[8..16].try_into().unwrap_or([0;8])));
+    // Extract com output (first 2 rate lanes = 16 bytes for N=16)
+    let com_l0 = BaseElement::new(u64::from_le_bytes(com_output[0..8].try_into().unwrap_or([0;8])));
+    let com_l1 = BaseElement::new(u64::from_le_bytes(com_output[8..16].try_into().unwrap_or([0;8])));
+    let (trace_data, num_cols, total_perms) = trace.into_trace();
+    (trace_data, num_cols, total_perms, pk_root_l0, pk_root_l1, com_l0, com_l1)
 }
 
 #[cfg(test)] mod tests {
@@ -311,7 +359,7 @@ pub fn build_verification_trace(pk: &[u8], sigma_com: &[u8], m_pub: &[u8]) -> (V
     #[test] fn test_build_trace() {
         let pk = vec![0x42u8; PK_BYTES]; let m_pub = vec![0x27u8; N];
         let sigma_com = vec![0x00u8; SIG_BYTES];
-        let (t, nc, tp) = build_verification_trace(&pk, &sigma_com, &m_pub);
+        let (t, nc, tp, _, _, _, _) = build_verification_trace(&pk, &sigma_com, &m_pub, &[], &[], &[], &[]);
         assert!(t.len().is_power_of_two()); assert!(nc <= 255);
         eprintln!("Trace: {} rows × {} cols, {} perms", t.len(), nc, tp);
     }

@@ -11,7 +11,7 @@ RUST_STARK_STATIC_LIB = $(RUST_STARK_LIB_DIR)/libsphincsplus_stark_rs.a
 LINK_EXTRA_DEPS =
 RUST_STARK_LDLIBS = -lpthread -lm
 ifeq ($(OS),Windows_NT)
-	RUST_STARK_LDLIBS +=
+	RUST_STARK_LDLIBS += -lws2_32 -luserenv -lntdll -lbcrypt
 else
 	RUST_STARK_LDLIBS += -ldl
 endif

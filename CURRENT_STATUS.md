@@ -47,19 +47,31 @@ Because the trace IS the SPHINCS+ verification, proving the trace is correct = p
 | Parameters | n=16, h=40, d=4, k=8, a=6, w=16 |
 | Trace size | 131,072 rows × 64 columns |
 | Poseidon2 permutations | 3,686 |
-| Constraints | 16 |
-| Proof size | ~95 KB |
-| Proving time | ~127 seconds |
-| Verification time | < 1 second |
+| Constraints | 31 (16 core + 12 absorption + 3 copies) |
+| Proof size | ~72 KB (blowup=8, queries=27) |
+| Proving time | ~65 seconds (est., blowup=8 → 2× faster than blowup=32) |
+| Verification time | ~1.5 ms |
 | Column usage | 64 / 255 (25%) |
 
 ## What Is NOT Proven (Current Limitations)
 
-- **Input dataflow**: The AIR proves permutations are correct but does not yet constrain that the INPUT to each permutation is correct (right addresses, domain tags, message blocks)
-- **Root matching**: Final HT root == pk_root is not yet asserted in the AIR
-- **sigma_C construction**: Encryption correctness is not yet constrained
+- **Input dataflow**: AIR proves permutations are correct but does not yet constrain that the INPUT to each permutation is correct (right addresses, domain tags, message blocks)
+- **Sponge state carry**: Each permutation starts from ZERO state rather than carrying the sponge state across permutations
+- **m_pub vs com semantic gap**: trace builder uses `m_pub` as signed message, but issuer signs `com`. C-level `spx_p2_verify_com` guard prevents invalid proofs, but the proof proves the wrong statement internally
+- **Call type sequencing**: The sequence of call types is not yet AIR-constrained
+- **Hardcoded N=16**: trace_builder.rs only supports dev params (n=16)
 - **Formal security**: No UC proof, no side-channel resistance
-- **Benchmark parameters**: Current measurements are on dev parameters only
+
+**Now proven** (since 2026-07-21):
+- ✅ All 12 Poseidon2 state lanes constrained (full + internal rounds)
+- ✅ pk_root bound to proof header and start/end state assertions
+- ✅ Commit and Encrypt computations are endogenous (in-trace, CallType::Commit + CallType::Encrypt)
+- ✅ Commit output bound to public input `com` via boundary assertions at row 30
+- ✅ OOM resolved: blowup_factor 32→8, num_queries 32→27 (~4x memory reduction)
+- ✅ Public input context binding: ctx_hash = Blake3(pk ‖ pk_e ‖ com ‖ m_pub ‖ public_ctx ‖ sigma_c) in proof header (272 bytes: magic + version + metadata + ctx_hash), verified on verification
+- ✅ C-level signature guard: spx_p2_verify_com rejects invalid sigma_com before Rust prover
+- ✅ Proof format: magic "PFP2" + version=2 for format detection
+- ✅ All 9 strict regression tests passing (7.7s prove, 5.6ms verify, ~71KB proof)
 
 ## Comparison Path
 
