@@ -31,7 +31,7 @@ Holder                              Issuer                     Verifier
 
 The Full-AIR (`air_engine.rs`) proves the ENTIRE SPHINCS+ `crypto_sign_verify` execution trace without external guards:
 
-1. **All 3,686 Poseidon2 permutations** are executed correctly (full rounds: x^7 S-box + MDS, internal rounds: x^7 on lane 0 + diagonal MDS)
+1. **All 2,091 Poseidon2 permutations** are executed correctly (full rounds: x^7 S-box + MDS, internal rounds: x^7 on lane 0 + diagonal MDS)
 2. **Round counter** increments correctly within each permutation and resets at boundaries
 3. **Permutation index** stays constant within permutations and increments at boundaries
 4. **Call type** stays constant within each permutation
@@ -47,7 +47,7 @@ Because the trace IS the SPHINCS+ verification, proving the trace is correct = p
 | Parameters | n=16, h=63, d=7, k=10, a=12, w=16 |
 | Trace size | 23,861 rows × 64 columns (next pow2: 32,768) |
 | Poseidon2 calls | 2,091 |
-| Constraints | 53 (16 core + 12 absorption + 12 state carry + 8 THASH absorb + 2 boolean + 3 copies) |
+| Constraints | 53 (16 core + 12 absorption + 12 state carry + 8 THASH absorb + 4 boolean + 3 copies) |
 | Proof size | ~85 KB (blowup=16, queries=27, ~108-bit conjectured security) |
 | Proving time | ~37 seconds (WSL, blowup=16) |
 | Verification time | ~4 ms |
@@ -56,12 +56,12 @@ Because the trace IS the SPHINCS+ verification, proving the trace is correct = p
 
 ## What Is NOT Proven (Current Limitations)
 
-- ~~**Input dataflow**: AIR proves permutations are correct but does not yet constrain that the INPUT to each permutation is correct~~ → **PARTIALLY FIXED 2026-07-21** (THASH absorb[0..1] bound; addr binding in absorb[2..5] deferred)
-- ~~**Sponge state carry**: Each permutation starts from ZERO state rather than carrying the sponge state across permutations~~ → **FIXED 2026-07-21**
-- ~~**m_pub vs com semantic gap**: trace builder uses `m_pub` as signed message, but issuer signs `com`~~ → **FIXED 2026-07-21**
-- **Call type sequencing**: The sequence of call types is not yet AIR-constrained
-- **pk_root not asserted in AIR**: pk_root is in proof header but not bound to trace via boundary assertion
-- **Hardcoded N=16**: trace_builder.rs only supports dev params (n=16)
+- ~~**Input dataflow**~~ → **FIXED 2026-07-22** (THASH absorb[0..5] bound to domain+pub_seed+addr, constraints 45-52)
+- ~~**Sponge state carry**~~ → **FIXED 2026-07-21**
+- ~~**m_pub vs com semantic gap**~~ → **FIXED 2026-07-21**
+- ~~**pk_root not asserted in AIR**~~ → **FIXED 2026-07-22** (boundary assertion at root_row)
+- **Call type sequencing**: The sequence of call types is not yet AIR-constrained (indirectly covered by root assertion)
+- **Hardcoded N=16**: n=16 is sufficient for 128-bit target; parameterization for n=24 deferred
 - **Formal security**: No UC proof, no side-channel resistance
 
 **Now proven** (since 2026-07-21):
@@ -70,7 +70,7 @@ Because the trace IS the SPHINCS+ verification, proving the trace is correct = p
 - ✅ Commit and Encrypt computations are endogenous (in-trace, CallType::Commit + CallType::Encrypt)
 - ✅ Commit output bound to public input `com` via boundary assertions at row 30
 - ✅ OOM resolved: blowup_factor 32→8, num_queries 32→27 (~4x memory reduction)
-- ✅ Public input context binding: ctx_hash = Blake3(pk ‖ pk_e ‖ com ‖ m_pub ‖ public_ctx ‖ sigma_c) in proof header (272 bytes: magic + version + metadata + ctx_hash), verified on verification
+- ✅ Public input context binding: ctx_hash = Blake3(pk ‖ pk_e ‖ com ‖ m_pub ‖ public_ctx ‖ sigma_c) in proof header (296 bytes), verified on verification
 - ✅ C-level signature guard: spx_p2_verify_com rejects invalid sigma_com before Rust prover
 - ✅ Proof format: magic "PFP2" + version=2 for format detection
 - ✅ **Sponge state continuity**: Rust trace builder now carries Poseidon2 sponge state across permutation blocks within each hash operation, matching C's poseidon2_inc_* semantics. AIR enforces continuity via carries_from_prev/carries_to_next flags and init_state columns (cols 39-52)

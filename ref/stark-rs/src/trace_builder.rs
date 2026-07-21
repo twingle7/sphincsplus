@@ -52,7 +52,7 @@ pub const PARAMS_C13: SpxParams = SpxParams { n: 16, h: 60, d: 6, k: 14, a: 12, 
 // Prove-fast variant (d=4, fewer layers → faster proving)
 pub const PARAMS_FAST: SpxParams = SpxParams { n: 16, h: 60, d: 4, k: 14, a: 12, w: 16 };
 
-// Default: dev params (fast iteration, no security claims)
+// Default: 128-bit security params
 pub const N: usize = 16; pub const H: usize = 63; pub const D: usize = 7;
 pub const A: usize = 12; pub const K: usize = 10; pub const W: usize = 16; pub const LOGW: usize = 4;
 pub const TREE_HEIGHT: usize = H / D;

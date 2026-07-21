@@ -234,10 +234,10 @@ The canonical public API entry points are documented in `ref/README.md`.
 The Rust crate `sphincsplus-stark-rs` implements TWO AIRs — always prefer full-AIR for new work:
 
 **Full-AIR** (in `air_engine.rs` + `trace_builder.rs`) — **current recommended path.** Self-contained proof of the ENTIRE SPHINCS+ verification trace. No external C guards needed.
-- Trace: 131,072 rows × 64 columns (dev params), 3,686 Poseidon2 permutations
-- Approach: trace builder walks through `crypto_sign_verify`, pre-computes expected next state using `poseidon2_round`, stores in trace columns 16..27. AIR checks `nxt == expected` via simple equality constraints.
-- 16 constraints: 6 rate lanes + round counter + perm index + call type + pad flag
-- Proof: ~95 KB, ~127 seconds (dev params)
+- Trace: 23,861 rows × 64 columns (128-bit params), 2,091 Poseidon2 permutations
+- Approach: trace builder walks through `crypto_sign_verify`, pre-computes expected next state using `poseidon2_round`, stores in trace columns 16..27. AIR checks `nxt == expected` via simple equality constraints. Sponge state continuity, input binding, and root assertion also enforced.
+- 53 constraints: rate/capacity lanes + round counter + perm index + call type + pad flag + sponge continuity + THASH absorb binding + root assertion
+- Proof: ~85 KB, ~37 seconds (128-bit, blowup=16, WSL)
 - C FFI: `spx_p2_ffi_generate_pi_f_full_air` / `spx_p2_ffi_verify_pi_f_full_air`
 - Rust FFI: `spx_p2_rust_generate_pi_f_full_air` / `spx_p2_rust_verify_pi_f_full_air` / `spx_p2_rust_get_abi_version_full_air`
 

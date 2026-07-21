@@ -14,10 +14,10 @@ Two AIRs coexist:
 ## Full-AIR
 
 - Proves ALL Poseidon2 permutations in the SPHINCS+ verification trace
-- 131,072 rows × 64 columns (dev params), 3,686 permutations
-- Pre-computed expected-next-state approach (trace cols 16..27)
-- 16 constraints: 6 rate lanes + round/perm/call/pad checks
-- Proof: ~95 KB, ~127 seconds (dev params)
+- 23,861 rows × 64 columns (128-bit params), 2,091 permutations
+- Pre-computed expected-next-state approach (trace cols 16..27) + sponge continuity + input binding
+- 53 constraints: rate/capacity + round/perm/call/pad + carry + THASH absorb + root assertion
+- Proof: ~85 KB, ~37 seconds (128-bit, blowup=16)
 - C FFI: `spx_p2_rust_generate_pi_f_full_air` / `verify_pi_f_full_air`
 
 ## Build

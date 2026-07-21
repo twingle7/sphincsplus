@@ -7,7 +7,7 @@ All measurements on WSL2 (Ubuntu), 8GB RAM, Intel Core i7.
 | Name | n | h | d | k | a | FORS security | SPX_BYTES | Trace rows | Poseidon2 calls |
 |------|---|---|---|---|---|--------------|-----------|-------------|-----------------|
 | Dev (128f-small) | 16 | 40 | 4 | 8 | 6 | ~48-bit | 3,792 | ~13K | 1,121 |
-| **128f** | **16** | **63** | **7** | **10** | **12** | **~120-bit** | **7,024** | **~50K** | **~4,534** |
+| **128f** | **16** | **63** | **7** | **10** | **12** | **~120-bit** | **7,024** | **23,861** | **2,091** |
 
 ## Dev Parameters (h=40, blowup=16, queries=27) — WSL Measured
 
