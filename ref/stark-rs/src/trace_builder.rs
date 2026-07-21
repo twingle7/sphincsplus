@@ -131,6 +131,10 @@ impl TraceRecorder {
         // carries flags at every row (needed for continuity constraints at is_last)
         r[39] = BaseElement::new(if carries_from_prev { 1 } else { 0 });
         r[40] = BaseElement::new(if carries_to_next { 1 } else { 0 });
+        // is_thash flag at every row: 1 for THASH call types (ForsLeaf..Merkle)
+        let is_thash = matches!(ct, CallType::ForsLeaf | CallType::ForsAuth | CallType::ForsPk
+            | CallType::WotsChain | CallType::WotsPk | CallType::WotsLeafHash | CallType::Merkle);
+        r[53] = BaseElement::new(if is_thash { 1 } else { 0 });
         if round == 0 {
             for i in 0..P2_RATE { r[28 + i] = absorb[i]; }
             // Store init_state in cols 41-52 (at row 0 only)
@@ -316,10 +320,17 @@ fn hash_message(state: &mut [BaseElement; P2_T], r: &[u8], pk: &[u8], msg: &[u8]
 }
 
 // ── Main (dev params, backward compat) ──
-pub fn build_verification_trace(pk: &[u8], sigma_com: &[u8], m_pub: &[u8],
-    m: &[u8], r: &[u8], pk_e: &[u8], omega2: &[u8]) -> (Vec<Vec<BaseElement>>, usize, u64, BaseElement, BaseElement, BaseElement, BaseElement) {
+pub fn build_verification_trace(pk: &[u8], sigma_com: &[u8], _m_pub: &[u8],
+    m: &[u8], r: &[u8], pk_e: &[u8], omega2: &[u8]) -> (Vec<Vec<BaseElement>>, usize, u64, BaseElement, BaseElement, BaseElement, BaseElement, BaseElement, BaseElement) {
     assert_eq!(pk.len(), PK_BYTES); assert_eq!(sigma_com.len(), SIG_BYTES);
     let pub_seed = &pk[0..N]; let sig_r = &sigma_com[0..N];
+    // Pre-compute pub_seed as field elements for absorb binding
+    let mut ps_lo: u64 = 0;
+    for i in 0..7 { ps_lo |= (pub_seed[i] as u64) << (8 * i); }
+    let mut ps_hi: u64 = 0;
+    for i in 0..8 { ps_hi |= (pub_seed[7 + i] as u64) << (8 * i); }
+    let pub_seed_lo = BaseElement::new(ps_lo);
+    let pub_seed_hi = BaseElement::new(ps_hi);
     let fors_sig = &sigma_com[N..N+FORS_BYTES]; let ht_sig = &sigma_com[N+FORS_BYTES..];
     let mut state = [BaseElement::ZERO; P2_T]; let mut trace = TraceRecorder::new();
 
@@ -386,7 +397,7 @@ pub fn build_verification_trace(pk: &[u8], sigma_com: &[u8], m_pub: &[u8],
     let com_l0 = BaseElement::new(u64::from_le_bytes(com_output[0..8].try_into().unwrap_or([0;8])));
     let com_l1 = BaseElement::new(u64::from_le_bytes(com_output[8..16].try_into().unwrap_or([0;8])));
     let (trace_data, num_cols, total_perms) = trace.into_trace();
-    (trace_data, num_cols, total_perms, pk_root_l0, pk_root_l1, com_l0, com_l1)
+    (trace_data, num_cols, total_perms, pk_root_l0, pk_root_l1, com_l0, com_l1, pub_seed_lo, pub_seed_hi)
 }
 
 #[cfg(test)] mod tests {
@@ -394,7 +405,7 @@ pub fn build_verification_trace(pk: &[u8], sigma_com: &[u8], m_pub: &[u8],
     #[test] fn test_build_trace() {
         let pk = vec![0x42u8; PK_BYTES]; let m_pub = vec![0x27u8; N];
         let sigma_com = vec![0x00u8; SIG_BYTES];
-        let (t, nc, tp, _, _, _, _) = build_verification_trace(&pk, &sigma_com, &m_pub, &[], &[], &[], &[]);
+        let (t, nc, tp, _, _, _, _, _, _) = build_verification_trace(&pk, &sigma_com, &m_pub, &[], &[], &[], &[]);
         assert!(t.len().is_power_of_two()); assert!(nc <= 255);
         eprintln!("Trace: {} rows × {} cols, {} perms", t.len(), nc, tp);
     }
