@@ -47,7 +47,7 @@ Because the trace IS the SPHINCS+ verification, proving the trace is correct = p
 | Parameters | n=16, h=40, d=4, k=8, a=6, w=16 |
 | Trace size | 131,072 rows × 64 columns |
 | Poseidon2 permutations | 3,686 |
-| Constraints | 31 (16 core + 12 absorption + 3 copies) |
+| Constraints | 45 (16 core + 12 absorption + 12 state carry + 2 boolean flags + 3 copies) |
 | Proof size | ~72 KB (blowup=8, queries=27) |
 | Proving time | ~65 seconds (est., blowup=8 → 2× faster than blowup=32) |
 | Verification time | ~1.5 ms |
@@ -56,9 +56,10 @@ Because the trace IS the SPHINCS+ verification, proving the trace is correct = p
 ## What Is NOT Proven (Current Limitations)
 
 - **Input dataflow**: AIR proves permutations are correct but does not yet constrain that the INPUT to each permutation is correct (right addresses, domain tags, message blocks)
-- **Sponge state carry**: Each permutation starts from ZERO state rather than carrying the sponge state across permutations
-- **m_pub vs com semantic gap**: trace builder uses `m_pub` as signed message, but issuer signs `com`. C-level `spx_p2_verify_com` guard prevents invalid proofs, but the proof proves the wrong statement internally
+- ~~**Sponge state carry**: Each permutation starts from ZERO state rather than carrying the sponge state across permutations~~ → **FIXED 2026-07-21**
+- ~~**m_pub vs com semantic gap**: trace builder uses `m_pub` as signed message, but issuer signs `com`~~ → **FIXED 2026-07-21**
 - **Call type sequencing**: The sequence of call types is not yet AIR-constrained
+- **pk_root not asserted in AIR**: pk_root is in proof header but not bound to trace via boundary assertion
 - **Hardcoded N=16**: trace_builder.rs only supports dev params (n=16)
 - **Formal security**: No UC proof, no side-channel resistance
 
@@ -71,6 +72,10 @@ Because the trace IS the SPHINCS+ verification, proving the trace is correct = p
 - ✅ Public input context binding: ctx_hash = Blake3(pk ‖ pk_e ‖ com ‖ m_pub ‖ public_ctx ‖ sigma_c) in proof header (272 bytes: magic + version + metadata + ctx_hash), verified on verification
 - ✅ C-level signature guard: spx_p2_verify_com rejects invalid sigma_com before Rust prover
 - ✅ Proof format: magic "PFP2" + version=2 for format detection
+- ✅ **Sponge state continuity**: Rust trace builder now carries Poseidon2 sponge state across permutation blocks within each hash operation, matching C's poseidon2_inc_* semantics. AIR enforces continuity via carries_from_prev/carries_to_next flags and init_state columns (cols 39-52)
+- ✅ **Padding fixed**: Extra empty padding block removed; now matches C's pad10*1 exactly
+- ✅ **Domain tags corrected**: THASH_F=0x11, THASH_H=0x12, THASH_TL=0x13 now match C layer
+- ✅ **m_pub→com_output**: hash_message now signs the commitment (com_output), matching C's crypto_sign_verify(com, ...)
 - ✅ All 9 strict regression tests passing (7.7s prove, 5.6ms verify, ~71KB proof)
 
 ## Comparison Path
