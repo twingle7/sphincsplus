@@ -341,7 +341,7 @@ pub unsafe extern "C" fn spx_p2_rust_generate_pi_f_full_air(
     let mut tt = TraceTable::new(TRACE_WIDTH, trace_len);
     for r in 0..trace_len { for c in 0..TRACE_WIDTH { tt.set(c, r, trace_data[r][c]); } }
     let pi = SpxVerifyPublicInputs::from_values(start_state, result_state, total_perms, root_perm, pk_root_l0, pk_root_l1, com_l0, com_l1, pub_seed_lo, pub_seed_hi, pub_seed_15);
-    let opts = ProofOptions::new(27, 8, 0, FieldExtension::None, 8, 31, BatchingMethod::Linear, BatchingMethod::Linear);
+    let opts = ProofOptions::new(27, 16, 0, FieldExtension::None, 8, 31, BatchingMethod::Linear, BatchingMethod::Linear);
     let prover = SpxVerifyProver{options:opts, pub_inputs:pi, trace:tt};
     match prover.prove(prover.trace.clone()) {
         Ok(proof) => {
@@ -492,7 +492,7 @@ pub unsafe extern "C" fn spx_p2_rust_get_abi_version_full_air(out_version: *mut 
         let mut ss = [BaseElement::ZERO; P2_T]; for i in 0..P2_T { ss[i] = td[0][i]; }
         let mut rs = [BaseElement::ZERO; P2_T]; for i in 0..P2_T { rs[i] = td[tl-1][i]; }
         let pi = SpxVerifyPublicInputs::from_values(ss, rs, tp, rp, pk_l0, pk_l1, com_l0, com_l1, ps_lo, ps_hi, ps15);
-        let opts = ProofOptions::new(27, 8, 0, FieldExtension::None, 8, 31, BatchingMethod::Linear, BatchingMethod::Linear);
+        let opts = ProofOptions::new(27, 16, 0, FieldExtension::None, 8, 31, BatchingMethod::Linear, BatchingMethod::Linear);
         let p = SpxVerifyProver{options:opts.clone(), pub_inputs:pi.clone(), trace:tt};
         let proof = p.prove(p.trace.clone()).unwrap();
         let proof_bytes = proof.to_bytes();
@@ -523,7 +523,7 @@ pub unsafe extern "C" fn spx_p2_rust_get_abi_version_full_air(out_version: *mut 
         let mut ss = [BaseElement::ZERO; P2_T]; for i in 0..P2_T { ss[i] = td[0][i]; }
         let mut rs = [BaseElement::ZERO; P2_T]; for i in 0..P2_T { rs[i] = td[tl-1][i]; }
         let pi = SpxVerifyPublicInputs::from_values(ss, rs, tp, rp, pk_l0, pk_l1, com_l0, com_l1, ps_lo, ps_hi, ps15);
-        let opts = ProofOptions::new(27, 8, 0, FieldExtension::None, 8, 31, BatchingMethod::Linear, BatchingMethod::Linear);
+        let opts = ProofOptions::new(27, 16, 0, FieldExtension::None, 8, 31, BatchingMethod::Linear, BatchingMethod::Linear);
         let p = SpxVerifyProver{options:opts.clone(), pub_inputs:pi.clone(), trace:tt};
         // Prover may panic if trace violates constraints; catch that.
         let prove_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {

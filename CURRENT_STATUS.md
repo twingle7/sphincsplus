@@ -48,8 +48,8 @@ Because the trace IS the SPHINCS+ verification, proving the trace is correct = p
 | Trace size | 131,072 rows × 64 columns |
 | Poseidon2 permutations | 3,686 |
 | Constraints | 53 (16 core + 12 absorption + 12 state carry + 8 THASH absorb + 2 boolean + 3 copies) |
-| Proof size | ~72 KB (blowup=8, queries=27) |
-| Proving time | ~65 seconds (est., blowup=8 → 2× faster than blowup=32) |
+| Proof size | ~72 KB (blowup=16, queries=27, ~108-bit conjectured security) |
+| Proving time | ~246 seconds (H=63, blowup=16) |
 | Verification time | ~1.5 ms |
 | Column usage | 64 / 255 (25%) |
 
