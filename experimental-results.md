@@ -1,27 +1,39 @@
 # Experimental Results — SPHINCS+-Poseidon2 Fischlin Blind Signature
 
-All measurements on Windows 11 Home China, MinGW64, Rust 1.85+, gcc (MinGW).
+All measurements on WSL2 (Ubuntu), 8GB RAM, Intel Core i7.
 
 ## Parameter Sets
 
-| Name | n | h | d | k | a | FORS security | Trace rows | Permutations |
-|------|---|---|---|---|---|--------------|-------------|-------------|
-| Dev (small) | 16 | 40 | 4 | 8 | 6 | ~48-bit | ~13K | ~1,150 |
-| **128-bit** | **16** | **63** | **7** | **10** | **12** | **~120-bit** | **~50K** | **~4,534** |
+| Name | n | h | d | k | a | FORS security | SPX_BYTES | Trace rows | Poseidon2 calls |
+|------|---|---|---|---|---|--------------|-----------|-------------|-----------------|
+| Dev (128f-small) | 16 | 40 | 4 | 8 | 6 | ~48-bit | 3,792 | ~13K | 1,121 |
+| **128f** | **16** | **63** | **7** | **10** | **12** | **~120-bit** | **7,024** | **~50K** | **~4,534** |
 
-## STARK Proof Metrics (128-bit params, blowup=16, queries=27)
+## Dev Parameters (h=40, blowup=16, queries=27) — WSL Measured
 
 | Metric | Value |
 |--------|-------|
-| Trace dimensions | ~50K rows × 64 columns |
-| Trace domain size | 262,144 (next power of 2) |
-| Poseidon2 permutations | ~4,534 |
-| AIR constraints | 53 |
-| Proof size | ~71 KB |
-| Prove time | ~246 seconds (single thread) |
-| Verify time | ~5.6 ms |
+| Poseidon2 calls | 1,121 |
+| Trace rows | 12,793 (next pow2: 16,384) |
+| Proof size | 86,061 bytes (~84 KB) |
+| Preprocess | 22.6 ms |
+| **Prove (core)** | **38.5 seconds** |
+| Prove (end-to-end) | 38.5 seconds |
+| **Verify** | **10.7 ms** |
+| Peak RSS | ~4.6 GB |
+| Magic / Version | 0x32504650 ("PFP2") / 2 |
+
+## 128-bit Parameters (h=63, blowup=16, queries=27) — Estimated
+
+| Metric | Value |
+|--------|-------|
+| Poseidon2 calls | ~4,534 |
+| Trace rows | ~50K (next pow2: 65,536 or 131,072) |
+| Proof size | ~85 KB |
+| **Prove (est.)** | **~170 seconds** |
+| **Verify (est.)** | **~11 ms** |
+| Peak RSS (est.) | ~5 GB |
 | Conjectured STARK security | ~108-bit |
-| Memory peak | ~5 GB RSS |
 
 ## Constraint Breakdown (53 total)
 
@@ -44,35 +56,34 @@ All measurements on Windows 11 Home China, MinGW64, Rust 1.85+, gcc (MinGW).
 | 48 | THASH domain membership | 1 |
 | 49-52 | THASH absorb[2..5] = expected | 4 |
 
-## Proof Header Format (296 bytes)
+## Regression Test Results (Dev params, 9/9 PASS)
 
 ```
-[4 magic "PFP2"] [4 version=2] [8 total_perms] [8 root_perm]
-[96 start_state (12×8)] [96 result_state (12×8)]
-[16 pk_root] [16 com] [16 pub_seed] [32 ctx_hash]
+=== Poseidon2 Fischlin Protocol Flow Demo ===       OK
+poseidon2_fischlin_statement_spec test:              OK
+poseidon2_verify_full_guard test:                    OK (49976 constraints, 1 violation)
+poseidon2_cross_backend_consistency test:            OK
+poseidon2_statement_binding test:                    OK (pi_f_len=85999)
+poseidon2_trace_replay_binding test:                 OK (pi_f_len=85421)
+poseidon2_roles_interaction test:                    OK (pi_f_len=85166)
+poseidon2_fischlin_blind_e2e test:                   OK (pi_f_len=86320)
+poseidon2_stark_stats:                               OK
+[strict] regression: PASS
 ```
-
-## Comparison: Dev vs 128-bit vs Blowup
-
-| Config | Prove | Verify | Proof | Security |
-|--------|-------|--------|-------|----------|
-| Dev (blowup=8) | ~72s | ~5.6ms | ~71KB | ~80-bit |
-| 128-bit (blowup=8) | ~156s | ~5.6ms | ~71KB | ~80-bit |
-| **128-bit (blowup=16)** | **~246s** | **~5.6ms** | **~71KB** | **~108-bit** |
 
 ## WSL Benchmark Commands
 
 ```bash
-# Setup
+# Setup — 128-bit params
 cd /mnt/d/Desktop/sphincsplus/ref
-export PARAMS=sphincs-poseidon2-128f-small
+export PARAMS=sphincs-poseidon2-128f      # new 128-bit param file
 export THASH=simple
 export CC=gcc
 
 # Build Rust backend
 cd stark-rs && cargo build --release && cd ..
 
-# Full strict regression (all 9 tests)
+# Full strict regression
 bash scripts/run_strict_regression.sh
 
 # Individual protocol benchmark
@@ -89,19 +100,15 @@ make -B PARAMS=$PARAMS THASH=$THASH CC=$CC \
   EXTRA_CFLAGS="-DSPX_P2_USE_RUST_STARK" \
   test/poseidon2_stark_stats
 ./test/poseidon2_stark_stats
+
+# Dev params (fast iteration)
+export PARAMS=sphincs-poseidon2-128f-small
 ```
 
 ## Rust Unit Tests
 
 ```bash
 cd /mnt/d/Desktop/sphincsplus/ref/stark-rs
-
-# Air engine tests (E2E prove+verify + tamper rejection)
 cargo test --lib air_engine
-
-# All lib tests
 cargo test --lib
-
-# With release build
-cargo test --lib --release
 ```
