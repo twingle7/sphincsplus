@@ -45,8 +45,8 @@ pub const PARAMS_C13: SpxParams = SpxParams { n: 16, h: 60, d: 6, k: 14, a: 12, 
 pub const PARAMS_FAST: SpxParams = SpxParams { n: 16, h: 60, d: 4, k: 14, a: 12, w: 16 };
 
 // Default: dev params (fast iteration, no security claims)
-pub const N: usize = 16; pub const H: usize = 40; pub const D: usize = 4;
-pub const A: usize = 6; pub const K: usize = 8; pub const W: usize = 16; pub const LOGW: usize = 4;
+pub const N: usize = 16; pub const H: usize = 63; pub const D: usize = 7;
+pub const A: usize = 12; pub const K: usize = 10; pub const W: usize = 16; pub const LOGW: usize = 4;
 pub const TREE_HEIGHT: usize = H / D;
 pub const WOTS_LEN1: usize = 8 * N / LOGW; pub const WOTS_LEN2: usize = 3;
 pub const WOTS_LEN: usize = WOTS_LEN1 + WOTS_LEN2;
@@ -109,11 +109,13 @@ pub enum CallType { Hmsg=0, ForsLeaf=1, ForsAuth=2, ForsPk=3, WotsChain=4, WotsP
 // ── Trace Recorder ──
 pub struct TraceRecorder {
     trace: Vec<Vec<BaseElement>>, num_cols: usize, row: usize, perm_index: usize,
+    pub_seed_15: Option<BaseElement>,
 }
 
 impl TraceRecorder {
     pub fn new() -> Self {
-        Self { trace: Vec::with_capacity(4000*PERM_PERIOD), num_cols: TRACE_COLS, row: 0, perm_index: 0 }
+        Self { trace: Vec::with_capacity(4000*PERM_PERIOD), num_cols: TRACE_COLS,
+               row: 0, perm_index: 0, pub_seed_15: None }
     }
 
     fn push_row(&mut self, state: &[BaseElement; P2_T], expected_next: &[BaseElement; P2_T],
@@ -146,6 +148,18 @@ impl TraceRecorder {
                 for b in 0..8 { val |= (ab[w*8 + b] as u64) << (8 * b); }
                 r[35 + w] = BaseElement::new(val);
             }
+            // Pre-compute expected absorb[2..5] from addr bytes + pub_seed last byte
+            // absorb[2] = LE(pub_seed[15] || addr[0..6]); absorb[3..5] = LE(addr[7..30])
+            let ps15 = self.pub_seed_15.unwrap_or(BaseElement::ZERO);
+            let mut exp2: u64 = ps15.as_int() & 0xFF;
+            for b in 0..7 { exp2 |= (ab[b] as u64) << (8 * (b+1)); }
+            r[54] = BaseElement::new(exp2);
+            let mut exp3: u64 = 0; for b in 0..8 { exp3 |= (ab[7+b] as u64) << (8 * b); }
+            r[55] = BaseElement::new(exp3);
+            let mut exp4: u64 = 0; for b in 0..8 { exp4 |= (ab[15+b] as u64) << (8 * b); }
+            r[56] = BaseElement::new(exp4);
+            let mut exp5: u64 = 0; for b in 0..8 { exp5 |= (ab[23+b] as u64) << (8 * b); }
+            r[57] = BaseElement::new(exp5);
         }
         self.row += 1;
     }
@@ -321,7 +335,7 @@ fn hash_message(state: &mut [BaseElement; P2_T], r: &[u8], pk: &[u8], msg: &[u8]
 
 // ── Main (dev params, backward compat) ──
 pub fn build_verification_trace(pk: &[u8], sigma_com: &[u8], _m_pub: &[u8],
-    m: &[u8], r: &[u8], pk_e: &[u8], omega2: &[u8]) -> (Vec<Vec<BaseElement>>, usize, u64, BaseElement, BaseElement, BaseElement, BaseElement, BaseElement, BaseElement) {
+    m: &[u8], r: &[u8], pk_e: &[u8], omega2: &[u8]) -> (Vec<Vec<BaseElement>>, usize, u64, BaseElement, BaseElement, BaseElement, BaseElement, BaseElement, BaseElement, u64, BaseElement) {
     assert_eq!(pk.len(), PK_BYTES); assert_eq!(sigma_com.len(), SIG_BYTES);
     let pub_seed = &pk[0..N]; let sig_r = &sigma_com[0..N];
     // Pre-compute pub_seed as field elements for absorb binding
@@ -331,8 +345,10 @@ pub fn build_verification_trace(pk: &[u8], sigma_com: &[u8], _m_pub: &[u8],
     for i in 0..8 { ps_hi |= (pub_seed[7 + i] as u64) << (8 * i); }
     let pub_seed_lo = BaseElement::new(ps_lo);
     let pub_seed_hi = BaseElement::new(ps_hi);
+    let pub_seed_15 = BaseElement::new(pub_seed[15] as u64);
     let fors_sig = &sigma_com[N..N+FORS_BYTES]; let ht_sig = &sigma_com[N+FORS_BYTES..];
     let mut state = [BaseElement::ZERO; P2_T]; let mut trace = TraceRecorder::new();
+    trace.pub_seed_15 = Some(pub_seed_15);
 
     // ── Commit: com = Poseidon2(domain=0x20, m || r) ──
     let mut com_input = Vec::new();
@@ -377,6 +393,10 @@ pub fn build_verification_trace(pk: &[u8], sigma_com: &[u8], _m_pub: &[u8],
         root = compute_root(&mut state, pub_seed, &leaf, cur_idx, 0, auth_path, TREE_HEIGHT as u32, &tree_addr, &mut trace);
         cur_idx = cur_tree as u32 & ((1u32<<TREE_HEIGHT)-1); cur_tree >>= TREE_HEIGHT;
     }
+    // The final root is the output of the first perm in the last Merkle hash of the last HT layer.
+    // After record_permutation, perm_index points to the NEXT slot, so the first perm of
+    // the last thash is at perm_index - 2 (since each thash does 2 perms for Merkle).
+    let root_perm = (trace.perm_index - 2) as u64;
     // ── Encrypt: sigma_C_enc = Poseidon2(domain=0xFF, label || pk_e || com || sigma_com || omega2) ──
     let label = b"m20-pke-ct-v1";
     let mut enc_input = Vec::new();
@@ -397,7 +417,7 @@ pub fn build_verification_trace(pk: &[u8], sigma_com: &[u8], _m_pub: &[u8],
     let com_l0 = BaseElement::new(u64::from_le_bytes(com_output[0..8].try_into().unwrap_or([0;8])));
     let com_l1 = BaseElement::new(u64::from_le_bytes(com_output[8..16].try_into().unwrap_or([0;8])));
     let (trace_data, num_cols, total_perms) = trace.into_trace();
-    (trace_data, num_cols, total_perms, pk_root_l0, pk_root_l1, com_l0, com_l1, pub_seed_lo, pub_seed_hi)
+    (trace_data, num_cols, total_perms, pk_root_l0, pk_root_l1, com_l0, com_l1, pub_seed_lo, pub_seed_hi, root_perm, pub_seed_15)
 }
 
 #[cfg(test)] mod tests {
@@ -405,7 +425,7 @@ pub fn build_verification_trace(pk: &[u8], sigma_com: &[u8], _m_pub: &[u8],
     #[test] fn test_build_trace() {
         let pk = vec![0x42u8; PK_BYTES]; let m_pub = vec![0x27u8; N];
         let sigma_com = vec![0x00u8; SIG_BYTES];
-        let (t, nc, tp, _, _, _, _, _, _) = build_verification_trace(&pk, &sigma_com, &m_pub, &[], &[], &[], &[]);
+        let (t, nc, tp, _, _, _, _, _, _, _, _) = build_verification_trace(&pk, &sigma_com, &m_pub, &[], &[], &[], &[]);
         assert!(t.len().is_power_of_two()); assert!(nc <= 255);
         eprintln!("Trace: {} rows × {} cols, {} perms", t.len(), nc, tp);
     }

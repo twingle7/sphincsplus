@@ -30,33 +30,37 @@ pub const VERSION_LEN: usize = 4;
 #[derive(Debug, Clone)]
 pub struct SpxVerifyPublicInputs {
     pub start_state: [BaseElement; P2_T], pub result_state: [BaseElement; P2_T],
-    pub total_perms: u64,
+    pub total_perms: u64, pub root_perm: u64,
     pub pk_root_l0: BaseElement, pub pk_root_l1: BaseElement,
     pub com_l0: BaseElement, pub com_l1: BaseElement,
     pub pub_seed_lo: BaseElement, pub pub_seed_hi: BaseElement,
+    pub pub_seed_15: BaseElement,
 }
 impl SpxVerifyPublicInputs {
-    pub fn from_values(start: [BaseElement; P2_T], result: [BaseElement; P2_T], p: u64,
+    pub fn from_values(start: [BaseElement; P2_T], result: [BaseElement; P2_T], p: u64, rp: u64,
                        rl0: BaseElement, rl1: BaseElement,
                        cl0: BaseElement, cl1: BaseElement,
-                       ps_lo: BaseElement, ps_hi: BaseElement) -> Self {
-        Self{start_state:start, result_state:result, total_perms:p,
+                       ps_lo: BaseElement, ps_hi: BaseElement,
+                       ps15: BaseElement) -> Self {
+        Self{start_state:start, result_state:result, total_perms:p, root_perm:rp,
              pk_root_l0:rl0, pk_root_l1:rl1, com_l0:cl0, com_l1:cl1,
-             pub_seed_lo:ps_lo, pub_seed_hi:ps_hi}
+             pub_seed_lo:ps_lo, pub_seed_hi:ps_hi, pub_seed_15:ps15}
     }
 }
 impl ToElements<BaseElement> for SpxVerifyPublicInputs {
     fn to_elements(&self) -> Vec<BaseElement> {
-        let mut v = Vec::with_capacity(2 * P2_T + 7);
+        let mut v = Vec::with_capacity(2 * P2_T + 9);
         v.extend_from_slice(&self.start_state);
         v.extend_from_slice(&self.result_state);
         v.push(BaseElement::new(self.total_perms));
+        v.push(BaseElement::new(self.root_perm));
         v.push(self.pk_root_l0);
         v.push(self.pk_root_l1);
         v.push(self.com_l0);
         v.push(self.com_l1);
         v.push(self.pub_seed_lo);
         v.push(self.pub_seed_hi);
+        v.push(self.pub_seed_15);
         v
     }
 }
@@ -64,8 +68,9 @@ impl ToElements<BaseElement> for SpxVerifyPublicInputs {
 pub struct SpxVerifyAir {
     context: AirContext<BaseElement>,
     start_state: [BaseElement; P2_T], result_state: [BaseElement; P2_T], total_perms: u64,
+    root_perm: u64,
+    pk_root_l0: BaseElement, pk_root_l1: BaseElement,
     com_l0: BaseElement, com_l1: BaseElement,
-    // Defect 1: expected absorb[0] per THASH domain tag
     expected_absorb0_f: BaseElement, expected_absorb0_h: BaseElement, expected_absorb0_tl: BaseElement,
     pub_seed_hi: BaseElement,
     inv_f: BaseElement, inv_h: BaseElement, inv_tl: BaseElement,
@@ -118,6 +123,8 @@ impl Air for SpxVerifyAir {
             d389118.clone(),
             // 48: THASH domain membership (deg=4*131071-4095=520189)
             d520189.clone(),
+            // 49-52: THASH absorb[2..5] = expected (deg=3*131071-4095=389118, same as 46-47)
+            d389118.clone(), d389118.clone(), d389118.clone(), d389118.clone(),
         ];
         // Pre-compute expected absorb[0] per THASH domain tag
         // absorb[0] = LE(domain_byte || pub_seed[0..6]) = domain_byte + 256 * pub_seed_lo
@@ -134,9 +141,11 @@ impl Air for SpxVerifyAir {
         let inv_h  = BaseElement::new(0xFFFFFFFF00000000u64); // -1
         let inv_tl = BaseElement::new(0x7FFFFFFF80000001u64); // 1/2
         Self {
-            context: AirContext::new(trace_info, degrees, 2 * P2_T + 4, options),
+            context: AirContext::new(trace_info, degrees, 2 * P2_T + 6, options),
             start_state: pub_inputs.start_state, result_state: pub_inputs.result_state,
             total_perms: pub_inputs.total_perms,
+            root_perm: pub_inputs.root_perm,
+            pk_root_l0: pub_inputs.pk_root_l0, pk_root_l1: pub_inputs.pk_root_l1,
             com_l0: pub_inputs.com_l0, com_l1: pub_inputs.com_l1,
             expected_absorb0_f, expected_absorb0_h, expected_absorb0_tl,
             pub_seed_hi: pub_inputs.pub_seed_hi,
@@ -214,11 +223,16 @@ impl Air for SpxVerifyAir {
         result[47] = is_first * is_thash * is_first_in_chain * (absorb1 - E::from(self.pub_seed_hi));
         // Constraint 48: domain ∈ {0x11, 0x12, 0x13} when is_thash=1
         result[48] = is_first * is_thash * (domain - d_17) * (domain - d_18) * (domain - d_19);
+        // Constraint 49-52: THASH absorb[2..5] = expected (addr-derived) for first perm of chain
+        result[49] = is_first * is_thash * is_first_in_chain * (cur[30] - cur[54]); // absorb[2] vs exp[2]
+        result[50] = is_first * is_thash * is_first_in_chain * (cur[31] - cur[55]); // absorb[3] vs exp[3]
+        result[51] = is_first * is_thash * is_first_in_chain * (cur[32] - cur[56]); // absorb[4] vs exp[4]
+        result[52] = is_first * is_thash * is_first_in_chain * (cur[33] - cur[57]); // absorb[5] vs exp[5]
     }
 
     fn get_assertions(&self) -> Vec<Assertion<Self::BaseField>> {
         let last = self.trace_length() - 1;
-        let mut a = Vec::with_capacity(2 * P2_T + 6);
+        let mut a = Vec::with_capacity(2 * P2_T + 8);
         // All 12 state lanes at start and end
         for lane in 0..P2_T {
             a.push(Assertion::single(lane, 0, self.start_state[lane]));
@@ -229,6 +243,10 @@ impl Air for SpxVerifyAir {
         // Commit output bound to public input com (first permutation output at row TOTAL_ROUNDS=30)
         a.push(Assertion::single(0, TOTAL_ROUNDS, self.com_l0));
         a.push(Assertion::single(1, TOTAL_ROUNDS, self.com_l1));
+        // pk_root bound to final HT root output state
+        let root_row = (self.root_perm as usize) * PERM_PERIOD + TOTAL_ROUNDS;
+        a.push(Assertion::single(0, root_row, self.pk_root_l0));
+        a.push(Assertion::single(1, root_row, self.pk_root_l1));
         a
     }
 
@@ -313,7 +331,7 @@ pub unsafe extern "C" fn spx_p2_rust_generate_pi_f_full_air(
         std::slice::from_raw_parts(pubi.pk_e, trace_builder::N) } else { &[] };
     let omega2 = if !witv.omega2.is_null() {
         std::slice::from_raw_parts(witv.omega2, trace_builder::N) } else { &[] };
-    let (trace_data, _, total_perms, pk_root_l0, pk_root_l1, com_l0, com_l1, pub_seed_lo, pub_seed_hi) = trace_builder::build_verification_trace(pk, sigma_com, m_pub, m, r, pk_e, omega2);
+    let (trace_data, _, total_perms, pk_root_l0, pk_root_l1, com_l0, com_l1, pub_seed_lo, pub_seed_hi, root_perm, pub_seed_15) = trace_builder::build_verification_trace(pk, sigma_com, m_pub, m, r, pk_e, omega2);
     let trace_len = trace_data.len();
     // Extract all 12 start and result state lanes
     let mut start_state = [BaseElement::ZERO; P2_T];
@@ -322,21 +340,22 @@ pub unsafe extern "C" fn spx_p2_rust_generate_pi_f_full_air(
     // Build TraceTable and prove
     let mut tt = TraceTable::new(TRACE_WIDTH, trace_len);
     for r in 0..trace_len { for c in 0..TRACE_WIDTH { tt.set(c, r, trace_data[r][c]); } }
-    let pi = SpxVerifyPublicInputs::from_values(start_state, result_state, total_perms, pk_root_l0, pk_root_l1, com_l0, com_l1, pub_seed_lo, pub_seed_hi);
+    let pi = SpxVerifyPublicInputs::from_values(start_state, result_state, total_perms, root_perm, pk_root_l0, pk_root_l1, com_l0, com_l1, pub_seed_lo, pub_seed_hi, pub_seed_15);
     let opts = ProofOptions::new(27, 8, 0, FieldExtension::None, 8, 31, BatchingMethod::Linear, BatchingMethod::Linear);
     let prover = SpxVerifyProver{options:opts, pub_inputs:pi, trace:tt};
     match prover.prove(prover.trace.clone()) {
         Ok(proof) => {
             let proof_bytes = proof.to_bytes();
-            // Header: [4 magic] [4 version] [8 total_perms] [12*8 start_state] [12*8 result_state] [2*8 pk_root] [2*8 com] [2*8 pub_seed] [32 ctx_hash]
-            let header_len: usize = MAGIC_LEN + VERSION_LEN + 8 + P2_T * 8 * 2 + 2 * 8 + 2 * 8 + 2 * 8 + 32;
+            // Header: [4 magic] [4 version] [8 total_perms] [8 root_perm] [12*8 start_state] [12*8 result_state] [2*8 pk_root] [2*8 com] [2*8 pub_seed] [32 ctx_hash]
+            let header_len: usize = MAGIC_LEN + VERSION_LEN + 8 + 8 + P2_T * 8 * 2 + 2 * 8 + 2 * 8 + 2 * 8 + 32;
             if proof_bytes.len() + header_len > out.cap { return SPX_P2_FULL_AIR_ERR_INPUT; }
             let out_bytes = std::slice::from_raw_parts_mut(out.data, out.cap);
             out_bytes[0..MAGIC_LEN].copy_from_slice(&PI_F_MAGIC.to_le_bytes());
             out_bytes[MAGIC_LEN..MAGIC_LEN+VERSION_LEN].copy_from_slice(&PI_F_VERSION.to_le_bytes());
             let tp_off = MAGIC_LEN + VERSION_LEN;
             out_bytes[tp_off..tp_off+8].copy_from_slice(&total_perms.to_le_bytes());
-            let start_off = tp_off + 8;
+            out_bytes[tp_off+8..tp_off+16].copy_from_slice(&root_perm.to_le_bytes());
+            let start_off = tp_off + 16;
             for i in 0..P2_T {
                 out_bytes[start_off + i*8 .. start_off + (i+1)*8].copy_from_slice(&start_state[i].as_int().to_le_bytes());
                 out_bytes[start_off + P2_T*8 + i*8 .. start_off + P2_T*8 + (i+1)*8].copy_from_slice(&result_state[i].as_int().to_le_bytes());
@@ -388,7 +407,7 @@ pub unsafe extern "C" fn spx_p2_rust_verify_pi_f_full_air(
 ) -> i32 {
     if proof_blob.is_null() || pub_inputs.is_null() { return SPX_P2_FULL_AIR_ERR_NULL; }
     let pf = &*proof_blob; let pubi = &*pub_inputs;
-    let header_len: usize = MAGIC_LEN + VERSION_LEN + 8 + P2_T * 8 * 2 + 2 * 8 + 2 * 8 + 2 * 8 + 32;
+    let header_len: usize = MAGIC_LEN + VERSION_LEN + 8 + 8 + P2_T * 8 * 2 + 2 * 8 + 2 * 8 + 2 * 8 + 32;
     if pf.data.is_null() || pf.len < header_len { return SPX_P2_FULL_AIR_ERR_INPUT; }
     let data = std::slice::from_raw_parts(pf.data, pf.len);
     // Check magic and version
@@ -398,9 +417,10 @@ pub unsafe extern "C" fn spx_p2_rust_verify_pi_f_full_air(
     if version != PI_F_VERSION { return SPX_P2_FULL_AIR_ERR_INPUT; }
     let tp_off = MAGIC_LEN + VERSION_LEN;
     let total_perms = u64::from_le_bytes(data[tp_off..tp_off+8].try_into().unwrap());
+    let root_perm = u64::from_le_bytes(data[tp_off+8..tp_off+16].try_into().unwrap());
     let mut start_state = [BaseElement::ZERO; P2_T];
     let mut result_state = [BaseElement::ZERO; P2_T];
-    let start_off = tp_off + 8;
+    let start_off = tp_off + 16;
     for i in 0..P2_T {
         start_state[i] = BaseElement::new(u64::from_le_bytes(data[start_off + i*8 .. start_off + (i+1)*8].try_into().unwrap()));
         result_state[i] = BaseElement::new(u64::from_le_bytes(data[start_off + P2_T*8 + i*8 .. start_off + P2_T*8 + (i+1)*8].try_into().unwrap()));
@@ -414,6 +434,8 @@ pub unsafe extern "C" fn spx_p2_rust_verify_pi_f_full_air(
     let pub_seed_off = com_off + 16;
     let pub_seed_lo = BaseElement::new(u64::from_le_bytes(data[pub_seed_off .. pub_seed_off + 8].try_into().unwrap()));
     let pub_seed_hi = BaseElement::new(u64::from_le_bytes(data[pub_seed_off + 8 .. pub_seed_off + 16].try_into().unwrap()));
+    // Derive pub_seed_15 from pk (pub_seed = pk[0..N])
+    let pub_seed_15 = BaseElement::new(std::slice::from_raw_parts(pubi.pk, trace_builder::PK_BYTES)[15] as u64);
     // Verify ctx_hash: recompute Blake3(pk || pk_e || com || m_pub || public_ctx || sigma_c) and compare
     let mut hasher = blake3::Hasher::new();
     if pubi.pk.is_null() { return SPX_P2_FULL_AIR_ERR_INPUT; }
@@ -440,7 +462,7 @@ pub unsafe extern "C" fn spx_p2_rust_verify_pi_f_full_air(
     }
     let proof_bytes = &data[header_len..];
     let proof_obj = match Proof::from_bytes(proof_bytes) { Ok(p) => p, Err(_) => return SPX_P2_FULL_AIR_ERR_VERIFY };
-    let pi = SpxVerifyPublicInputs::from_values(start_state, result_state, total_perms, pk_root_l0, pk_root_l1, com_l0, com_l1, pub_seed_lo, pub_seed_hi);
+    let pi = SpxVerifyPublicInputs::from_values(start_state, result_state, total_perms, root_perm, pk_root_l0, pk_root_l1, com_l0, com_l1, pub_seed_lo, pub_seed_hi, pub_seed_15);
     let min_opts = AcceptableOptions::MinConjecturedSecurity(63);
     match winterfell::verify::<SpxVerifyAir, Blake3_256<BaseElement>, DefaultRandomCoin<_>, MerkleTree<_>>(
         proof_obj, pi, &min_opts,
@@ -464,12 +486,12 @@ pub unsafe extern "C" fn spx_p2_rust_get_abi_version_full_air(out_version: *mut 
     fn prove_verify() -> bool {
         let pk = vec![0x42u8; trace_builder::PK_BYTES]; let m_pub = vec![0x27u8; trace_builder::N];
         let sigma_com = vec![0x00u8; trace_builder::SIG_BYTES];
-        let (td, _, tp, pk_l0, pk_l1, com_l0, com_l1, ps_lo, ps_hi) = trace_builder::build_verification_trace(&pk, &sigma_com, &m_pub, &[], &[], &[], &[]);
+        let (td, _, tp, pk_l0, pk_l1, com_l0, com_l1, ps_lo, ps_hi, rp, ps15) = trace_builder::build_verification_trace(&pk, &sigma_com, &m_pub, &[], &[], &[], &[]);
         let tl = td.len(); let mut tt = TraceTable::new(TRACE_WIDTH, tl);
         for r in 0..tl { for c in 0..TRACE_WIDTH { tt.set(c, r, td[r][c]); } }
         let mut ss = [BaseElement::ZERO; P2_T]; for i in 0..P2_T { ss[i] = td[0][i]; }
         let mut rs = [BaseElement::ZERO; P2_T]; for i in 0..P2_T { rs[i] = td[tl-1][i]; }
-        let pi = SpxVerifyPublicInputs::from_values(ss, rs, tp, pk_l0, pk_l1, com_l0, com_l1, ps_lo, ps_hi);
+        let pi = SpxVerifyPublicInputs::from_values(ss, rs, tp, rp, pk_l0, pk_l1, com_l0, com_l1, ps_lo, ps_hi, ps15);
         let opts = ProofOptions::new(27, 8, 0, FieldExtension::None, 8, 31, BatchingMethod::Linear, BatchingMethod::Linear);
         let p = SpxVerifyProver{options:opts.clone(), pub_inputs:pi.clone(), trace:tt};
         let proof = p.prove(p.trace.clone()).unwrap();
@@ -490,15 +512,17 @@ pub unsafe extern "C" fn spx_p2_rust_get_abi_version_full_air(out_version: *mut 
     #[test] fn test_e2e() { assert!(prove_verify()); }
 
     /// Helper: prove a tampered trace. Returns true if tamper is rejected (by prover or verifier).
-    fn tamper_rejected(td: &[Vec<BaseElement>], tp: u64, pk_l0: BaseElement, pk_l1: BaseElement,
+    fn tamper_rejected(td: &[Vec<BaseElement>], tp: u64, rp: u64,
+                       pk_l0: BaseElement, pk_l1: BaseElement,
                        com_l0: BaseElement, com_l1: BaseElement,
-                       ps_lo: BaseElement, ps_hi: BaseElement) -> bool {
+                       ps_lo: BaseElement, ps_hi: BaseElement,
+                       ps15: BaseElement) -> bool {
         let tl = td.len();
         let mut tt = TraceTable::new(TRACE_WIDTH, tl);
         for r in 0..tl { for c in 0..TRACE_WIDTH { tt.set(c, r, td[r][c]); } }
         let mut ss = [BaseElement::ZERO; P2_T]; for i in 0..P2_T { ss[i] = td[0][i]; }
         let mut rs = [BaseElement::ZERO; P2_T]; for i in 0..P2_T { rs[i] = td[tl-1][i]; }
-        let pi = SpxVerifyPublicInputs::from_values(ss, rs, tp, pk_l0, pk_l1, com_l0, com_l1, ps_lo, ps_hi);
+        let pi = SpxVerifyPublicInputs::from_values(ss, rs, tp, rp, pk_l0, pk_l1, com_l0, com_l1, ps_lo, ps_hi, ps15);
         let opts = ProofOptions::new(27, 8, 0, FieldExtension::None, 8, 31, BatchingMethod::Linear, BatchingMethod::Linear);
         let p = SpxVerifyProver{options:opts.clone(), pub_inputs:pi.clone(), trace:tt};
         // Prover may panic if trace violates constraints; catch that.
@@ -522,11 +546,11 @@ pub unsafe extern "C" fn spx_p2_rust_get_abi_version_full_air(out_version: *mut 
         let pk = vec![0x42u8; trace_builder::PK_BYTES];
         let m_pub = vec![0x27u8; trace_builder::N];
         let sigma_com = vec![0x00u8; trace_builder::SIG_BYTES];
-        let (mut td, _, tp, pk_l0, pk_l1, com_l0, com_l1, ps_lo, ps_hi) = trace_builder::build_verification_trace(&pk, &sigma_com, &m_pub, &[], &[], &[], &[]);
+        let (mut td, _, tp, pk_l0, pk_l1, com_l0, com_l1, ps_lo, ps_hi, rp, ps15) = trace_builder::build_verification_trace(&pk, &sigma_com, &m_pub, &[], &[], &[], &[]);
         let original = td[10][0];
         td[10][0] = original + BaseElement::ONE;
         eprintln!("[tamper] row=9 cur[16]={} nxt[0]={}", td[9][16].as_int(), td[10][0].as_int());
-        assert!(tamper_rejected(&td, tp, pk_l0, pk_l1, com_l0, com_l1, ps_lo, ps_hi),
+        assert!(tamper_rejected(&td, tp, rp, pk_l0, pk_l1, com_l0, com_l1, ps_lo, ps_hi, ps15),
                 "Tampered state proof should be rejected");
     }
 
@@ -534,10 +558,10 @@ pub unsafe extern "C" fn spx_p2_rust_get_abi_version_full_air(out_version: *mut 
         let pk = vec![0x42u8; trace_builder::PK_BYTES];
         let m_pub = vec![0x27u8; trace_builder::N];
         let sigma_com = vec![0x00u8; trace_builder::SIG_BYTES];
-        let (mut td, _, tp, pk_l0, pk_l1, com_l0, com_l1, ps_lo, ps_hi) = trace_builder::build_verification_trace(&pk, &sigma_com, &m_pub, &[], &[], &[], &[]);
+        let (mut td, _, tp, pk_l0, pk_l1, com_l0, com_l1, ps_lo, ps_hi, rp, ps15) = trace_builder::build_verification_trace(&pk, &sigma_com, &m_pub, &[], &[], &[], &[]);
         let original = td[5][12];
         td[5][12] = original + BaseElement::new(5);
-        assert!(tamper_rejected(&td, tp, pk_l0, pk_l1, com_l0, com_l1, ps_lo, ps_hi),
+        assert!(tamper_rejected(&td, tp, rp, pk_l0, pk_l1, com_l0, com_l1, ps_lo, ps_hi, ps15),
                 "Tampered round proof should be rejected");
     }
 }
