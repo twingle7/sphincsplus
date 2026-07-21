@@ -1,8 +1,9 @@
-//! Full SPHINCS+ verification AIR with sponge state continuity.
+//! Full SPHINCS+ verification AIR with sponge state continuity and input binding.
 //! Uses pre-computed expected-next-state columns (16..27) for constraint simplicity.
 //! Trace columns (64): state[0..12], round[12], perm[13], call[14], pad[15],
 //!   expected_next[16..28], absorb[28..34], domain[34], addr[35..39],
-//!   carries_from_prev[39], carries_to_next[40], init_state[41..53]
+//!   carries_from_prev[39], carries_to_next[40], init_state[41..53),
+//!   is_thash[53], expected_absorb[54..58]
 
 use winterfell::{
     crypto::{hashers::Blake3_256, DefaultRandomCoin, MerkleTree},

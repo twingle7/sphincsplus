@@ -1,5 +1,5 @@
 //! Full SPHINCS+ verification trace builder.
-//! Dev params: n=16, h=40, d=4, k=8, a=6, w=16
+//! 128-bit security params: n=16, h=63, d=7, k=10, a=12, w=16
 //!
 //! Trace columns (64):
 //!   [0..12)  Poseidon2 state at current row
@@ -8,7 +8,15 @@
 //!   [14]     Call type tag
 //!   [15]     Padding flag (0=real, 1=pad)
 //!   [16..28) Expected next state (pre-computed via poseidon2_round)
-//!   [28..64) Reserved (zero-padded)
+//!   [28..34) Absorb input at round 0
+//!   [34]     Domain tag at round 0
+//!   [35..39) Address bytes (4×u64) at round 0
+//!   [39]     carries_from_prev flag
+//!   [40]     carries_to_next flag
+//!   [41..53) init_state at round 0
+//!   [53]     is_thash flag
+//!   [54..58) expected_absorb[2..5] at round 0
+//!   [58..64) Reserved (zero-padded)
 
 use crate::thash_poseidon2_exact;
 use winterfell::math::{fields::f64::BaseElement, FieldElement};

@@ -40,18 +40,19 @@ The trace builder (`trace_builder.rs`) walks through the complete SPHINCS+ verif
 
 Because the trace IS the SPHINCS+ verification, proving the trace is correct = proving the verification passed.
 
-## Key Metrics (Dev Parameters)
+## Key Metrics (128-bit Parameters)
 
 | Metric | Value |
 |--------|-------|
-| Parameters | n=16, h=40, d=4, k=8, a=6, w=16 |
-| Trace size | 131,072 rows × 64 columns |
-| Poseidon2 permutations | 3,686 |
+| Parameters | n=16, h=63, d=7, k=10, a=12, w=16 |
+| Trace size | 23,861 rows × 64 columns (next pow2: 32,768) |
+| Poseidon2 calls | 2,091 |
 | Constraints | 53 (16 core + 12 absorption + 12 state carry + 8 THASH absorb + 2 boolean + 3 copies) |
-| Proof size | ~72 KB (blowup=16, queries=27, ~108-bit conjectured security) |
-| Proving time | ~246 seconds (H=63, blowup=16) |
-| Verification time | ~1.5 ms |
-| Column usage | 64 / 255 (25%) |
+| Proof size | ~85 KB (blowup=16, queries=27, ~108-bit conjectured security) |
+| Proving time | ~37 seconds (WSL, blowup=16) |
+| Verification time | ~4 ms |
+| Memory peak | ~4.6 GB |
+| Column usage | 58 / 64 (91%) |
 
 ## What Is NOT Proven (Current Limitations)
 
