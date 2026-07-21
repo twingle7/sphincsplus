@@ -47,7 +47,7 @@ Because the trace IS the SPHINCS+ verification, proving the trace is correct = p
 | Parameters | n=16, h=40, d=4, k=8, a=6, w=16 |
 | Trace size | 131,072 rows × 64 columns |
 | Poseidon2 permutations | 3,686 |
-| Constraints | 45 (16 core + 12 absorption + 12 state carry + 2 boolean flags + 3 copies) |
+| Constraints | 49 (16 core + 12 absorption + 12 state carry + 4 THASH absorb + 2 boolean flags + 3 copies) |
 | Proof size | ~72 KB (blowup=8, queries=27) |
 | Proving time | ~65 seconds (est., blowup=8 → 2× faster than blowup=32) |
 | Verification time | ~1.5 ms |
@@ -55,7 +55,7 @@ Because the trace IS the SPHINCS+ verification, proving the trace is correct = p
 
 ## What Is NOT Proven (Current Limitations)
 
-- **Input dataflow**: AIR proves permutations are correct but does not yet constrain that the INPUT to each permutation is correct (right addresses, domain tags, message blocks)
+- ~~**Input dataflow**: AIR proves permutations are correct but does not yet constrain that the INPUT to each permutation is correct~~ → **PARTIALLY FIXED 2026-07-21** (THASH absorb[0..1] bound; addr binding in absorb[2..5] deferred)
 - ~~**Sponge state carry**: Each permutation starts from ZERO state rather than carrying the sponge state across permutations~~ → **FIXED 2026-07-21**
 - ~~**m_pub vs com semantic gap**: trace builder uses `m_pub` as signed message, but issuer signs `com`~~ → **FIXED 2026-07-21**
 - **Call type sequencing**: The sequence of call types is not yet AIR-constrained
