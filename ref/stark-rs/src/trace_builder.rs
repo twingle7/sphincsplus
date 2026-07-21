@@ -64,8 +64,8 @@ const OFF_KP_ADDR: usize = 20; const OFF_CHAIN_ADDR: usize = 27; const OFF_HASH_
 const OFF_TREE_HGT: usize = 27; const OFF_TREE_INDEX: usize = 28;
 const ADDR_WOTS: u8 = 0; const ADDR_WOTSPK: u8 = 1; const ADDR_HASHTREE: u8 = 2;
 const ADDR_FORSTREE: u8 = 3; const ADDR_FORSPK: u8 = 4;
-const DOMAIN_HASH_MESSAGE: u8 = 0x03; const DOMAIN_THASH_F: u8 = 0x10;
-const DOMAIN_THASH_H: u8 = 0x11; const DOMAIN_THASH_TL: u8 = 0x12;
+const DOMAIN_HASH_MESSAGE: u8 = 0x03; const DOMAIN_THASH_F: u8 = 0x11;
+const DOMAIN_THASH_H: u8 = 0x12; const DOMAIN_THASH_TL: u8 = 0x13;
 const DOMAIN_COMMIT: u8 = 0x20; const DOMAIN_CUSTOM: u8 = 0xFF;
 
 // ── Address ──
@@ -118,7 +118,9 @@ impl TraceRecorder {
 
     fn push_row(&mut self, state: &[BaseElement; P2_T], expected_next: &[BaseElement; P2_T],
                  round: u64, ct: CallType, absorb: &[BaseElement; P2_RATE],
-                 domain_tag: u8, addr: &SpxAddr) {
+                 domain_tag: u8, addr: &SpxAddr,
+                 carries_from_prev: bool, carries_to_next: bool,
+                 init_state: &[BaseElement; P2_T]) {
         if self.row >= self.trace.len() { self.trace.push(vec![BaseElement::ZERO; self.num_cols]); }
         let r = &mut self.trace[self.row];
         for c in 0..P2_T { r[c] = state[c]; }
@@ -126,9 +128,13 @@ impl TraceRecorder {
         r[13] = BaseElement::new(self.perm_index as u64);
         r[14] = BaseElement::new(ct as u64);
         for c in 0..P2_T { r[16 + c] = expected_next[c]; }
-        if round == 0 { for i in 0..P2_RATE { r[28 + i] = absorb[i]; } }
-        // Store domain tag (col 34) and address (cols 35-38) at row 0 of each permutation
+        // carries flags at every row (needed for continuity constraints at is_last)
+        r[39] = BaseElement::new(if carries_from_prev { 1 } else { 0 });
+        r[40] = BaseElement::new(if carries_to_next { 1 } else { 0 });
         if round == 0 {
+            for i in 0..P2_RATE { r[28 + i] = absorb[i]; }
+            // Store init_state in cols 41-52 (at row 0 only)
+            for lane in 0..P2_T { r[41 + lane] = init_state[lane]; }
             r[34] = BaseElement::new(domain_tag as u64);
             let ab = addr.bytes();
             for w in 0..4 {
@@ -142,31 +148,36 @@ impl TraceRecorder {
 
     pub fn record_permutation(&mut self, init_state: &[BaseElement; P2_T],
                                absorb: &[BaseElement; P2_RATE], call_type: CallType,
-                               domain_tag: u8, addr: &SpxAddr) -> [BaseElement; P2_RATE] {
+                               domain_tag: u8, addr: &SpxAddr,
+                               carries_from_prev: bool, carries_to_next: bool) -> [BaseElement; P2_T] {
         let mut state = *init_state;
         for i in 0..P2_RATE { state[i] += absorb[i]; }
         let zero_absorb = [BaseElement::ZERO; P2_RATE];
         let zero_addr = SpxAddr::new();
-        // Row 0: initial state. Expected next = after round 0. Record absorb, domain, addr.
+        // Row 0: initial state. Expected next = after round 0.
         let mut after_r0 = state;
         thash_poseidon2_exact::poseidon2_round(&mut after_r0, 0);
-        self.push_row(&state, &after_r0, 0, call_type, absorb, domain_tag, addr);
+        self.push_row(&state, &after_r0, 0, call_type, absorb, domain_tag, addr,
+                      carries_from_prev, carries_to_next, init_state);
         state = after_r0;
 
         // Rows 1..29
         for round in 1..TOTAL_ROUNDS {
             let mut next_state = state;
             thash_poseidon2_exact::poseidon2_round(&mut next_state, round);
-            self.push_row(&state, &next_state, round as u64, call_type, &zero_absorb, 0, &zero_addr);
+            self.push_row(&state, &next_state, round as u64, call_type, &zero_absorb, 0, &zero_addr,
+                          carries_from_prev, carries_to_next, init_state);
             state = next_state;
         }
         // Row 30: identity pad
-        self.push_row(&state, &state, TOTAL_ROUNDS as u64, call_type, &zero_absorb, 0, &zero_addr);
+        self.push_row(&state, &state, TOTAL_ROUNDS as u64, call_type, &zero_absorb, 0, &zero_addr,
+                      carries_from_prev, carries_to_next, init_state);
         // Row 31: terminating pad
-        self.push_row(&state, &[BaseElement::ZERO; P2_T], (TOTAL_ROUNDS+1) as u64, call_type, &zero_absorb, 0, &zero_addr);
+        self.push_row(&state, &[BaseElement::ZERO; P2_T], (TOTAL_ROUNDS+1) as u64, call_type, &zero_absorb, 0, &zero_addr,
+                      carries_from_prev, carries_to_next, init_state);
 
-        let mut out = [BaseElement::ZERO; P2_RATE];
-        out.copy_from_slice(&state[0..P2_RATE]);
+        let mut out = [BaseElement::ZERO; P2_T];
+        out.copy_from_slice(&state);
         self.perm_index += 1;
         out
     }
@@ -188,24 +199,47 @@ impl TraceRecorder {
     }
 }
 
-// ── Poseidon2 hash ──
+// ── Poseidon2 hash (matches C poseidon2_hash_bytes_domain sponge semantics) ──
 fn poseidon2_hash(state: &mut [BaseElement; P2_T], input: &[u8], out_len: usize,
                   trace: &mut TraceRecorder, call_type: CallType,
                   domain_tag: u8, addr: &SpxAddr) -> Vec<u8> {
-    let rate = P2_RATE * 8; let mut output = Vec::new(); let mut offset = 0;
-    while offset < input.len() {
-        let end = (offset + rate).min(input.len()); let len = end - offset;
-        let mut chunk = [0u8; 48]; chunk[..len].copy_from_slice(&input[offset..end]);
-        if len < rate { chunk[len] = 0x01; chunk[rate-1] |= 0x80; }
-        let absorb = bytes_to_rate(&chunk);
-        let out_lanes = trace.record_permutation(state, &absorb, call_type, domain_tag, addr);
-        output.extend_from_slice(&lanes_to_bytes(&out_lanes));
-        offset = end;
+    let rate = P2_RATE * 8;
+    // Each hash operation starts from ZERO (matches C poseidon2_inc_init)
+    let mut sponge = [BaseElement::ZERO; P2_T];
+    let mut output = Vec::new();
+    let mut offset = 0;
+
+    // Process full 48-byte blocks (no padding — matches C absorb full blocks)
+    while offset + rate <= input.len() {
+        let chunk: &[u8; 48] = input[offset..offset + rate].try_into().unwrap();
+        let absorb = bytes_to_rate(chunk);
+        let carries_from_prev = offset > 0;
+        let carries_to_next = true; // always more blocks follow (data or final pad)
+        let out_st = trace.record_permutation(&sponge, &absorb, call_type, domain_tag, addr,
+                                               carries_from_prev, carries_to_next);
+        sponge = out_st;
+        let mut rate_lanes = [BaseElement::ZERO; P2_RATE];
+        rate_lanes.copy_from_slice(&sponge[0..P2_RATE]);
+        output.extend_from_slice(&lanes_to_bytes(&rate_lanes));
+        offset += rate;
     }
-    { let mut chunk = [0u8; 48]; chunk[0] = 0x01; chunk[47] |= 0x80;
-      let absorb = bytes_to_rate(&chunk);
-      let out_lanes = trace.record_permutation(state, &absorb, call_type, domain_tag, addr);
-      output.extend_from_slice(&lanes_to_bytes(&out_lanes)); }
+
+    // Final block: always padded (matches C poseidon2_inc_finalize: pad10*1 then permute)
+    let remaining = input.len() - offset;
+    let mut chunk = [0u8; 48];
+    chunk[..remaining].copy_from_slice(&input[offset..]);
+    chunk[remaining] ^= 0x01;
+    chunk[rate - 1] ^= 0x80;
+    let absorb = bytes_to_rate(&chunk);
+    let carries_from_prev = offset > 0;
+    let carries_to_next = false; // last permutation in this hash chain
+    sponge = trace.record_permutation(&sponge, &absorb, call_type, domain_tag, addr,
+                                       carries_from_prev, carries_to_next);
+    let mut rate_lanes = [BaseElement::ZERO; P2_RATE];
+    rate_lanes.copy_from_slice(&sponge[0..P2_RATE]);
+    output.extend_from_slice(&lanes_to_bytes(&rate_lanes));
+
+    *state = sponge; // return final sponge state to caller
     output.truncate(out_len); output
 }
 
@@ -272,10 +306,10 @@ fn fors_pk_from_sig(state: &mut [BaseElement; P2_T], pub_seed: &[u8], sig: &[u8]
     let blocks: Vec<&[u8]> = (0..K).map(|i| &roots[i*N..(i+1)*N]).collect();
     thash(state, DOMAIN_THASH_TL, pub_seed, &pk_addr, &blocks, N, trace, CallType::ForsPk)
 }
-fn hash_message(state: &mut [BaseElement; P2_T], r: &[u8], pk: &[u8], m: &[u8],
+fn hash_message(state: &mut [BaseElement; P2_T], r: &[u8], pk: &[u8], msg: &[u8],
                 trace: &mut TraceRecorder) -> (Vec<u8>, usize) {
     let mut input = Vec::new(); input.push(DOMAIN_HASH_MESSAGE); input.extend_from_slice(r);
-    input.extend_from_slice(pk); input.extend_from_slice(m);
+    input.extend_from_slice(pk); input.extend_from_slice(msg);
     let out_len = FORS_MSG_BYTES + 16;
     let addr = SpxAddr::new(); // H_msg uses zero address
     (poseidon2_hash(state, &input, out_len, trace, CallType::Hmsg, DOMAIN_HASH_MESSAGE, &addr), out_len)
@@ -298,7 +332,8 @@ pub fn build_verification_trace(pk: &[u8], sigma_com: &[u8], m_pub: &[u8],
     let com_output = poseidon2_hash(&mut state, &com_input, N, &mut trace,
         CallType::Commit, DOMAIN_COMMIT, &addr);
 
-    let (hmsg_out, _hmsg_len) = hash_message(&mut state, sig_r, pk, m_pub, &mut trace);
+    // H_msg signs com_output (the commitment), matching C's crypto_sign_verify(com, ...)
+    let (hmsg_out, _hmsg_len) = hash_message(&mut state, sig_r, pk, &com_output, &mut trace);
     let mhash = &hmsg_out[..FORS_MSG_BYTES];
     // tree and idx_leaf extracted from hash output (exact format from C's hash_message)
     let tree = if hmsg_out.len() >= FORS_MSG_BYTES + 8 {
