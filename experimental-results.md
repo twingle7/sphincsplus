@@ -11,17 +11,20 @@ All measurements on WSL2 (Ubuntu), 8GB RAM, Intel Core i7.
 
 ## Dev Parameters (h=40, blowup=16, queries=27) — WSL Measured
 
-| Metric | Value |
-|--------|-------|
-| Poseidon2 calls | 1,121 |
-| Trace rows | 12,793 (next pow2: 16,384) |
-| Proof size | 86,061 bytes (~84 KB) |
-| Preprocess | 22.6 ms |
-| **Prove (core)** | **38.5 seconds** |
-| Prove (end-to-end) | 38.5 seconds |
-| **Verify** | **10.7 ms** |
-| Peak RSS | ~4.6 GB |
-| Magic / Version | 0x32504650 ("PFP2") / 2 |
+| Metric | Run 1 (cold) | Run 2 (warm) |
+|--------|-------------|-------------|
+| Prove (core) | 38.5s | **36.0s** |
+| Verify | 10.7ms | **4.6ms** |
+| Preprocess | 22.6ms | 21.3ms |
+| Proof size | 86,061 B | 85,996 B |
+| Peak RSS | 4.6 GB | 4.6 GB |
+| Poseidon2 calls | 1,121 | 1,121 |
+| Trace rows | 12,793 | 12,793 |
+
+All 9 regression tests: PASS ✅ | Magic: 0x32504650, Version: 2 ✅
+
+All 9 regression tests: PASS ✅
+Magic: 0x32504650, Version: 2 ✅
 
 ## 128-bit Parameters (h=63, blowup=16, queries=27) — Estimated
 
@@ -30,8 +33,8 @@ All measurements on WSL2 (Ubuntu), 8GB RAM, Intel Core i7.
 | Poseidon2 calls | ~4,534 |
 | Trace rows | ~50K (next pow2: 65,536 or 131,072) |
 | Proof size | ~85 KB |
-| **Prove (est.)** | **~170 seconds** |
-| **Verify (est.)** | **~11 ms** |
+| **Prove (est.)** | **~160 seconds** (scaled from dev: 36s × 50K/13K × log₂(50K)/log₂(13K)) |
+| **Verify (est.)** | **~5 ms** |
 | Peak RSS (est.) | ~5 GB |
 | Conjectured STARK security | ~108-bit |
 
