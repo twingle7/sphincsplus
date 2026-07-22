@@ -64,15 +64,6 @@ int spx_p2_issue_respond(spx_p2_issue_response_obj *out_resp,
                          const uint8_t *issuer_sk,
                          const spx_p2_issue_request_obj *req);
 
-#define spx_p2_unblind SPX_NAMESPACE(spx_p2_unblind)
-/* Legacy compatibility alias. Fischlin final path should prefer finalize_credential(). */
-int spx_p2_unblind(spx_p2_cred_internal *out_cred,
-                   const uint8_t com[SPX_N],
-                   const uint8_t sigma_blind[SPX_BYTES],
-                   size_t sigma_blind_len,
-                   const uint8_t *omega2,
-                   size_t omega2_len);
-
 #define spx_p2_finalize_credential SPX_NAMESPACE(spx_p2_finalize_credential)
 int spx_p2_finalize_credential(spx_p2_cred_internal *out_cred,
                                const spx_p2_issue_request_obj *req,
@@ -83,18 +74,6 @@ int spx_p2_finalize_credential(spx_p2_cred_internal *out_cred,
                                size_t rlen,
                                const uint8_t *omega2,
                                size_t omega2_len);
-
-#define spx_p2_issue_unblind SPX_NAMESPACE(spx_p2_issue_unblind)
-/* Legacy compatibility alias. Fischlin final path should prefer issue_finalize(). */
-int spx_p2_issue_unblind(spx_p2_cred_internal *out_cred,
-                         uint8_t out_com[SPX_N],
-                         const uint8_t *issuer_sk,
-                         const uint8_t *m,
-                         size_t mlen,
-                         const uint8_t *r,
-                         size_t rlen,
-                         const uint8_t *omega2,
-                         size_t omega2_len);
 
 #define spx_p2_issue_finalize SPX_NAMESPACE(spx_p2_issue_finalize)
 int spx_p2_issue_finalize(spx_p2_cred_internal *out_cred,

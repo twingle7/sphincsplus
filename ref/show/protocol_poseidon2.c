@@ -140,35 +140,22 @@ int spx_p2_issue_respond(spx_p2_issue_response_obj *out_resp,
     return ret;
 }
 
-int spx_p2_unblind(spx_p2_cred_internal *out_cred,
-                   const uint8_t com[SPX_N],
-                   const uint8_t sigma_blind[SPX_BYTES], size_t sigma_blind_len,
-                   const uint8_t *omega2, size_t omega2_len)
-{
-    /* Compatibility wrapper: this step only packages issuer response into credential witness. */
-    if (out_cred == 0 || com == 0 || sigma_blind == 0)
-    {
-        return SPX_P2_FLOW_ERR_NULL;
-    }
-    if (sigma_blind_len != SPX_BYTES)
-    {
-        return SPX_P2_FLOW_ERR_INPUT;
-    }
-    if ((omega2 != 0 && omega2_len == 0) || (omega2 == 0 && omega2_len > 0) || omega2_len > SPX_N)
-    {
-        return SPX_P2_FLOW_ERR_INPUT;
-    }
-    memset(out_cred, 0, sizeof(*out_cred));
-    memcpy(out_cred->com, com, SPX_N);
-    memcpy(out_cred->sigma_com, sigma_blind, SPX_BYTES);
-    if (omega2_len > 0)
-    {
-        memcpy(out_cred->omega2, omega2, omega2_len);
-        out_cred->omega2_len = omega2_len;
-    }
-    return SPX_P2_FLOW_OK;
-}
-
+/*
+ * spx_p2_finalize_credential — Fischlin credential-finalization step.
+ *
+ * Packages the issuer's blinded signature (sigma_prime on commitment c)
+ * together with the message m, randomness r, and binding factor omega2
+ * into the holder's internal credential witness.
+ *
+ * IMPORTANT: there is NO mathematical "unblinding" of the signature.
+ * In the Fischlin framework the signer signs the commitment c, and the
+ * credential stores sigma_com = sigma_prime verbatim.  The ZK proof later
+ * attests knowledge of (m, r) such that c = Commit(m; r), NOT that a
+ * transformed "unblinded" signature exists.
+ *
+ * The legacy spx_p2_unblind() wrapper (removed) was a thin compatibility
+ * shim that did exactly the same packaging — the name was misleading.
+ */
 int spx_p2_finalize_credential(spx_p2_cred_internal *out_cred,
                                const spx_p2_issue_request_obj *req,
                                const spx_p2_issue_response_obj *resp,
@@ -176,7 +163,6 @@ int spx_p2_finalize_credential(spx_p2_cred_internal *out_cred,
                                const uint8_t *r, size_t rlen,
                                const uint8_t *omega2, size_t omega2_len)
 {
-    int ret;
     if (out_cred == 0 || req == 0 || resp == 0 || m == 0 || r == 0)
     {
         return SPX_P2_FLOW_ERR_NULL;
@@ -185,14 +171,27 @@ int spx_p2_finalize_credential(spx_p2_cred_internal *out_cred,
     {
         return SPX_P2_FLOW_ERR_INPUT;
     }
-    ret = spx_p2_unblind(out_cred, req->c, resp->sigma_prime, resp->sigma_prime_len, omega2, omega2_len);
-    if (ret != SPX_P2_FLOW_OK)
+    if (resp->sigma_prime_len != SPX_BYTES)
     {
-        return ret;
+        return SPX_P2_FLOW_ERR_INPUT;
+    }
+    if ((omega2 != 0 && omega2_len == 0) || (omega2 == 0 && omega2_len > 0) || omega2_len > SPX_N)
+    {
+        return SPX_P2_FLOW_ERR_INPUT;
     }
     if (mlen == 0 || mlen > sizeof(out_cred->m) || rlen == 0 || rlen > sizeof(out_cred->r))
     {
         return SPX_P2_FLOW_ERR_INPUT;
+    }
+
+    /* Package credential witness: sigma_com = sigma_prime (verbatim). */
+    memset(out_cred, 0, sizeof(*out_cred));
+    memcpy(out_cred->com, req->c, SPX_N);
+    memcpy(out_cred->sigma_com, resp->sigma_prime, SPX_BYTES);
+    if (omega2_len > 0)
+    {
+        memcpy(out_cred->omega2, omega2, omega2_len);
+        out_cred->omega2_len = omega2_len;
     }
     memcpy(out_cred->m, m, mlen);
     out_cred->mlen = mlen;
@@ -201,24 +200,14 @@ int spx_p2_finalize_credential(spx_p2_cred_internal *out_cred,
     return SPX_P2_FLOW_OK;
 }
 
-int spx_p2_issue_unblind(spx_p2_cred_internal *out_cred,
-                         uint8_t out_com[SPX_N],
-                         const uint8_t *issuer_sk,
-                         const uint8_t *m, size_t mlen,
-                         const uint8_t *r, size_t rlen,
-                         const uint8_t *omega2, size_t omega2_len)
-{
-    spx_p2_issue_request_obj req;
-    spx_p2_issue_response_obj resp;
-    int ret = spx_p2_issue_finalize(out_cred, &req, &resp, issuer_sk, m, mlen, r, rlen, omega2, omega2_len);
-    if (ret != SPX_P2_FLOW_OK)
-    {
-        return ret;
-    }
-    memcpy(out_com, req.c, SPX_N);
-    return SPX_P2_FLOW_OK;
-}
-
+/*
+ * spx_p2_issue_finalize — full Issue path (prepare + sign + finalize).
+ *
+ * This is the recommended entry point for the Issuer side when the
+ * Issuer holds the signing key and wants to produce a credential in
+ * one call.  The legacy spx_p2_issue_unblind() wrapper (removed) was
+ * a thin alias for this function.
+ */
 int spx_p2_issue_finalize(spx_p2_cred_internal *out_cred,
                           spx_p2_issue_request_obj *out_req,
                           spx_p2_issue_response_obj *out_resp,

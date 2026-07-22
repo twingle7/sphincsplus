@@ -220,7 +220,7 @@ The multi-party blind-signature protocol runs in four phases:
 
 1. **Prepare + Issue request** (`spx_p2_prepare_issue_request`) — Holder blinds message `m` with randomness `r`, producing a commitment `com` sent to the Issuer.
 2. **Issue / respond** (`spx_p2_issue_sign` / `spx_p2_issue_respond`) — Issuer signs the blinded commitment with their SPHINCS+ secret key, producing `sigma_blind`.
-3. **Finalize credential** (`spx_p2_finalize_credential`) — Holder unblinds the signature and builds the internal credential (includes full witness trace for STARK proving).
+3. **Finalize credential** (`spx_p2_finalize_credential`) — Holder packages the blinded signature (stored verbatim — there is no mathematical unblinding in Fischlin for hash-based signatures) together with message, randomness, and binding factor into the internal credential witness.
 4. **Show** (`spx_p2_show_prove` / `spx_p2_show_verify`) — Holder generates a STARK proof `pi_f` that they know a valid opening. Verifier checks the proof against only public statements (`pk_sig`, `pk_E`, `com`, `m_pub`, `public_ctx`, `sigma_C`).
 
 There are two statement modes:

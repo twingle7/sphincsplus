@@ -9,10 +9,11 @@ Holder                              Issuer                     Verifier
   │                                    │                          │
   │  ◄── sigma_blind = Sign(sk, c) ───│                          │
   │                                    │                          │
-  │  Unblind: sigma = Unblind(         │                          │
-  │    sigma_blind, omega2)            │                          │
+  │  Finalize: store credential         │                          │
+  │    sigma_com = sigma_blind (verbatim)│                        │
+  │    (no mathematical unblinding)     │                          │
   │                                    │                          │
-  │  sigma_C = Enc(pk_E, c||sigma;     │                          │
+  │  sigma_C = Enc(pk_E, c||sigma_com; │                          │
   │    omega2)                         │                          │
   │                                    │                          │
   │  pi_F = FullAIR.Prove(pk_sig,      │                          │
