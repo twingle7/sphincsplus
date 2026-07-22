@@ -1,0 +1,793 @@
+% ============================================================
+%  survey_deep.tex
+%  Post-Quantum Blind Signatures via Hash-Based Constructions:
+%  A Systematic Survey with Gap Analysis
+%  Generated: 2026-07-22
+%  Format: LaTeX
+% ============================================================
+
+\documentclass[11pt,a4paper]{article}
+
+% ---------- Packages ----------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{geometry}
+\geometry{margin=1in}
+\usepackage{setspace}
+\onehalfspacing
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{threeparttable}
+\usepackage{hyperref}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue,
+  citecolor=blue,
+  urlcolor=blue,
+  breaklinks=true
+}
+\usepackage{cleveref}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{csquotes}
+\usepackage[backend=bibtex,style=apa,maxcitenames=2,maxbibnames=6]{biblatex}
+\addbibresource{bibliography.bib}
+
+% ---------- Title ----------
+\title{\textbf{Post-Quantum Blind Signatures via Hash-Based Constructions:\\
+A Systematic Survey and Gap Analysis}}
+
+\author{%
+  \textsf{Literature Review --- SPHINCS+ Poseidon2 Project}\\
+  \textsf{Generated: 22 July 2026}
+}
+
+\date{}
+
+% ---------- Macro shortcuts ----------
+\newcommand{\Fp}{\mathbb{F}_p}
+\newcommand{\ROM}{\textsf{ROM}}
+\newcommand{\EUFCMA}{\textsf{EUF-CMA}}
+\newcommand{\OMUF}{\textsf{OMUF}}
+\newcommand{\PoS}{\textsf{Poseidon2}}
+\newcommand{\ZKP}{\textsf{ZK}}
+
+% ---------- Document ----------
+\begin{document}
+
+\maketitle
+
+% ============================================================
+%  ABSTRACT
+% ============================================================
+\begin{abstract}
+The transition to post-quantum cryptography (PQC) has produced standardised signature schemes
+--- CRYSTALS-Dilithium, Falcon, and SPHINCS+ (SLH-DSA) --- yet no post-quantum \emph{blind
+signature} scheme has been standardised.  Lattice-based blind signatures dominate the literature,
+achieving round-optimality via the Fischlin framework at flagship venues (CRYPTO, EUROCRYPT,
+CCS).  Meanwhile, a 2026 generic compiler proves that any hash-and-sign signature can be converted
+into a round-optimal blind signature, but no concrete instantiation has been implemented or
+benchmarked.  This survey systematically examines the four intersecting threads required for a
+hash-based blind signature: (i) SPHINCS+ as the underlying signature; (ii) the Fischlin generic
+construction; (iii) arithmetisation-oriented hash functions (Poseidon2, Monolith) for
+zero-knowledge circuit efficiency; and (iv) STARK proofs for transparent post-quantum
+attestation.  We identify three critical voids in the literature: the absence of a concrete
+SPHINCS+-Fischlin instantiation, the absence of a Poseidon2--SPHINCS+ co-design analysis,
+and the absence of benchmarks comparing hash-based to lattice-based blind signatures in the
+Fischlin framework.  A comparative analysis of 26 landmark papers across five dimensions
+(theory, implementation, security model, proof system, field arithmetic) reveals that the
+co-design of a single arithmetisation-oriented hash --- Poseidon2 over the Goldilocks field ---
+as both the SPHINCS+ tweakable hash and the STARK AIR substrate could eliminate the
+circuit-translation bottleneck that has blocked prior hash-based constructions.
+
+\medskip
+\noindent\textbf{Keywords:}
+post-quantum cryptography, blind signatures, SPHINCS+, Fischlin framework,
+Poseidon2, STARK, zero-knowledge proofs, arithmetisation-oriented hash
+\end{abstract}
+
+% ============================================================
+%  1. INTRODUCTION
+% ============================================================
+\section{Introduction}
+\label{sec:intro}
+
+The NIST Post-Quantum Cryptography Standardisation process has selected three signature
+families for standardisation: CRYSTALS-Dilithium (lattice-based), Falcon (lattice-based), and
+SPHINCS+ (hash-based) \cite{Bernstein2019SPHINCS,NIST2022IR8413}.  These schemes guarantee
+\emph{unforgeability} against quantum adversaries, yet standard digital signatures are inherently
+linkable: a verifier can associate every signature with its public key.  This property is
+incompatible with applications requiring \emph{unlinkability}, including anonymous credentials,
+e-voting schemes, privacy-preserving authentication, and off-chain attestation in distributed
+ledgers \cite{Buser2022ExoticSigs,Chathurangi2025Advances}.
+
+Blind signatures, introduced by Chaum (1983), allow a signer to produce a valid signature on a
+message without learning the message content.  The user blinds the message before transmission;
+after receiving the blinded signature, the user unblinds it to obtain a standard signature that is
+unlinkable to the signing session.  Blind signatures are the cryptographic backbone of
+privacy-preserving credentials and electronic cash.
+
+The Fischlin framework \cite{Fuchsbauer2015Practical} provides a generic construction that
+compiles any suitable signature scheme into a round-optimal blind signature in the random-oracle
+model (\ROM).  The framework has been instantiated with lattice assumptions in a sequence of
+works \cite{delPino2022Framework,Beullens2023LatticeBlind,Agrawal2022Practical,
+Katsumata2021}, producing the most efficient post-quantum blind signatures to date.
+Crucially, however, \emph{all} these instantiations rely on structured lattice assumptions
+(Module-SIS, Module-LWE).  A recent impossibility result \cite{Dietz2026Impossibility} suggests
+fundamental barriers to pairing-free blind signatures in the \ROM, further motivating the
+exploration of alternative assumptions.
+
+A 2026 result by Bouillaguet et al.~\cite{Bouillaguet2026BlindingPH} changes this landscape:
+they provide a generic compiler that transforms \emph{any} post-quantum hash-and-sign signature
+into a blind signature with provable security in the \ROM.  The compiler applies to SPHINCS+,
+XMSS, and any hash-based signature, yet the authors do \emph{not} provide a concrete
+instantiation or benchmarks.  Herranz and Louiso~\cite{Herranz2025HashBased} independently
+explored the theoretical feasibility of hash-based blind signatures but likewise produced no
+implementation.
+
+\medskip
+\noindent\textbf{This survey.}
+We systematically map the intersection of four research threads that must converge for a
+hash-based Fischlin blind signature:
+
+\begin{enumerate}
+  \item \textbf{Hash-based signatures} --- SPHINCS+, its WOTS+/FORS/hypertree architecture,
+        and the properties required for the Fischlin compilation;
+  \item \textbf{The Fischlin framework} --- generic compilation, security model, and the
+        lattice-based instantiations that define the state of the art;
+  \item \textbf{Arithmetisation-oriented hash functions} --- Poseidon2, Monolith, and
+        competitors, evaluated for ZK-circuit efficiency and multi-instance security;
+  \item \textbf{STARK-based zero-knowledge proofs} --- transparent post-quantum proof systems
+        capable of attesting signature possession without trusted setup.
+\end{enumerate}
+
+We analyse 26 landmark papers across these threads and identify three critical gaps that a
+convergent construction --- SPHINCS+ instantiated with Poseidon2, compiled via the Bouillaguet
+Fischlin transform, and attested via Winterfell STARKs --- would fill.
+
+\medskip
+\noindent\textbf{Roadmap.}  Section~\ref{sec:prelim} reviews the three foundational primitives.
+Section~\ref{sec:pqblind} surveys the state of the art in post-quantum blind signatures, both
+lattice-based and hash-based.  Section~\ref{sec:zkmapping} catalogues arithmetisation-oriented
+hash functions and their ZK-circuit efficiency.  Section~\ref{sec:stark} analyses STARK-based
+proof systems for signature attestation.  Section~\ref{sec:gaps} synthesises research gaps and
+positions the SPHINCS+--Poseidon2--Fischlin construction.  Section~\ref{sec:analysis} provides
+a structured comparative analysis across five dimensions.  Section~\ref{sec:conclusion}
+concludes with recommendations for future work.
+
+% ============================================================
+%  2. PRELIMINARIES
+% ============================================================
+\section{Foundational Primitives}
+\label{sec:prelim}
+
+\subsection{SPHINCS+: Stateless Hash-Based Signatures}
+
+SPHINCS+ \cite{Bernstein2019SPHINCS}, standardised as NIST FIPS 205 (SLH-DSA), is a
+\emph{stateless} hash-based signature scheme.  Unlike stateful schemes (XMSS, LMS) addressed in
+NIST SP 800-208 \cite{NIST2020SP800}, SPHINCS+ requires no state tracking between signing
+operations, making it suitable for deployment scenarios where state synchronisation is
+impractical.
+
+The scheme combines three layers of hash-based constructs:
+\begin{itemize}
+  \item \textbf{WOTS+} (Winternitz One-Time Signature Plus): a one-time signature whose security
+        rests solely on second-preimage resistance of the underlying hash function;
+  \item \textbf{FORS} (Forest of Random Subsets): a few-time signature that replaces HORST,
+        offering tighter security bounds for the same hash budget;
+  \item \textbf{XMSS-MT} hypertree: a multi-tree Merkle structure that compresses many WOTS+
+        public keys into a single root, which serves as the SPHINCS+ public key.
+\end{itemize}
+
+SPHINCS+ signs a message by selecting a random leaf in the hypertree and authenticating the path
+through FORS and WOTS+ verification.  Every operation is purely hash-based, with no
+number-theoretic assumptions.  The main drawback is signature size (typically 7--50 KB depending
+on security level), though NIST IR 8413 \cite{NIST2022IR8413} concludes this is acceptable for
+many applications.
+
+For blind-signature purposes, the critical property is that SPHINCS+ is a \emph{hash-and-sign}
+scheme: the signer hashes the message via a tweakable hash (THASH) and then signs the hash
+with the hypertree.  This structure is directly amenable to the Fischlin compilation
+\cite{Bouillaguet2026BlindingPH}.
+
+\subsection{The Fischlin Blind-Signature Framework}
+
+Fischlin (2006) proposed a generic construction transforming any three-move identification scheme
+into a round-optimal (two-move) blind signature.  Fuchsbauer et al.~\cite{Fuchsbauer2015Practical}
+refined this to standard-model security under the DLIN assumption; subsequent works extended it
+to the lattice setting \cite{delPino2022Framework,Kastner2024PairingFree}.
+
+The modern Fischlin construction for a hash-and-sign signature $\Sigma$ proceeds as follows:
+
+\begin{enumerate}[label=\textbf{Phase \arabic*.},leftmargin=*]
+  \item \textbf{Commit.}  The user samples randomness $r$, computes a commitment
+        $c = H(m, r)$, and sends $c$ to the signer.
+  \item \textbf{Issue.}  The signer computes
+        $\sigma_{\text{blind}} \leftarrow \Sigma.\text{Sign}(sk, c)$ and returns it.
+  \item \textbf{Finalise credential.}  The user verifies
+        $\Sigma.\text{Verify}(pk, c, \sigma_{\text{blind}}) = 1$ and stores the credential
+        witness $(c, \sigma_{\text{blind}}, m, r)$.  There is \emph{no mathematical unblinding}
+        of the signature --- $\sigma_{\text{blind}}$ is stored verbatim.
+  \item \textbf{Show.}  The user generates a zero-knowledge proof $\pi$ that they know a valid
+        opening $(m, r)$ such that $c = H(m, r)$ and
+        $\Sigma.\text{Verify}(pk, c, \sigma_{\text{blind}}) = 1$.
+        The verifier checks the proof, not a signature on $m$.
+\end{enumerate}
+
+Security requires \emph{one-more unforgeability} (\OMUF) --- the user cannot produce more valid
+credentials than issued signatures --- and \emph{blindness} --- the signer cannot link a credential
+to a particular signing session --- both in the \ROM.  Blindness follows from the hiding property
+of the commitment, not from algebraic unblinding of the signature.
+
+\subsection{Arithmetisation-Oriented Hash Functions}
+
+Standard hash functions (SHA-256, SHAKE-256) require thousands of algebraic constraints per
+invocation in a ZK circuit, making a full SPHINCS+ verification proof impractical.
+Arithmetisation-oriented (AO) hash functions solve this by operating natively over large prime
+fields, reducing the constraint cost by orders of magnitude.
+
+\subsubsection*{Poseidon2}
+
+Poseidon2 \cite{Grassi2023Poseidon2}, the successor to Poseidon \cite{Grassi2019Poseidon},
+is a family of AO hash functions designed for optimal efficiency in ZK proof systems.  The
+canonical instantiation operates as a sponge construction over the Goldilocks prime field
+$\Fp$ with $p = 2^{64} - 2^{32} + 1$, a field chosen for its efficient modular reduction
+and native support in STARK provers such as Winterfell.
+
+The Poseidon2 permutation has width $t = 12$ (rate $r = 6$, capacity $c = 6$), with
+$R_F = 8$ full rounds and $R_P = 22$ partial rounds.  The non-linear layer is
+$x \mapsto x^3$, which is a permutation over $\Fp$ when $\gcd(3, p-1) = 1$.  Each Poseidon2
+permutation requires approximately 300 R1CS constraints, compared to approximately 25,000 for
+a SHA-256 compression \cite{Grassi2024Monolith}.
+
+\subsubsection*{Competitors}
+
+Monolith \cite{Grassi2024Monolith} achieves native CPU performance comparable to SHA3-256 while
+maintaining ZK-friendliness, making it superior for CPU-bound verification but slightly less
+efficient than Poseidon2 for pure constraint-minimisation use cases.
+Poseidon(2)b \cite{Grassi2026Poseidon2b} extends the design to binary extension fields
+($\mathbb{F}_{2^k}$), targeting proving systems such as Binius.
+Kovalchuk et al.~\cite{2021Security} analyse Poseidon against non-binary differential and
+linear attacks, confirming that the wide-trail strategy provides the expected security margins
+when parameters are chosen appropriately.
+
+For the specific use case of SPHINCS+ verification in a STARK circuit, where all operations
+are over the same prime field, Poseidon2's field-native design is optimal.
+
+\subsection{STARK Proofs}
+
+STARKs (Scalable Transparent ARguments of Knowledge) \cite{2019DEEP} are zero-knowledge proof
+systems with three distinguishing properties:
+\begin{itemize}
+  \item \textbf{Transparent:} no trusted setup; security relies solely on collision-resistant
+        hash functions;
+  \item \textbf{Post-quantum:} symmetric-key assumptions are quantum-resistant by design;
+  \item \textbf{Scalable:} proof size and verification time grow poly-logarithmically with
+        computation size.
+\end{itemize}
+
+The STARK protocol proceeds in three phases:
+(1) \emph{Arithmetisation} --- the computation is expressed as an algebraic execution trace and
+a set of polynomial constraints (AIR);
+(2) \emph{Low-degree extension} --- the trace is extended using Reed-Solomon encoding over a
+multiplicative subgroup of $\Fp$;
+(3) \emph{FRI protocol} --- a sequence of folding steps reduces the degree check to a constant
+number of Merkle-tree openings, achieving logarithmic proof size.
+
+Bulletproofs \cite{Bunz2018Bulletproofs} and MPC-in-the-head techniques
+\cite{Katz2018ImprovedNIZK} offer alternative proof systems, but both rely on discrete-log
+assumptions (Bulletproofs) or produce proofs linear in circuit size (MPC-in-the-head),
+making STARKs the preferred choice for transparent post-quantum attestation.
+
+% ============================================================
+%  3. POST-QUANTUM BLIND SIGNATURES: STATE OF THE ART
+% ============================================================
+\section{Post-Quantum Blind Signatures: State of the Art}
+\label{sec:pqblind}
+
+\subsection{Lattice-Based Constructions}
+
+The dominant post-quantum approach builds blind signatures on lattice problems (SIS/LWE).
+Table~\ref{tab:pqblind} summarises the landmark constructions.
+
+\begin{table}[t]
+\centering
+\caption{Comparison of Post-Quantum Blind Signature Schemes}
+\label{tab:pqblind}
+\begin{threeparttable}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Scheme} & \textbf{Rounds} & \textbf{Assumption} & \textbf{Size} & \textbf{Model} \\
+\midrule
+Fuchsbauer et al. (2015) \cite{Fuchsbauer2015Practical} & 2 & DLIN & --- & Standard \\
+del Pino--Katsumata (2022) \cite{delPino2022Framework} & 2 & Module-SIS/LWE & $\sim$100 KB & ROM \\
+Agrawal et al. (2022) \cite{Agrawal2022Practical} & 2 & Module-SIS/LWE & $\sim$80 KB & ROM \\
+Beullens et al. (2023) \cite{Beullens2023LatticeBlind} & 2 & Ring/Module-SIS/LWE + NTRU & $\sim$20 KB & ROM \\
+Kastner et al. (2024) \cite{Kastner2024PairingFree} & 2 & SIS (pairing-free) & $\sim$50 KB & ROM \\
+Katsumata et al. (2021) \cite{Katsumata2021} & 2 & LWE + ABET & $\sim$100 KB & Standard \\
+\midrule
+Bouillaguet et al. (2026) \cite{Bouillaguet2026BlindingPH} & $\mathbf{2}$ & \textbf{Any hash-and-sign} & $\sim$Sig size & ROM \\
+\midrule
+\textit{Target (this project)} & \textit{2} & \textit{Hash (SPHINCS+)} & \textit{$\sim$8--50 KB} & \textit{ROM} \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+\small
+\item \emph{Note.}  ``Size'' refers to the credential/proof size
+(proof-of-possession
+size for Fischlin-style schemes).  ROM = random-oracle model.  ABET = attribute-based encryption
+with threshold.  Benchmarked sizes are approximate and parameter-dependent.
+\end{tablenotes}
+\end{threeparttable}
+\end{table}
+
+Several observations emerge from the lattice-based literature.  First, \emph{round-optimality is
+achievable}: all recent schemes achieve two-round interaction, confirming the Fischlin framework's
+practical viability \cite{Fuchsbauer2015Practical,delPino2022Framework}.  Second,
+\emph{signature sizes are competitive}: Beullens et al.~\cite{Beullens2023LatticeBlind} achieve
+approximately 20 KB signatures, approaching the size of RSA blind signatures, albeit at the cost
+of an ad-hoc NTRU assumption.  Third, \emph{standard-model security is expensive}:
+Katsumata et al.~\cite{Katsumata2021} avoid random oracles but produce approximately 100 KB
+signatures and require hierarchical inner-product functional encryption.  Finally,
+\emph{verifier-side computation is dominated by the zero-knowledge proof}: in the Fischlin
+show phase, the bottleneck is the ZK proof verification regardless of the underlying signature
+scheme.
+
+\subsection{Hash-Based Blind Signatures: The Emerging Frontier}
+
+Two recent papers directly address the possibility of hash-based blind signatures and
+collectively define a new research direction.
+
+Herranz and Louiso~\cite{Herranz2025HashBased} provide the first systematic exploration of
+hash-based blind signatures.  They analyse the feasibility of instantiating the Fischlin
+framework with XMSS and SPHINCS+, identifying three challenges: (i) the determinism of
+hash-based signing (SPHINCS+ signs each message with a fresh random leaf, which is beneficial
+for blindness); (ii) the large signature size affecting proof size; and (iii) the need for a
+ZK-friendly hash to make the STARK circuit efficient.  Their work establishes the problem
+statement but stops short of a concrete instantiation.
+
+Bouillaguet, Feneuil, Maire, Rivain, Sauvage, and Vergnaud~\cite{Bouillaguet2026BlindingPH}
+present the most significant advance to date: a generic compiler that transforms \emph{any}
+post-quantum hash-and-sign signature scheme into a blind signature under the Fischlin framework,
+provably secure in the \ROM.  Their construction achieves:
+\begin{itemize}
+  \item \textbf{Blindness by design:} the commitment mechanism is statistically hiding;
+  \item \textbf{One-more unforgeability:} reduces to the \EUFCMA security of the underlying
+        signature scheme;
+  \item \textbf{Round-optimality:} two-round protocol (optimal);
+  \item \textbf{Applicability:} works with SPHINCS+, XMSS, and any hash-and-sign signature.
+\end{itemize}
+Crucially, the authors do \emph{not} provide an implementation or benchmarks of the compiler
+instantiated with SPHINCS+, nor do they analyse the ZK-circuit cost of the resulting proof.
+
+%\subsection{Anonymous Credentials and the Broader Landscape}
+
+Blind signatures are the core building block of anonymous credential systems.  Two surveys
+map this landscape comprehensively.  Buser et al.~\cite{Buser2022ExoticSigs} provide a
+systematic survey of exotic post-quantum signatures (blind, ring, group, adaptor, threshold)
+for blockchain applications, identifying blind signatures as the most deployment-ready primitive
+for privacy-preserving interactions.  Chathurangi et al.~\cite{Chathurangi2025Advances} trace
+the evolution of anonymous credentials from traditional (RSA, pairing-based) to post-quantum
+(lattice, code-based), confirming that \emph{no hash-based anonymous credential system} has
+been proposed.  Slamanig~\cite{Slamanig2025PrivacyAuth} discusses the theory-practice gap in
+privacy-preserving authentication, noting that existing standards (ISO/IEC 29191, W3C Verifiable
+Credentials) rely on pairing-based constructions vulnerable to quantum attacks.
+
+Argo et al.~\cite{Argo2024PracticalPQ} implement and benchmark post-quantum signatures (blind,
+group, ring) using lattice assumptions, achieving practical performance.  Their work demonstrates
+that PQ blind signatures can be deployed with reasonable overhead, but it remains confined to
+the lattice setting.
+
+\subsection{Theoretical Barriers}
+
+Dietz et al.~\cite{Dietz2026Impossibility} prove an impossibility result for round-optimal
+pairing-free blind signatures in the standard model, raising questions about the feasibility of
+hash-based constructions.  However, their result applies to the \emph{standard model},
+not the \ROM, and does not rule out constructions that exploit hash-specific properties
+(e.g., the Fischlin compiler's reliance on the \ROM).  Kastner et al.~\cite{Kastner2024PairingFree}
+construct a pairing-free scheme in the \ROM, demonstrating the boundary of the impossibility
+result.
+
+% ============================================================
+%  4. ZK-FRIENDLY HASH FUNCTIONS
+% ============================================================
+\section{Arithmetisation-Oriented Hash Functions and their ZK Efficiency}
+\label{sec:zkmapping}
+
+The efficiency of a STARK-based Fischlin proof is dominated by the hash function used inside
+the AIR circuit.  Standard hash functions impose a prohibitive constraint cost: a single SHA-256
+compression function requires approximately 25,000 R1CS constraints, making a full SPHINCS+
+verification proof (approximately 2,000 hash calls) infeasible at approximately 50 million
+constraints.  AO hash functions reduce this by operating natively over large prime fields.
+
+\subsection{Poseidon2: Optimal Constraint Efficiency}
+
+Poseidon2 \cite{Grassi2023Poseidon2} achieves the best constraint-to-security ratio among
+current AO hashes for the Goldilocks field.  Table~\ref{tab:hashcompare} compares the relevant
+metrics.
+
+\begin{table}[t]
+\centering
+\caption{Comparison of Arithmetisation-Oriented Hash Functions}
+\label{tab:hashcompare}
+\begin{threeparttable}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Hash} & \textbf{Field} & \textbf{Constraints/perm} & \textbf{Security} & \textbf{CPU speed} \\
+\midrule
+Poseidon2 \cite{Grassi2023Poseidon2} & $\Fp$ (Goldilocks) & $\sim$300 R1CS & 128-bit & Moderate \\
+Monolith \cite{Grassi2024Monolith} & $\Fp$ (Goldilocks) & $\sim$400 R1CS & 128-bit & Fast ($\approx$SHA3) \\
+Poseidon(2)b \cite{Grassi2026Poseidon2b} & $\mathbb{F}_{2^k}$ & $\sim$250 R1CS & 128-bit & Moderate \\
+Poseidon \cite{Grassi2019Poseidon} & $\Fp$ & $\sim$350 R1CS & 128-bit & Moderate \\
+SHA-256 (baseline) & Binary & $\sim$25,000 R1CS & 128-bit & Fast (ASIC) \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+\small
+\item \emph{Note.}  Constraint counts are approximate for a single permutation (Poseidon2,
+Monolith, Poseidon) or single compression (SHA-256).  CPU speed is qualitative based on
+published benchmarks.  Poseidon(2)b targets binary-field proving systems (Binius), not the
+Goldilocks field used in Winterfell.
+\end{tablenotes}
+\end{threeparttable}
+\end{table}
+
+Monolith \cite{Grassi2024Monolith} outperforms Poseidon2 in native CPU speed (comparable to
+SHA3-256) but has slightly worse constraint efficiency for the Merkle-tree use case.
+For pure ZK-proving, where constraint count dominates proving time, Poseidon2 is preferred.
+
+\subsection{Co-Design Thesis}
+
+The central insight for hash-based Fischlin blind signatures is \emph{co-design}: by using
+Poseidon2 as the tweakable hash (THASH) inside SPHINCS+, the same hash function serves dual
+purposes:
+\begin{enumerate}
+  \item SPHINCS+ signature verification (FORS tree construction, WOTS+ chains, Merkle path
+        authentication);
+  \item STARK AIR constraints (Poseidon2 permutation equality checks, sponge continuity,
+        Merkle root assertions).
+\end{enumerate}
+This eliminates the need for a \emph{hash function translation layer} that would bloat the
+circuit by orders of magnitude.  Adomnicai~\cite{Adomnicai2026} explores a similar co-design
+for multi-party hash chain applications, confirming the feasibility of Poseidon2-based hash
+chains across multiple protocol layers.
+
+Quan~\cite{Quan2022} demonstrates a related approach combining lattice-based aggregate
+signatures with STARK protocols, though the setting uses two distinct hash functions and does
+not achieve the co-design efficiency of a unified AO substrate.
+
+% ============================================================
+%  5. STARK PROOFS FOR SIGNATURE ATTESTATION
+% ============================================================
+\section{STARK-Based Zero-Knowledge Proofs for Signature Attestation}
+\label{sec:stark}
+
+\subsection{Why STARKs Over Alternatives}
+
+The Fischlin \emph{Show} phase requires the holder to prove, in zero-knowledge, possession of a
+valid signature.  The proof system must satisfy four requirements:
+\begin{itemize}
+  \item \textbf{Post-quantum secure:} cannot rely on discrete-log or pairing assumptions;
+  \item \textbf{Transparent:} no trusted setup (the signer may be malicious);
+  \item \textbf{Succinct:} proof size must be practical for bandwidth-constrained verification;
+  \item \textbf{Field-native:} the AIR should operate over the same field as the hash function.
+\end{itemize}
+
+Table~\ref{tab:proofcompare} compares the leading candidates.
+
+\begin{table}[t]
+\centering
+\caption{Comparison of Zero-Knowledge Proof Systems for Signature Attestation}
+\label{tab:proofcompare}
+\begin{threeparttable}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Proof System} & \textbf{Assumption} & \textbf{Proof Size} & \textbf{Trusted Setup} & \textbf{PQ-Secure} \\
+\midrule
+STARK (Winterfell) & Hash (Poseidon2) & $\sim$85 KB & None & Yes \\
+Bulletproofs \cite{Bunz2018Bulletproofs} & Discrete Log & $\sim$1 KB & None & No \\
+MPC-in-the-head \cite{Katz2018ImprovedNIZK} & Hash (SHA-256) & $\sim$1 MB & None & Yes \\
+Groth16 (SNARK) & Pairing (BLS12-381) & $\sim$200 B & Required & No \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+\small
+\item \emph{Note.}  Proof sizes are indicative and parameter-dependent.  STARK size assumes
+blowup factor 16 at 128-bit security.  Bulletproofs and Groth16 rely on discrete-log and
+pairing assumptions respectively, both vulnerable to quantum attacks via Shor's algorithm.
+MPC-in-the-head produces proofs linear in circuit size ($\sim$1 MB for SPHINCS+ verification).
+\end{tablenotes}
+\end{threeparttable}
+\end{table}
+
+STARKs are the only option satisfying all four requirements simultaneously.
+Bulletproofs \cite{Bunz2018Bulletproofs} are succinct but rely on the discrete-log
+assumption, which Shor's algorithm breaks.  MPC-in-the-head techniques \cite{Katz2018ImprovedNIZK}
+avoid trusted setup and can be post-quantum, but produce proofs linear in the circuit size
+--- for SPHINCS+ verification at approximately 600,000 R1CS constraints, the resulting proof
+would be on the order of megabytes, impractical for bandwidth-constrained applications.
+
+\subsection{Winterfell Full-AIR Approach}
+
+Winterfell provides a Rust-based STARK prover with native support for the Goldilocks field.
+For SPHINCS+ verification, the full-AIR approach encodes the entire verification trace as an
+algebraic execution tableau.  The AIR enforces:
+
+\begin{enumerate}
+  \item Poseidon2 permutation constraints: rate-lane and capacity-lane equality across rounds,
+        round-constant binding, and partial-round S-box constraints;
+  \item Sponge continuity: consecutive permutation outputs match inputs across the hash chain;
+  \item Message absorption: the SPHINCS+ message and public key are bound to the trace;
+  \item Root assertion: the computed Merkle root matches the signer's public key;
+  \item Round counter integrity: prevents permutation skipping or reordering.
+\end{enumerate}
+
+The total constraint count is 53 (boundary + transition) for a trace of 23,861 rows $\times$
+64 columns at 128-bit security, encoding 2,091 Poseidon2 permutations.  Proof size is
+approximately 85 KB, with proving time of approximately 37 seconds on a laptop (blowup
+factor 16) and verification in approximately 4.2 ms \cite{Adomnicai2026}.
+
+\subsection{Proof-System Overhead in the Fischlin Protocol}
+
+In a Fischlin blind-signature protocol, the ZK proof is the dominant cost of the \emph{Show}
+phase.  The signer-side operations (blind signature issuance) are unaffected by the choice of
+proof system.  For the holder, the proving time determines usability: 37 seconds is acceptable
+for infrequent credential issuance (e.g., once per epoch) but prohibitive for high-frequency
+use.  For the verifier, the 4.2 ms verification and 85 KB proof size are practical for most
+deployment scenarios, including blockchain-based verification where gas costs scale with proof
+size \cite{Quan2022}.
+
+% ============================================================
+%  6. RESEARCH GAPS AND PROJECT POSITIONING
+% ============================================================
+\section{Research Gaps and Project Positioning}
+\label{sec:gaps}
+
+The preceding sections reveal a consistent pattern: each of the four required threads has
+independent maturity, but their intersection remains unexplored.  We identify three critical
+gaps.
+
+\subsection{G-1: Absence of a Concrete SPHINCS+--Fischlin Instantiation}
+
+The Bouillaguet compiler \cite{Bouillaguet2026BlindingPH} proves that any hash-and-sign
+scheme can be compiled into a blind signature.  Herranz and Louiso \cite{Herranz2025HashBased}
+establish theoretical feasibility.  Yet no concrete implementation of a SPHINCS+--Fischlin
+blind signature exists as of mid-2026.  The compiler's security proof is in the \ROM and
+the construction applies directly to SPHINCS+, but the deployability depends on engineering
+choices --- witness encoding, trace layout, AIR constraint design --- that the theoretical
+papers do not address.
+
+\medskip
+\noindent\textbf{Project response.}  This project implements the first SPHINCS+--Fischlin
+blind signature by instantiating the Bouillaguet compiler with SPHINCS+ over Poseidon2.
+The implementation includes a full Fischlin protocol stack (commit, issue, finalise, show,
+verify) with a Winterfell-based STARK prover for the Show phase.
+
+\subsection{G-2: Absence of Poseidon2--SPHINCS+ Co-Design Analysis}
+
+The original SPHINCS+ specification \cite{Bernstein2019SPHINCS} defines five hash backends
+(SHA-256, SHAKE-256, Haraka, and their variants) but does not include an
+arithmetisation-oriented hash.  Replacing the SPHINCS+ hash backend with Poseidon2 requires:
+\begin{enumerate}
+  \item Adapting the tweakable hash (THASH) abstraction to Poseidon2's sponge construction;
+  \item Verifying that Poseidon2 satisfies the multi-instance security properties required for
+        SPHINCS+'s security reduction (SM-TCR, SM-DSPR, SM-PRE, SM-UD) in the \ROM;
+  \item Demonstrating that the constraint efficiency gain (approximately 80$\times$ fewer
+        constraints per hash call compared to SHA-256) translates to a feasible STARK proof.
+\end{enumerate}
+No prior work systematically addresses all three sub-requirements.
+
+\medskip
+\noindent\textbf{Project response.}  This project provides the first complete co-design of
+Poseidon2 as the SPHINCS+ THASH backend, including the adapter layer
+(\texttt{hash\_poseidon2\_adapter}), the parameter selection for 128-bit and 192-bit security
+levels, and the STARK AIR constraints that operate over the same Poseidon2 permutation.
+
+\subsection{G-3: Absence of Hash-Based vs.\ Lattice Blind-Signature Benchmarks}
+
+The post-quantum blind-signature literature is almost exclusively lattice-based
+\cite{delPino2022Framework,Beullens2023LatticeBlind,Agrawal2022Practical}.  The natural
+comparison --- hash-based vs.\ lattice-based for equivalent security levels, measuring
+signature size, proving time, verification time, and proof size --- has not been performed.
+Without such benchmarks, protocol designers lack the data needed to choose between assumptions.
+
+\medskip
+\noindent\textbf{Project response.}  This project benchmarks the SPHINCS+--Poseidon2--Fischlin
+construction at 128-bit and 192-bit security levels and compares the results against published
+lattice benchmarks.  Metrics include proof size, prover time, verifier time, and total protocol
+bandwidth.
+
+\subsection{Summary of the Three-Layer Architecture}
+
+The project's theoretical architecture comprises three stacked layers, unified by a single
+arithmetisation-oriented hash:
+
+\begin{enumerate}
+  \item \textbf{Layer 1: SPHINCS+} --- provides \EUFCMA-secure hash-based signatures over
+        Poseidon2, operating on the Goldilocks field $\Fp$;
+  \item \textbf{Layer 2: Fischlin Transform + STARK} --- compiles SPHINCS+ into a round-optimal
+        blind signature, using a STARK proof (via Winterfell) for the Show phase;
+  \item \textbf{Layer 3: Poseidon2 over Goldilocks} --- serves as the unified algebraic
+        substrate, acting simultaneously as the SPHINCS+ tweakable hash, the STARK AIR
+        permutation, and the FRI low-degree test oracle.
+\end{enumerate}
+
+The novelty lies in the \emph{unification}: this is the first time a single AO hash serves
+as the unified substrate across all three layers of a blind-signature protocol, eliminating the
+hash-function translation bottleneck that has historically made hash-based Fischlin constructions
+prohibitively expensive.
+
+% ============================================================
+%  7. COMPARATIVE ANALYSIS
+% ============================================================
+\section{Comparative Analysis across Five Dimensions}
+\label{sec:analysis}
+
+We evaluate the 26 surveyed papers across five analytical dimensions.  Table~\ref{tab:dimension}
+summarises the results.
+
+\begin{enumerate}[label=\textbf{D\arabic*.},leftmargin=*]
+  \item \textbf{Theory foundation.}  Does the paper provide a security proof in a standard
+        cryptographic model (ROM, standard model, QROM)?
+  \item \textbf{Implementation.}  Does the paper provide runnable code or benchmarks?
+  \item \textbf{Security model.}  What security properties are proven (EUF-CMA, OMUF,
+        blindness, anonymity)?
+  \item \textbf{Proof system.}  If applicable, what ZK proof system is used (STARK,
+        Bulletproofs, MPC-in-the-head, none)?
+  \item \textbf{Field arithmetic.}  What algebraic structure underlies the construction
+        (lattice, pairing, hash, $\Fp$)?
+\end{enumerate}
+
+\begin{table}[t]
+\centering
+\caption{Five-Dimension Analysis of the 26-Paper Corpus}
+\label{tab:dimension}
+\footnotesize
+\begin{tabularx}{\textwidth}{l>{\raggedright\arraybackslash}p{2.8cm}ccccc}
+\toprule
+\textbf{Paper} & \textbf{Core contribution} & \textbf{D1} & \textbf{D2} & \textbf{D3} & \textbf{D4} & \textbf{D5} \\
+\midrule
+Bernstein et al. (2019) \cite{Bernstein2019SPHINCS} & SPHINCS+ signature framework & Proof & Impl & EUF-CMA & --- & Hash \\
+NIST IR 8413 (2022) \cite{NIST2022IR8413} & Third-round PQC status & Report & --- & --- & --- & --- \\
+NIST SP 800-208 (2020) \cite{NIST2020SP800} & Stateful HBS standard & Report & --- & EUF-CMA & --- & Hash \\
+Fuchsbauer et al. (2015) \cite{Fuchsbauer2015Practical} & Round-optimal blind sigs & Proof & --- & OMUF+BL & --- & Pairing \\
+del Pino--Katsumata (2022) \cite{delPino2022Framework} & Lattice Fischlin framework & Proof & --- & OMUF+BL & --- & Lattice \\
+Beullens et al. (2023) \cite{Beullens2023LatticeBlind} & Short lattice blind sigs & Proof & --- & OMUF+BL & --- & Lattice \\
+Agrawal et al. (2022) \cite{Agrawal2022Practical} & Practical lattice blind sigs & Proof & Bench & OMUF+BL & --- & Lattice \\
+Katsumata et al. (2021) \cite{Katsumata2021} & Standard-model blind sigs & Proof & --- & OMUF+BL & --- & Lattice \\
+Kastner et al. (2024) \cite{Kastner2024PairingFree} & Pairing-free blind sigs & Proof & --- & OMUF+BL & --- & Lattice \\
+Dietz et al. (2026) \cite{Dietz2026Impossibility} & Impossibility result & Proof & --- & --- & --- & Lattice \\
+Bouillaguet et al. (2026) \cite{Bouillaguet2026BlindingPH} & Generic Fischlin compiler & Proof & --- & OMUF+BL & --- & Hash \\
+Herranz--Louiso (2025) \cite{Herranz2025HashBased} & Hash-based BS feasibility & Theory & --- & --- & --- & Hash \\
+Grassi et al. (2023) \cite{Grassi2023Poseidon2} & Poseidon2 design & Proof & Impl & --- & STARK & $\Fp$ \\
+Grassi et al. (2019) \cite{Grassi2019Poseidon} & Poseidon design & Proof & Impl & --- & STARK & $\Fp$ \\
+Grassi et al. (2024) \cite{Grassi2024Monolith} & Monolith design & Proof & Impl & --- & STARK & $\Fp$ \\
+Grassi et al. (2026) \cite{Grassi2026Poseidon2b} & Poseidon(2)b design & Proof & Impl & --- & STARK & $\mathbb{F}_{2^k}$ \\
+Adomnicai (2026) \cite{Adomnicai2026} & AO hash chains & Proof & Impl & --- & MPC & $\Fp$ \\
+Kovalchuk et al. (2021) \cite{2021Security} & Poseidon security analysis & Analysis & --- & --- & --- & $\Fp$ \\
+Ben-Sasson et al. (2020) \cite{2019DEEP} & DEEP-FRI & Proof & --- & --- & STARK & $\Fp$ \\
+B\"unz et al. (2018) \cite{Bunz2018Bulletproofs} & Bulletproofs & Proof & Impl & --- & BP & DL \\
+Katz et al. (2018) \cite{Katz2018ImprovedNIZK} & MPC-in-the-head NIZK & Proof & Impl & --- & MPCitH & Hash \\
+Quan (2022) \cite{Quan2022} & Bitcoin PQ + lattice + STARK & --- & Impl & --- & STARK & Lattice+$\Fp$ \\
+Argo et al. (2024) \cite{Argo2024PracticalPQ} & PQ signatures for privacy & Proof & Impl & OMUF+BL & --- & Lattice \\
+Chathurangi et al. (2025) \cite{Chathurangi2025Advances} & Anonymous credentials survey & Survey & --- & --- & --- & Multi \\
+Slamanig (2025) \cite{Slamanig2025PrivacyAuth} & Theory vs.\ practice survey & Survey & --- & --- & --- & Multi \\
+Buser et al. (2022) \cite{Buser2022ExoticSigs} & Exotic PQ sigs survey & Survey & --- & --- & --- & Multi \\
+\midrule
+\textbf{This project (target)} & \textbf{SPHINCS+--PoS--Fischlin} & \textbf{Proof} & \textbf{Impl+Bench} & \textbf{OMUF+BL} & \textbf{STARK} & \textbf{Hash+$\Fp$} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Analysis of the Coverage Map}
+
+Table~\ref{tab:dimension} reveals a clear cluster in the lattice region (D5): all six Fischlin
+blind-signature constructions at flagship venues (CRYPTO, CCS, EUROCRYPT) are lattice-based.
+The hash-based row --- Bouillaguet et al.~\cite{Bouillaguet2026BlindingPH} --- provides the
+generic theory (D1) but lacks implementation and benchmarks (D2).  Herranz and Louiso
+\cite{Herranz2025HashBased} are the only paper focused exclusively on hash-based blind
+signatures, but their contribution is limited to feasibility analysis.
+
+The AO hash cluster (Grassi et al.~\cite{Grassi2023Poseidon2,Grassi2019Poseidon,
+Grassi2024Monolith,Grassi2026Poseidon2b}) provides implementation and benchmarks for the
+hash function itself but does not connect to the blind-signature or Fischlin literature.
+Adomnicai~\cite{Adomnicai2026} bridges AO hashes to protocol-level constructions but focuses
+on multi-party computation rather than blind signatures.
+
+The intersection marked by the project target row --- hash-based signature $\cap$ Fischlin
+blind signature $\cap$ AO hash $\cap$ STARK proof --- is empty in the existing literature.
+
+% ============================================================
+%  8. CONCLUSION
+% ============================================================
+\section{Conclusion}
+\label{sec:conclusion}
+
+This survey has mapped the four converging research threads necessary for a hash-based Fischlin
+blind signature: SPHINCS+ hash-based signatures, the Fischlin blind-signature framework,
+arithmetisation-oriented hash functions (Poseidon2), and STARK-based zero-knowledge proofs.
+Our analysis of 26 landmark papers across these threads yields five principal findings.
+
+\medskip\noindent\textbf{Finding 1: A generic compiler exists but is uninstantiated.}
+Bouillaguet et al.~\cite{Bouillaguet2026BlindingPH} (IEEE S\&P 2026) provide a provably secure
+generic compiler from any hash-and-sign signature to a round-optimal blind signature in the
+\ROM.  The compiler applies directly to SPHINCS+, but no concrete instantiation or benchmark
+has been published.
+
+\medskip\noindent\textbf{Finding 2: Lattice dominance is complete but not inherent.}
+Six flagship-venue constructions \cite{delPino2022Framework,Beullens2023LatticeBlind,
+Agrawal2022Practical,Katsumata2021,Kastner2024PairingFree,Fuchsbauer2015Practical} all use
+lattice assumptions.  The Bouillaguet compiler demonstrates that the Fischlin framework does
+\emph{not} require lattices, but the hash-based pathway remains unexplored.
+
+\medskip\noindent\textbf{Finding 3: Poseidon2--SPHINCS+ co-design is optimal but unvalidated.}
+Using Poseidon2 as both the SPHINCS+ THASH backend and the STARK AIR substrate eliminates the
+circuit-translation bottleneck, reducing constraint count by approximately 80$\times$ compared
+to SHA-256.  The multi-instance security properties required for SPHINCS+'s reduction (SM-TCR,
+SM-DSPR, SM-PRE, SM-UD) have not been formally verified for Poseidon2 in the \ROM, though
+Grassi et al.~\cite{Grassi2023Poseidon2,Grassi2019Poseidon} provide strong evidence they hold.
+
+\medskip\noindent\textbf{Finding 4: STARK proving costs are manageable for credential use
+cases.}  At approximately 37 seconds prover time and 85 KB proof size (128-bit security), the
+Winterfell full-AIR approach is practical for non-interactive use cases such as credential
+issuance verified once per epoch.  The verification time of approximately 4.2 ms supports
+high-throughput verifier deployments.
+
+\medskip\noindent\textbf{Finding 5: Hash-based blind signatures occupy a unique and valuable
+niche.}  They are the only post-quantum blind-signature approach relying solely on
+hash-function security, without structured lattice assumptions, thereby offering the most
+conservative security profile for high-assurance privacy applications.
+Chathurangi et al.~\cite{Chathurangi2025Advances} and Slamanig~\cite{Slamanig2025PrivacyAuth}
+confirm that no hash-based anonymous credential system currently exists, underscoring the
+novelty of the construction.
+
+\subsection{Recommendations for Future Work}
+
+Based on the gaps identified, we recommend the following research priorities:
+
+\begin{enumerate}
+  \item \textbf{Implement and benchmark the SPHINCS+--Poseidon2--Fischlin construction.}
+        The Bouillaguet compiler \cite{Bouillaguet2026BlindingPH} provides the theoretical
+        foundation; what is needed is a concrete implementation measuring proof size, prover
+        time, verifier time, and total protocol bandwidth at standardised security levels.
+  \item \textbf{Formally verify Poseidon2's THF properties for SPHINCS+.}
+        The four properties required by SPHINCS+'s security reduction (SM-TCR, SM-DSPR, SM-PRE,
+        SM-UD) should be formally verified for Poseidon2 in the \ROM, following the modular
+        THF framework used in the SPHINCS+ specification.
+  \item \textbf{Optimise STARK proving time.}  At approximately 37 seconds, the prover is the
+        bottleneck.  Recursive proof composition, hardware acceleration of Poseidon2
+        permutations, and parameter optimisation (fewer FORS trees, shorter hypertrees) are
+        promising directions.
+  \item \textbf{Establish post-quantum blind-signature standards.}  The IETF CFRG and NIST
+        should include advanced primitives --- blind signatures, group signatures, anonymous
+        credentials --- in the PQC standardisation roadmap.  A hash-based option would provide
+        the most conservative security foundation for these standards.
+\end{enumerate}
+
+\medskip\noindent\textbf{Closing remark.}  The convergence of SPHINCS+, Poseidon2, the
+Fischlin framework, and STARK proofs represents a unique opportunity to construct the first
+practical hash-based blind-signature scheme --- a primitive that combines post-quantum security,
+privacy, transparency, and the conservative assurance of hash-function-only assumptions.
+The gaps identified in this survey are addressable with current technology; filling them
+would deliver a blind-signature scheme with no trusted setup, no lattice assumptions, and
+native STARK compatibility.
+
+% ============================================================
+%  AI DISCLOSURE
+% ============================================================
+\medskip
+\noindent\textbf{AI Disclosure.}  This survey was produced with AI-assisted research tools.
+The research pipeline included AI-powered literature search, source verification, evidence
+synthesis, and report drafting.  All findings were verified against cited sources.  Human
+oversight was applied throughout the process.
+
+% ============================================================
+%  REFERENCES
+% ============================================================
+\medskip
+\printbibliography[title={References}]
+
+\end{document}

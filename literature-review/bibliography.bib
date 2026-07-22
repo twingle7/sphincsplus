@@ -1,0 +1,307 @@
+% ============================================================
+% Literature Review Bibliography
+% SPHINCS+ Poseidon2 Fischlin STARK Blind Signatures
+% Generated: 2026-07-22
+% ============================================================
+
+% ---------- DIRECTLY RELATED: PQ Blind Signatures via Fischlin ----------
+
+@inproceedings{Bouillaguet2026BlindingPH,
+  author = {Charles Bouillaguet and Thibauld Feneuil and Jules Maire and Matthieu Rivain and Julia Sauvage and Damien Vergnaud},
+  title = {Blinding Post-Quantum Hash-and-Sign Signatures},
+  booktitle = {Proceedings of the 2026 IEEE Symposium on Security and Privacy (S\&P)},
+  year = {2026},
+  pages = {1--18},
+  doi = {10.1109/SP63933.2026.00032},
+  note = {CRITICAL: Generic Fischlin compiler — any PQ hash-and-sign → blind signature. No SPHINCS+ instantiation provided.}
+}
+
+@misc{Herranz2025HashBased,
+  author = {Javier Herranz and Hugo Louiso},
+  title = {Hash-Based Blind Signatures: First Steps},
+  year = {2025},
+  howpublished = {IACR Cryptology ePrint Archive},
+  note = {KEY PAPER: First exploration of hash-based blind signatures}
+}
+
+% ---------- FOUNDATION: SPHINCS+ ----------
+
+@inproceedings{Bernstein2019SPHINCS,
+  author = {Daniel J. Bernstein and Andreas H\"ulsing and Stefan K\"olbl and Ruben Niederhagen and Joost Rijneveld and Tanel Simson},
+  title = {The {SPHINCS$^+$} Signature Framework},
+  booktitle = {Proceedings of the 2019 ACM SIGSAC Conference on Computer and Communications Security (CCS)},
+  year = {2019},
+  pages = {2129--2146},
+  publisher = {ACM},
+  doi = {10.1145/3319535.3363229},
+  note = {FOUNDATION: The SPHINCS+ scheme specification, 401+ citations}
+}
+
+% ---------- FOUNDATION: Poseidon / Poseidon2 ----------
+
+@inproceedings{Grassi2023Poseidon2,
+  author = {Lorenzo Grassi and Dmitry Khovratovich and Markus Schofnegger},
+  title = {Poseidon2: A Faster Version of the Poseidon Hash Function},
+  booktitle = {AFRICACRYPT 2023},
+  year = {2023},
+  series = {LNCS},
+  publisher = {Springer},
+  doi = {10.1007/978-3-031-37679-5\_8},
+  note = {FOUNDATION: Poseidon2 design, 24+ citations}
+}
+
+@article{Grassi2019Poseidon,
+  author = {Lorenzo Grassi and Dmitry Khovratovich and Christian Rechberger and Arnab Roy and Markus Schofnegger},
+  title = {Poseidon: A New Hash Function for Zero-Knowledge Proof Systems},
+  year = {2019},
+  howpublished = {IACR ePrint / DANS},
+  note = {FOUNDATION: Original Poseidon hash for ZK proofs, 71+ citations}
+}
+
+% ---------- LATTICE-BASED BLIND SIGNATURES (Fischlin-style) ----------
+
+@inproceedings{Beullens2023LatticeBlind,
+  author = {Ward Beullens and Vadim Lyubashevsky and Ngoc Khanh Nguyen and Gregor Seiler},
+  title = {Lattice-Based Blind Signatures: Short, Efficient, and Round-Optimal},
+  booktitle = {Proceedings of the 2023 ACM SIGSAC Conference on Computer and Communications Security (CCS)},
+  year = {2023},
+  publisher = {ACM},
+  doi = {10.1145/3576915.3616613},
+  note = {HIGH: Round-optimal lattice blind sig, Fischlin-style, 28+ citations}
+}
+
+@inproceedings{delPino2022Framework,
+  author = {Rafael del Pino and Shuichi Katsumata},
+  title = {A New Framework for More Efficient Round-Optimal Lattice-Based (Partially) Blind Signature via Trapdoor Sampling},
+  booktitle = {CRYPTO 2022},
+  year = {2022},
+  series = {LNCS},
+  publisher = {Springer},
+  doi = {10.1007/978-3-031-15979-4\_11},
+  note = {HIGH: Round-optimal Fischlin-style lattice blind sig, 43+ citations}
+}
+
+@misc{Agrawal2021CanRoundOptimal,
+  author = {Shweta Agrawal and Elena Kirshanova and Damien Stehl\'e and Anshu Yadav},
+  title = {Can Round-Optimal Lattice-Based Blind Signatures be Practical?},
+  year = {2021},
+  howpublished = {IACR Cryptology ePrint Archive},
+  note = {HIGH: Practicality analysis of round-optimal blind sigs, 13+ citations}
+}
+
+@inproceedings{Kastner2024PairingFree,
+  author = {Julia K\"astner and Ky Nguyen and Michael Reichle},
+  title = {Pairing-Free Blind Signatures from Standard Assumptions in the ROM},
+  booktitle = {CRYPTO 2024},
+  year = {2024},
+  series = {LNCS},
+  publisher = {Springer},
+  doi = {10.1007/978-3-031-68376-3\_7},
+  note = {MEDIUM: Pairing-free construction, 9+ citations}
+}
+
+% ---------- SURVEYS ----------
+
+@article{Buser2022ExoticSigs,
+  author = {Maxime Buser and Rafael Dowsley and Muhammed F. Esgin and Cl\'ementine Gritti and Shabnam Kasra Kermanshahi and Veronika Kuchta and Jason T. LeGrow and Joseph K. Liu and Rapha\"el C.-W. Phan and Amin Sakzad and Ron Steinfeld and Jiangshan Yu},
+  title = {A Survey on Exotic Signatures for Post-quantum Blockchain: Challenges and Research Directions},
+  journal = {ACM Computing Surveys},
+  year = {2022},
+  doi = {10.1145/3572771},
+  note = {HIGH: Survey covering PQ blind/ring/adaptor signatures, 40+ citations}
+}
+
+@article{Chathurangi2025Advances,
+  author = {Madusha Chathurangi and Qinyi Li and Ernest Foo},
+  title = {On Advances of Anonymous Credentials -- From Traditional to Post-Quantum},
+  journal = {Cryptography},
+  year = {2025},
+  volume = {9},
+  number = {1},
+  pages = {8},
+  doi = {10.3390/cryptography9010008},
+  note = {HIGH: Survey on PQ anonymous credentials, 4+ citations}
+}
+
+% ---------- PQ SIGNATURES FOR PRIVACY ----------
+
+@inproceedings{Argo2024PracticalPQ,
+  author = {Sven Argo and Tim G\"uneysu and Corentin Jeudy and Georg Land and Adeline Roux-Langlois and Olivier Sanders},
+  title = {Practical Post-Quantum Signatures for Privacy},
+  booktitle = {Proceedings of the 2024 ACM SIGSAC Conference on Computer and Communications Security (CCS)},
+  year = {2024},
+  publisher = {ACM},
+  doi = {10.1145/3658644.3670297},
+  note = {HIGH: PQ blind sigs, group sigs, anonymous credentials, 16+ citations}
+}
+
+@misc{Slamanig2025PrivacyAuth,
+  author = {Daniel Slamanig},
+  title = {Privacy-Preserving Authentication: Theory vs. Practice},
+  year = {2025},
+  howpublished = {Privacy and Identity Management / arXiv:2501.07209},
+  doi = {10.48550/arXiv.2501.07209},
+  note = {MEDIUM: Survey on privacy-preserving authentication, 2+ citations}
+}
+
+% ---------- ZK-FRIENDLY HASH COMPETITORS ----------
+
+@article{Grassi2024Monolith,
+  author = {Lorenzo Grassi and Dmitry Khovratovich and Reinhard L\"uftenegger and Christian Rechberger and Markus Schofnegger and Roman Walch},
+  title = {Monolith: Circuit-Friendly Hash Functions with New Nonlinear Layers for Fast and Constant-Time Implementations},
+  journal = {IACR Transactions on Symmetric Cryptology},
+  year = {2024},
+  volume = {2024},
+  number = {3},
+  pages = {44--83},
+  doi = {10.46586/tosc.v2024.i3.44-83},
+  note = {HIGH: Competitor ZK-friendly hash, compares to Poseidon2, 8+ citations}
+}
+
+% ---------- OTHER RELEVANT ----------
+
+@inproceedings{Baum2026ConcretelyEfficientBlind,
+  author = {Carsten Baum and Marvin Beckmann and Ward Beullens and Shibam Mukherjee and Christian Rechberger},
+  title = {Concretely Efficient Blind Signatures Based on VOLE-in-the-Head Proofs and the MAYO Trapdoor},
+  booktitle = {IACR Cryptology ePrint Archive},
+  year = {2026},
+  note = {MEDIUM: VOLE-based blind sig, 1+ citations}
+}
+
+@article{2023lattice,
+  author = {Ward Beullens and Vadim Lyubashevsky and Ngoc Khanh Nguyen and Gregor Seiler},
+  title = {Lattice-Based Blind Signatures: Short, Efficient, and Round-Optimal},
+  journal = {Proceedings of the 2023 ACM SIGSAC Conference on Computer and Communications Security (CCS)},
+  year = {2023},
+  doi = {10.1145/3576915.3616613}
+}
+
+@inproceedings{Agrawal2022Practical,
+  author = {Shweta Agrawal and Elena Kirshanova and Damien Stehle and Anshu Yadav},
+  title = {Practical, Round-Optimal Lattice-Based Blind Signatures},
+  booktitle = {ACM CCS},
+  year = {2022},
+  doi = {10.1145/3548606.3560650}
+}
+
+@inproceedings{Katsumata2021,
+  author = {Shuichi Katsumata and Ryo Nishimaki and Shota Yamada and Takashi Yamakawa},
+  title = {Round-Optimal Blind Signatures in the Plain Model from Classical and Quantum Standard Assumptions},
+  booktitle = {EUROCRYPT},
+  year = {2021},
+  doi = {10.1007/978-3-030-77870-5_15}
+}
+
+@article{2019DEEP,
+  author = {Eli Ben-Sasson and Lior Goldberg and Swastik Kopparty and Shubhangi Saraf},
+  title = {DEEP-FRI: Sampling Outside the Box Improves Soundness},
+  journal = {Proceedings of ITCS},
+  year = {2020},
+  doi = {10.4230/LIPICS.ITCS.2020.5}
+}
+
+@misc{Balumuri2024QuantumSafe,
+  author = {Sathvika Balumuri and Edward Eaton and Philippe Lamontagne},
+  title = {Quantum-Safe Public Key Blinding from MPC-in-the-Head Signature Schemes},
+  year = {2024},
+  doi = {10.1007/978-3-031-95761-1_13}
+}
+
+@misc{Grassi2026Poseidon2b,
+  author = {Lorenzo Grassi and Dmitry Khovratovich and Katharina Koschatko and Christian Rechberger and Markus Schofnegger and Verena Schroppel and Zhuo Wu},
+  title = {Poseidon(2)b},
+  year = {2026},
+  doi = {10.62056/a66ce0zn4}
+}
+
+@misc{Adomnicai2026,
+  author = {Alexandre Adomnicai},
+  title = {Towards Practical Multi-Party Hash Chains using Arithmetization-Oriented Primitives},
+  year = {2026},
+  doi = {10.62056/ahp2tx4e-}
+}
+
+@article{2021Security,
+  author = {L. Kovalchuk and R. Oliynykov and M. Rodinko},
+  title = {Security of the Poseidon Hash Function Against Non-Binary Differential and Linear Attacks},
+  journal = {Cybernetics and Systems Analysis},
+  year = {2021},
+  doi = {10.1007/s10559-021-00352-y}
+}
+
+@article{Quan2022,
+  author = {Yunjia Quan},
+  title = {Improving Bitcoin's Post-Quantum Transaction Efficiency With a Novel Lattice-Based Aggregate Signature Scheme Based on CRYSTALS-Dilithium and a STARK Protocol},
+  journal = {IEEE Access},
+  year = {2022},
+  doi = {10.1109/ACCESS.2022.3227394}
+}
+
+@inproceedings{Sekulic2025,
+  author = {Jelena Sekulic and Darko Capko and Aleksandar Erdeljan and Tatjana Grbic and Kosa Nenadic},
+  title = {A Short Survey of ZK-Friendly Hash Functions},
+  booktitle = {INFOTEH},
+  year = {2025},
+  doi = {10.1109/INFOTEH64129.2025.10959296}
+}
+
+@misc{Dietz2026Impossibility,
+  author = {Marian Dietz and Julia K\"astner and Stefano Tessaro},
+  title = {On the Impossibility of Round-Optimal Pairing-Free Blind Signatures in the ROM},
+  year = {2026},
+  howpublished = {IACR Cryptology ePrint Archive},
+  note = {MEDIUM: Theoretical impossibility result, 1+ citations}
+}
+
+% ---------- MISSING FROM ORIGINAL 26-PAPER CORPUS: ADDED FOR SURVEY ----------
+
+@inproceedings{Fuchsbauer2015Practical,
+  author = {Georg Fuchsbauer and Christian Hanser and Daniel Slamanig},
+  title = {Practical Round-Optimal Blind Signatures in the Standard Model},
+  booktitle = {CRYPTO 2015},
+  year = {2015},
+  series = {LNCS},
+  publisher = {Springer},
+  doi = {10.1007/978-3-662-48000-7\_12},
+  note = {FOUNDATION: Round-optimal blind sigs in standard model, 100+ citations}
+}
+
+@techreport{NIST2022IR8413,
+  author = {{NIST} and Gorjan Alagic and Daniel Apon and David Cooper and Quynh Dang and John M. Kelsey and Yi-Kai Liu and Carl A. Miller and Dustin Moody and Rene Peralta and Ray Perlner and Angela Robinson and Daniel Smith-Tone},
+  title = {Status Report on the Third Round of the {NIST} Post-Quantum Cryptography Standardization Process},
+  institution = {National Institute of Standards and Technology},
+  year = {2022},
+  number = {NIST IR 8413},
+  doi = {10.6028/nist.ir.8413},
+  note = {FOUNDATION: NIST PQC round 3 status report}
+}
+
+@techreport{NIST2020SP800,
+  author = {{NIST} and David A. Cooper and John M. Kelsey},
+  title = {Recommendation for Stateful Hash-Based Signature Schemes},
+  institution = {National Institute of Standards and Technology},
+  year = {2020},
+  number = {NIST SP 800-208},
+  doi = {10.6028/nist.sp.800-208},
+  note = {FOUNDATION: Standard for stateful HBS (XMSS, LMS)}
+}
+
+@inproceedings{Bunz2018Bulletproofs,
+  author = {Benedikt B\"unz and Jonathan Bootle and Dan Boneh and Andrew Poelstra and Pieter Wuille and Greg Maxwell},
+  title = {Bulletproofs: Short Proofs for Confidential Transactions and More},
+  booktitle = {Proceedings of the 2018 IEEE Symposium on Security and Privacy (S\&P)},
+  year = {2018},
+  publisher = {IEEE},
+  doi = {10.1109/sp.2018.00020},
+  note = {FOUNDATION: Bulletproofs, 1000+ citations}
+}
+
+@inproceedings{Katz2018ImprovedNIZK,
+  author = {Jonathan Katz and Vladimir Kolesnikov and Xiao Wang},
+  title = {Improved Non-Interactive Zero Knowledge with Applications to Post-Quantum Signatures},
+  booktitle = {Proceedings of the 2018 ACM SIGSAC Conference on Computer and Communications Security (CCS)},
+  year = {2018},
+  publisher = {ACM},
+  doi = {10.1145/3243734.3243805},
+  note = {FOUNDATION: MPC-in-the-head NIZK for PQ signatures}
+}

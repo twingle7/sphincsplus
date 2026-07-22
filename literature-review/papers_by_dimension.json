@@ -1,0 +1,180 @@
+{
+  "metadata": {
+    "created": "2026-07-22",
+    "description": "Literature review for SPHINCS+ Poseidon2 Fischlin STARK blind signatures",
+    "dimensions": 8,
+    "status": "in_progress"
+  },
+  "key_papers": [
+    {
+      "title": "Blinding Post-Quantum Hash-and-Sign Signatures",
+      "authors": ["Charles Bouillaguet", "Thibauld Feneuil", "Jules Maire", "Matthieu Rivain", "Julia Sauvage"],
+      "year": 2026,
+      "venue": "IEEE Symposium on Security and Privacy (S&P)",
+      "doi": "10.1109/SP63933.2026.00032",
+      "citations": 5,
+      "relevance": "DIRECT - Fischlin framework to compile any PQ hash-and-sign into blind signature",
+      "openAccess": true,
+      "paperId": "3cbc60a73a8abddd06fe3271f3ca5caa5e81fe5c"
+    },
+    {
+      "title": "Hash-Based Blind Signatures: First Steps",
+      "authors": ["Javier Herranz", "Hugo Louiso"],
+      "year": 2025,
+      "venue": "IACR Cryptology ePrint Archive",
+      "doi": null,
+      "citations": 1,
+      "relevance": "DIRECT - First exploration of hash-based blind signatures",
+      "openAccess": true,
+      "paperId": "157ee75a7d675cc3d8a3a5c63dd38ef73d166f58"
+    },
+    {
+      "title": "Lattice-Based Blind Signatures: Short, Efficient, and Round-Optimal",
+      "authors": ["Ward Beullens", "Vadim Lyubashevsky", "Ngoc Khanh Nguyen", "Gregor Seiler"],
+      "year": 2023,
+      "venue": "ACM CCS 2023",
+      "doi": "10.1145/3576915.3616613",
+      "citations": 28,
+      "relevance": "HIGH - Round-optimal lattice blind sig, Fischlin-style",
+      "openAccess": true,
+      "paperId": "W4388857319"
+    },
+    {
+      "title": "The SPHINCS+ Signature Framework",
+      "authors": ["Daniel J. Bernstein", "Andreas Hulsing", "Stefan Kolbl", "Ruben Niederhagen", "Joost Rijneveld", "Tanel Simson"],
+      "year": 2019,
+      "venue": "ACM CCS 2019",
+      "doi": "10.1145/3319535.3363229",
+      "citations": 401,
+      "relevance": "FOUNDATION - The SPHINCS+ scheme itself",
+      "openAccess": true,
+      "paperId": "d1c3ce329ff9f9199528ede3fc206665ce6261bc"
+    },
+    {
+      "title": "Poseidon2: A Faster Version of the Poseidon Hash Function",
+      "authors": ["Lorenzo Grassi", "Dmitry Khovratovich", "Markus Schofnegger"],
+      "year": 2023,
+      "venue": "AFRICACRYPT 2023",
+      "doi": "10.1007/978-3-031-37679-5_8",
+      "citations": 24,
+      "relevance": "FOUNDATION - Poseidon2 hash function design",
+      "openAccess": false,
+      "paperId": "doi:10.1007/978-3-031-37679-5_8"
+    },
+    {
+      "title": "Practical Post-Quantum Signatures for Privacy",
+      "authors": ["Sven Argo", "Tim Guneysu", "Corentin Jeudy", "Georg Land", "Adeline Roux-Langlois"],
+      "year": 2024,
+      "venue": "ACM CCS 2024",
+      "doi": "10.1145/3658644.3670297",
+      "citations": 16,
+      "relevance": "HIGH - PQ blind sigs, group sigs, anonymous credentials",
+      "openAccess": true,
+      "paperId": "a2bfbf25ed89a516a6dcde674d39e984d714ae7e"
+    },
+    {
+      "title": "A Survey on Exotic Signatures for Post-quantum Blockchain",
+      "authors": ["Maxime Buser", "Rafael Dowsley", "Muhammed F. Esgin", "Clementine Gritti", "et al."],
+      "year": 2022,
+      "venue": "ACM Computing Surveys",
+      "doi": "10.1145/3572771",
+      "citations": 40,
+      "relevance": "HIGH - Survey covering PQ blind/ring/adaptor signatures",
+      "openAccess": true,
+      "paperId": "W4311057306"
+    },
+    {
+      "title": "Poseidon: A New Hash Function for Zero-Knowledge Proof Systems",
+      "authors": ["Lorenzo Grassi", "Dmitry Khovratovich", "Christian Rechberger", "Arnab Roy", "Markus Schofnegger"],
+      "year": 2019,
+      "venue": "DANS / ePrint",
+      "doi": null,
+      "citations": 71,
+      "relevance": "FOUNDATION - Original Poseidon hash for ZK proofs",
+      "openAccess": true,
+      "paperId": "W3091883733"
+    },
+    {
+      "title": "Monolith: Circuit-Friendly Hash Functions with New Nonlinear Layers",
+      "authors": ["Lorenzo Grassi", "Dmitry Khovratovich", "Reinhard Luftenegger", "Christian Rechberger", "Markus Schofnegger", "Roman Walch"],
+      "year": 2024,
+      "venue": "IACR Trans. Symmetric Cryptology",
+      "doi": "10.46586/tosc.v2024.i3.44-83",
+      "citations": 8,
+      "relevance": "HIGH - Competitor ZK-friendly hash, compares to Poseidon2",
+      "openAccess": true,
+      "paperId": "W4402380465"
+    },
+    {
+      "title": "A New Framework for More Efficient Round-Optimal Lattice-Based (Partially) Blind Signature via Trapdoor Sampling",
+      "authors": ["Rafael del Pino", "Shuichi Katsumata"],
+      "year": 2022,
+      "venue": "CRYPTO 2022",
+      "doi": "10.1007/978-3-031-15979-4_11",
+      "citations": 43,
+      "relevance": "HIGH - Round-optimal Fischlin-style lattice blind sig",
+      "openAccess": false,
+      "paperId": "W4312305646"
+    },
+    {
+      "title": "On Advances of Anonymous Credentials - From Traditional to Post-Quantum",
+      "authors": ["Madusha Chathurangi", "Qinyi Li", "Ernest Foo"],
+      "year": 2025,
+      "venue": "Cryptography",
+      "doi": "10.3390/cryptography9010008",
+      "citations": 4,
+      "relevance": "HIGH - Survey on PQ anonymous credentials",
+      "openAccess": true,
+      "paperId": "36f6cd0b38577d380bacfbf1e0eb5e979a3b93b9"
+    },
+    {
+      "title": "Can Round-Optimal Lattice-Based Blind Signatures be Practical?",
+      "authors": ["Shweta Agrawal", "Elena Kirshanova", "Damien Stehle", "Anshu Yadav"],
+      "year": 2021,
+      "venue": "IACR ePrint",
+      "doi": null,
+      "citations": 13,
+      "relevance": "HIGH - Practicality analysis of round-optimal blind sigs",
+      "openAccess": true,
+      "paperId": "0bf8b6f87f7b2a146c70116cde028762c7aee7a7"
+    },
+    {
+      "title": "Privacy-Preserving Authentication: Theory vs. Practice",
+      "authors": ["Daniel Slamanig"],
+      "year": 2025,
+      "venue": "Privacy and Identity Management",
+      "doi": "10.48550/arXiv.2501.07209",
+      "citations": 2,
+      "relevance": "MEDIUM - Survey on privacy-preserving authentication",
+      "openAccess": true,
+      "paperId": "b4e8902272196eb3be675037161ac3a3e684ccc1"
+    },
+    {
+      "title": "Concretely Efficient Blind Signatures Based on VOLE-in-the-Head Proofs and the MAYO Trapdoor",
+      "authors": ["Carsten Baum", "Marvin Beckmann", "Ward Beullens", "Shibam Mukherjee", "Christian Rechberger"],
+      "year": 2026,
+      "venue": "IACR ePrint",
+      "doi": null,
+      "citations": 1,
+      "relevance": "MEDIUM - VOLE-based blind sig (alternative approach)",
+      "openAccess": true,
+      "paperId": "bcc8b5340ba85d8697428cdfe3c3e810628baab9"
+    },
+    {
+      "title": "Pairing-Free Blind Signatures from Standard Assumptions in the ROM",
+      "authors": ["Julia Kastner", "Ky Nguyen", "Michael Reichle"],
+      "year": 2024,
+      "venue": "CRYPTO 2024",
+      "doi": "10.1007/978-3-031-68376-3_7",
+      "citations": 9,
+      "relevance": "MEDIUM - Pairing-free construction relevant for PQ",
+      "openAccess": true,
+      "paperId": "W4401602145"
+    }
+  ],
+  "search_summary": {
+    "total_papers_collected": "~200 before dedup",
+    "high_priority": 15,
+    "rates_hit": ["semantic_scholar_429_on_round1_dimension3"]
+  }
+}

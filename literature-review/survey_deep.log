@@ -1,0 +1,1668 @@
+This is pdfTeX, Version 3.141592653-2.6-1.40.28 (MiKTeX 25.12) (preloaded format=pdflatex 2026.7.22)  22 JUL 2026 14:12
+entering extended mode
+ restricted \write18 enabled.
+ %&-line parsing enabled.
+**./survey_deep.tex
+(survey_deep.tex
+LaTeX2e <2025-11-01>
+L3 programming layer <2025-12-24>
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/base\article.cls
+Document Class: article 2025/01/22 v1.4n Standard LaTeX document class
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/base\size11.clo
+File: size11.clo 2025/01/22 v1.4n Standard LaTeX file (size option)
+)
+\c@part=\count275
+\c@section=\count276
+\c@subsection=\count277
+\c@subsubsection=\count278
+\c@paragraph=\count279
+\c@subparagraph=\count280
+\c@figure=\count281
+\c@table=\count282
+\abovecaptionskip=\skip49
+\belowcaptionskip=\skip50
+\bibindent=\dimen148
+)
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/base\inputenc.sty
+Package: inputenc 2024/02/08 v1.3d Input encoding file
+\inpenc@prehook=\toks17
+\inpenc@posthook=\toks18
+)
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/base\fontenc.sty
+Package: fontenc 2025/07/18 v2.1d Standard LaTeX package
+)
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsmath.sty
+Package: amsmath 2025/07/09 v2.17z AMS math features
+\@mathmargin=\skip51
+
+For additional information on amsmath, use the `?' option.
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amstext.sty
+Package: amstext 2024/11/17 v2.01 AMS text
+
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsgen.sty
+File: amsgen.sty 1999/11/30 v2.0 generic functions
+\@emptytoks=\toks19
+\ex@=\dimen149
+))
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsbsy.sty
+Package: amsbsy 1999/11/29 v1.2d Bold Symbols
+\pmbraise@=\dimen150
+)
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsopn.sty
+Package: amsopn 2022/04/08 v2.04 operator names
+)
+\inf@bad=\count283
+LaTeX Info: Redefining \frac on input line 233.
+\uproot@=\count284
+\leftroot@=\count285
+LaTeX Info: Redefining \overline on input line 398.
+LaTeX Info: Redefining \colon on input line 409.
+\classnum@=\count286
+\DOTSCASE@=\count287
+LaTeX Info: Redefining \ldots on input line 495.
+LaTeX Info: Redefining \dots on input line 498.
+LaTeX Info: Redefining \cdots on input line 619.
+\Mathstrutbox@=\box53
+\strutbox@=\box54
+LaTeX Info: Redefining \big on input line 721.
+LaTeX Info: Redefining \Big on input line 722.
+LaTeX Info: Redefining \bigg on input line 723.
+LaTeX Info: Redefining \Bigg on input line 724.
+\big@size=\dimen151
+LaTeX Font Info:    Redeclaring font encoding OML on input line 742.
+LaTeX Font Info:    Redeclaring font encoding OMS on input line 743.
+\macc@depth=\count288
+LaTeX Info: Redefining \bmod on input line 904.
+LaTeX Info: Redefining \pmod on input line 909.
+LaTeX Info: Redefining \smash on input line 939.
+LaTeX Info: Redefining \relbar on input line 969.
+LaTeX Info: Redefining \Relbar on input line 970.
+\c@MaxMatrixCols=\count289
+\dotsspace@=\muskip17
+\c@parentequation=\count290
+\dspbrk@lvl=\count291
+\tag@help=\toks20
+\row@=\count292
+\column@=\count293
+\maxfields@=\count294
+\andhelp@=\toks21
+\eqnshift@=\dimen152
+\alignsep@=\dimen153
+\tagshift@=\dimen154
+\tagwidth@=\dimen155
+\totwidth@=\dimen156
+\lineht@=\dimen157
+\@envbody=\toks22
+\multlinegap=\skip52
+\multlinetaggap=\skip53
+\mathdisplay@stack=\toks23
+LaTeX Info: Redefining \[ on input line 2950.
+LaTeX Info: Redefining \] on input line 2951.
+)
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\amssymb.sty
+Package: amssymb 2013/01/14 v3.01 AMS font symbols
+
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\amsfonts.sty
+Package: amsfonts 2013/01/14 v3.01 Basic AMSFonts support
+\symAMSa=\mathgroup4
+\symAMSb=\mathgroup5
+LaTeX Font Info:    Redeclaring math symbol \hbar on input line 98.
+LaTeX Font Info:    Overwriting math alphabet `\mathfrak' in version `bold'
+(Font)                  U/euf/m/n --> U/euf/b/n on input line 106.
+)) (C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/amscls\amsthm.sty
+Package: amsthm 2020/05/29 v2.20.6
+\thm@style=\toks24
+\thm@bodyfont=\toks25
+\thm@headfont=\toks26
+\thm@notefont=\toks27
+\thm@headpunct=\toks28
+\thm@preskip=\skip54
+\thm@postskip=\skip55
+\thm@headsep=\skip56
+\dth@everypar=\toks29
+)
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/geometry\geometry.sty
+Package: geometry 2026/03/07 v6.0 Page Geometry
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/graphics\keyval.sty
+Package: keyval 2022/05/29 v1.15 key=value parser (DPC)
+\KV@toks@=\toks30
+)
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/generic/iftex\ifvtex.sty
+Package: ifvtex 2019/10/25 v1.7 ifvtex legacy package. Use iftex instead.
+
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/generic/iftex\iftex.sty
+Package: iftex 2024/12/12 v1.0g TeX engine tests
+))
+\Gm@cnth=\count295
+\Gm@cntv=\count296
+\c@Gm@tempcnt=\count297
+\Gm@bindingoffset=\dimen158
+\Gm@wd@mp=\dimen159
+\Gm@odd@mp=\dimen160
+\Gm@even@mp=\dimen161
+\Gm@layoutwidth=\dimen162
+\Gm@layoutheight=\dimen163
+\Gm@layouthoffset=\dimen164
+\Gm@layoutvoffset=\dimen165
+\Gm@dimlist=\toks31
+
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/geometry\geometry.cfg
+))
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/setspace\setspace.sty
+Package: setspace 2022/12/04 v6.7b set line spacing
+)
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/booktabs\booktabs.sty
+Package: booktabs 2020/01/12 v1.61803398 Publication quality tables
+\heavyrulewidth=\dimen166
+\lightrulewidth=\dimen167
+\cmidrulewidth=\dimen168
+\belowrulesep=\dimen169
+\belowbottomsep=\dimen170
+\aboverulesep=\dimen171
+\abovetopsep=\dimen172
+\cmidrulesep=\dimen173
+\cmidrulekern=\dimen174
+\defaultaddspace=\dimen175
+\@cmidla=\count298
+\@cmidlb=\count299
+\@aboverulesep=\dimen176
+\@belowrulesep=\dimen177
+\@thisruleclass=\count300
+\@lastruleclass=\count301
+\@thisrulewidth=\dimen178
+) (C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/tools\tabularx.sty
+Package: tabularx 2023/12/11 v2.12a `tabularx' package (DPC)
+
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/tools\array.sty
+Package: array 2025/09/25 v2.6n Tabular extension package (FMi)
+\col@sep=\dimen179
+\ar@mcellbox=\box55
+\extrarowheight=\dimen180
+\NC@list=\toks32
+\extratabsurround=\skip57
+\backup@length=\skip58
+\ar@cellbox=\box56
+)
+\TX@col@width=\dimen181
+\TX@old@table=\dimen182
+\TX@old@col=\dimen183
+\TX@target=\dimen184
+\TX@delta=\dimen185
+\TX@cols=\count302
+\TX@ftn=\toks33
+)
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/multirow\multirow.sty
+Package: multirow 2024/11/12 v2.9 Span multiple rows of a table
+\multirow@colwidth=\skip59
+\multirow@cntb=\count303
+\multirow@dima=\skip60
+\bigstrutjot=\dimen186
+)
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/threeparttable\threep
+arttable.sty
+Package: threeparttable 2003/06/13  v 3.0
+\@tempboxb=\box57
+)
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\hyperref.sty
+Package: hyperref 2025-07-12 v7.01o Hypertext links for LaTeX
+
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/kvsetkeys\kvsetkeys.s
+ty
+Package: kvsetkeys 2022-10-05 v1.19 Key value parser (HO)
+)
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/generic/kvdefinekeys\kvdefi
+nekeys.sty
+Package: kvdefinekeys 2019-12-19 v1.6 Define keys (HO)
+)
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/generic/pdfescape\pdfescape
+.sty
+Package: pdfescape 2019/12/09 v1.15 Implements pdfTeX's escape features (HO)
+
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/generic/ltxcmds\ltxcmds.sty
+Package: ltxcmds 2023-12-04 v1.26 LaTeX kernel commands for general use (HO)
+)
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/generic/pdftexcmds\pdftexcm
+ds.sty
+Package: pdftexcmds 2020-06-27 v0.33 Utility functions of pdfTeX for LuaTeX (HO
+)
+
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/generic/infwarerr\infwarerr
+.sty
+Package: infwarerr 2019/12/03 v1.5 Providing info/warning/error messages (HO)
+)
+Package pdftexcmds Info: \pdf@primitive is available.
+Package pdftexcmds Info: \pdf@ifprimitive is available.
+Package pdftexcmds Info: \pdfdraftmode found.
+))
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/hycolor\hycolor.sty
+Package: hycolor 2020-01-27 v1.10 Color options for hyperref/bookmark (HO)
+)
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\nameref.sty
+Package: nameref 2025-06-21 v2.57 Cross-referencing by name of section
+
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/refcount\refcount.sty
+Package: refcount 2019/12/15 v3.6 Data extraction from label references (HO)
+)
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/generic/gettitlestring\gett
+itlestring.sty
+Package: gettitlestring 2019/12/15 v1.6 Cleanup title references (HO)
+
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/kvoptions\kvoptions.s
+ty
+Package: kvoptions 2022-06-15 v3.15 Key value format for package options (HO)
+))
+\c@section@level=\count304
+)
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/etoolbox\etoolbox.sty
+Package: etoolbox 2025/10/02 v2.5m e-TeX tools for LaTeX (JAW)
+\etb@tempcnta=\count305
+)
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/generic/stringenc\stringenc
+.sty
+Package: stringenc 2019/11/29 v1.12 Convert strings between diff. encodings (HO
+)
+)
+\@linkdim=\dimen187
+\Hy@linkcounter=\count306
+\Hy@pagecounter=\count307
+
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\pd1enc.def
+File: pd1enc.def 2025-07-12 v7.01o Hyperref: PDFDocEncoding definition (HO)
+Now handling font encoding PD1 ...
+... no UTF-8 mapping file for font encoding PD1
+)
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/generic/intcalc\intcalc.sty
+Package: intcalc 2019/12/15 v1.3 Expandable calculations with integers (HO)
+)
+\Hy@SavedSpaceFactor=\count308
+ (C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\puenc.def
+File: puenc.def 2025-07-12 v7.01o Hyperref: PDF Unicode definition (HO)
+Now handling font encoding PU ...
+... no UTF-8 mapping file for font encoding PU
+)
+Package hyperref Info: Hyper figures OFF on input line 4195.
+Package hyperref Info: Link nesting OFF on input line 4200.
+Package hyperref Info: Hyper index ON on input line 4203.
+Package hyperref Info: Plain pages OFF on input line 4210.
+Package hyperref Info: Backreferencing OFF on input line 4215.
+Package hyperref Info: Implicit mode ON; LaTeX internals redefined.
+Package hyperref Info: Bookmarks ON on input line 4462.
+\c@Hy@tempcnt=\count309
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/url\url.sty
+\Urlmuskip=\muskip18
+Package: url 2013/09/16  ver 3.4  Verb mode for urls, etc.
+)
+LaTeX Info: Redefining \url on input line 4801.
+\XeTeXLinkMargin=\dimen188
+
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/generic/bitset\bitset.sty
+Package: bitset 2019/12/09 v1.3 Handle bit-vector datatype (HO)
+
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/generic/bigintcalc\bigintca
+lc.sty
+Package: bigintcalc 2019/12/15 v1.5 Expandable calculations on big integers (HO
+)
+))
+\Fld@menulength=\count310
+\Field@Width=\dimen189
+\Fld@charsize=\dimen190
+Package hyperref Info: Hyper figures OFF on input line 6078.
+Package hyperref Info: Link nesting OFF on input line 6083.
+Package hyperref Info: Hyper index ON on input line 6086.
+Package hyperref Info: backreferencing OFF on input line 6093.
+Package hyperref Info: Link coloring OFF on input line 6098.
+Package hyperref Info: Link coloring with OCG OFF on input line 6103.
+Package hyperref Info: PDF/A mode OFF on input line 6108.
+\Hy@abspage=\count311
+\c@Item=\count312
+\c@Hfootnote=\count313
+)
+Package hyperref Info: Driver (autodetected): hpdftex.
+
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\hpdftex.def
+File: hpdftex.def 2025-07-12 v7.01o Hyperref driver for pdfTeX
+\Fld@listcount=\count314
+\c@bookmark@seq@number=\count315
+
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/rerunfilecheck\rerunf
+ilecheck.sty
+Package: rerunfilecheck 2025-06-21 v1.11 Rerun checks for auxiliary files (HO)
+
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/generic/uniquecounter\uniqu
+ecounter.sty
+Package: uniquecounter 2019/12/15 v1.4 Provide unlimited unique counter (HO)
+)
+Package uniquecounter Info: New unique counter `rerunfilecheck' on input line 2
+84.
+)
+\Hy@SectionHShift=\skip61
+)
+Package hyperref Info: Option `colorlinks' set `true' on input line 31.
+Package hyperref Info: Option `breaklinks' set `true' on input line 31.
+
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/cleveref\cleveref.sty
+Package: cleveref 2018/03/27 v0.21.4 Intelligent cross-referencing
+Package cleveref Info: `hyperref' support loaded on input line 2370.
+LaTeX Info: Redefining \cref on input line 2370.
+LaTeX Info: Redefining \Cref on input line 2370.
+LaTeX Info: Redefining \crefrange on input line 2370.
+LaTeX Info: Redefining \Crefrange on input line 2370.
+LaTeX Info: Redefining \cpageref on input line 2370.
+LaTeX Info: Redefining \Cpageref on input line 2370.
+LaTeX Info: Redefining \cpagerefrange on input line 2370.
+LaTeX Info: Redefining \Cpagerefrange on input line 2370.
+LaTeX Info: Redefining \labelcref on input line 2370.
+LaTeX Info: Redefining \labelcpageref on input line 2370.
+Package cleveref Info: `amsthm' support loaded on input line 3026.
+)
+==> First Aid for cleveref.sty applied!
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/xcolor\xcolor.sty
+Package: xcolor 2024/09/29 v3.02 LaTeX color extensions (UK)
+
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/graphics-cfg\color.cf
+g
+File: color.cfg 2016/01/02 v1.6 sample color configuration
+)
+Package xcolor Info: Driver file: pdftex.def on input line 274.
+
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/graphics-def\pdftex.d
+ef
+File: pdftex.def 2025/09/29 v1.2d Graphics/color driver for pdftex
+)
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/graphics\mathcolor.lt
+x)
+Package xcolor Info: Model `cmy' substituted by `cmy0' on input line 1349.
+Package xcolor Info: Model `hsb' substituted by `rgb' on input line 1353.
+Package xcolor Info: Model `RGB' extended on input line 1365.
+Package xcolor Info: Model `HTML' substituted by `rgb' on input line 1367.
+Package xcolor Info: Model `Hsb' substituted by `hsb' on input line 1368.
+Package xcolor Info: Model `tHsb' substituted by `hsb' on input line 1369.
+Package xcolor Info: Model `HSB' substituted by `hsb' on input line 1370.
+Package xcolor Info: Model `Gray' substituted by `gray' on input line 1371.
+Package xcolor Info: Model `wave' substituted by `hsb' on input line 1372.
+)
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/enumitem\enumitem.sty
+Package: enumitem 2025/02/06 v3.11 Customized lists
+\labelindent=\skip62
+\enit@outerparindent=\dimen191
+\enit@toks=\toks34
+\enit@inbox=\box58
+\enit@count@id=\count316
+\enitdp@description=\count317
+)
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/csquotes\csquotes.sty
+Package: csquotes 2026-05-19 v5.2p context-sensitive quotations (JAW)
+\csq@reset=\count318
+\csq@gtype=\count319
+\csq@glevel=\count320
+\csq@qlevel=\count321
+\csq@maxlvl=\count322
+\csq@tshold=\count323
+\csq@ltx@everypar=\toks35
+
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/csquotes\csquotes.def
+File: csquotes.def 2026-05-19 v5.2p csquotes generic definitions (JAW)
+)
+Package csquotes Info: Trying to load configuration file 'csquotes.cfg'...
+Package csquotes Info: ... configuration file loaded successfully.
+
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/csquotes\csquotes.cfg
+File: csquotes.cfg 
+))
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/biblatex\biblatex.sty
+Package: biblatex 2025/07/10 v3.21 programmable bibliographies (PK/MW)
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/logreq\logreq.sty
+Package: logreq 2010/08/04 v1.0 xml request logger
+\lrq@indent=\count324
+
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/logreq\logreq.def
+File: logreq.def 2010/08/04 v1.0 logreq spec v1.0
+))
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/base\ifthen.sty
+Package: ifthen 2024/03/16 v1.1e Standard LaTeX ifthen package (DPC)
+)
+\c@tabx@nest=\count325
+\c@listtotal=\count326
+\c@listcount=\count327
+\c@liststart=\count328
+\c@liststop=\count329
+\c@citecount=\count330
+\c@citetotal=\count331
+\c@multicitecount=\count332
+\c@multicitetotal=\count333
+\c@instcount=\count334
+\c@maxnames=\count335
+\c@minnames=\count336
+\c@maxitems=\count337
+\c@minitems=\count338
+\c@citecounter=\count339
+\c@maxcitecounter=\count340
+\c@savedcitecounter=\count341
+\c@uniquelist=\count342
+\c@uniquename=\count343
+\c@refsection=\count344
+\c@refsegment=\count345
+\c@maxextratitle=\count346
+\c@maxextratitleyear=\count347
+\c@maxextraname=\count348
+\c@maxextradate=\count349
+\c@maxextraalpha=\count350
+\c@abbrvpenalty=\count351
+\c@highnamepenalty=\count352
+\c@lownamepenalty=\count353
+\c@maxparens=\count354
+\c@parenlevel=\count355
+\blx@tempcnta=\count356
+\blx@tempcntb=\count357
+\blx@tempcntc=\count358
+\c@blx@maxsection=\count359
+\blx@maxsegment@0=\count360
+\blx@notetype=\count361
+\blx@parenlevel@text=\count362
+\blx@parenlevel@foot=\count363
+\blx@sectionciteorder@0=\count364
+\blx@sectionciteorderinternal@0=\count365
+\blx@entrysetcounter=\count366
+\blx@biblioinstance=\count367
+\labelnumberwidth=\skip63
+\labelalphawidth=\skip64
+\biblabelsep=\skip65
+\bibitemsep=\skip66
+\bibnamesep=\skip67
+\bibinitsep=\skip68
+\bibparsep=\skip69
+\bibhang=\skip70
+\blx@bcfin=\read2
+\blx@bcfout=\write3
+\blx@langwohyphens=\language79
+\c@mincomprange=\count368
+\c@maxcomprange=\count369
+\c@mincompwidth=\count370
+Package biblatex Info: Trying to load biblatex default data model...
+Package biblatex Info: ... file 'blx-dm.def' found.
+
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/biblatex\blx-dm.def
+File: blx-dm.def 2025/07/10 v3.21 biblatex datamodel (PK/MW)
+)
+Package biblatex Info: Trying to load biblatex style data model...
+Package biblatex Info: ... file 'apa.dbx' found.
+
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/biblatex-apa\apa.dbx
+File: apa.dbx 2025/08/27 v9.20 APA biblatex style data model
+)
+Package biblatex Info: Trying to load biblatex custom data model...
+Package biblatex Info: ... file 'biblatex-dm.cfg' not found.
+\c@afterword=\count371
+\c@savedafterword=\count372
+\c@annotator=\count373
+\c@savedannotator=\count374
+\c@author=\count375
+\c@savedauthor=\count376
+\c@bookauthor=\count377
+\c@savedbookauthor=\count378
+\c@commentator=\count379
+\c@savedcommentator=\count380
+\c@editor=\count381
+\c@savededitor=\count382
+\c@editora=\count383
+\c@savededitora=\count384
+\c@editorb=\count385
+\c@savededitorb=\count386
+\c@editorc=\count387
+\c@savededitorc=\count388
+\c@foreword=\count389
+\c@savedforeword=\count390
+\c@holder=\count391
+\c@savedholder=\count392
+\c@introduction=\count393
+\c@savedintroduction=\count394
+\c@namea=\count395
+\c@savednamea=\count396
+\c@nameb=\count397
+\c@savednameb=\count398
+\c@namec=\count399
+\c@savednamec=\count400
+\c@translator=\count401
+\c@savedtranslator=\count402
+\c@shortauthor=\count403
+\c@savedshortauthor=\count404
+\c@shorteditor=\count405
+\c@savedshorteditor=\count406
+\c@narrator=\count407
+\c@savednarrator=\count408
+\c@execproducer=\count409
+\c@savedexecproducer=\count410
+\c@execdirector=\count411
+\c@savedexecdirector=\count412
+\c@with=\count413
+\c@savedwith=\count414
+\c@labelname=\count415
+\c@savedlabelname=\count416
+\c@institution=\count417
+\c@savedinstitution=\count418
+\c@lista=\count419
+\c@savedlista=\count420
+\c@listb=\count421
+\c@savedlistb=\count422
+\c@listc=\count423
+\c@savedlistc=\count424
+\c@listd=\count425
+\c@savedlistd=\count426
+\c@liste=\count427
+\c@savedliste=\count428
+\c@listf=\count429
+\c@savedlistf=\count430
+\c@location=\count431
+\c@savedlocation=\count432
+\c@organization=\count433
+\c@savedorganization=\count434
+\c@origlocation=\count435
+\c@savedoriglocation=\count436
+\c@origpublisher=\count437
+\c@savedorigpublisher=\count438
+\c@publisher=\count439
+\c@savedpublisher=\count440
+\c@language=\count441
+\c@savedlanguage=\count442
+\c@origlanguage=\count443
+\c@savedoriglanguage=\count444
+\c@citation=\count445
+\c@savedcitation=\count446
+\c@pageref=\count447
+\c@savedpageref=\count448
+\shorthandwidth=\skip71
+\shortjournalwidth=\skip72
+\shortserieswidth=\skip73
+\shorttitlewidth=\skip74
+\shortauthorwidth=\skip75
+\shorteditorwidth=\skip76
+\locallabelnumberwidth=\skip77
+\locallabelalphawidth=\skip78
+\localshorthandwidth=\skip79
+\localshortjournalwidth=\skip80
+\localshortserieswidth=\skip81
+\localshorttitlewidth=\skip82
+\localshortauthorwidth=\skip83
+\localshorteditorwidth=\skip84
+Package biblatex Info: Trying to load compatibility code...
+Package biblatex Info: ... file 'blx-compat.def' found.
+
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/biblatex\blx-compat.d
+ef
+File: blx-compat.def 2025/07/10 v3.21 biblatex compatibility (PK/MW)
+)
+Package biblatex Info: Trying to load BibTeX backend compatibility...
+Package biblatex Info: ... file 'blx-bibtex.def' found.
+
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/biblatex\blx-bibtex.d
+ef
+File: blx-bibtex.def 2025/07/10 v3.21 biblatex compatibility (PK/MW)
+
+
+Package biblatex Warning: Using fall-back bibtex backend:
+(biblatex)                functionality may be reduced/unavailable.
+
+)
+Package biblatex Info: Trying to load generic definitions...
+Package biblatex Info: ... file 'biblatex.def' found.
+
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/biblatex\biblatex.def
+File: biblatex.def 2025/07/10 v3.21 biblatex compatibility (PK/MW)
+\c@textcitecount=\count449
+\c@textcitetotal=\count450
+\c@textcitemaxnames=\count451
+\c@biburlbigbreakpenalty=\count452
+\c@biburlbreakpenalty=\count453
+\c@biburlnumpenalty=\count454
+\c@biburlucpenalty=\count455
+\c@biburllcpenalty=\count456
+\biburlbigskip=\muskip19
+\biburlnumskip=\muskip20
+\biburlucskip=\muskip21
+\biburllcskip=\muskip22
+\c@smartand=\count457
+)
+Package biblatex Info: Trying to load bibliography style 'apa'...
+Package biblatex Info: ... file 'apa.bbx' found.
+
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/biblatex-apa\apa.bbx
+File: apa.bbx 2025/08/27 v9.20 APA biblatex references style
+
+
+! Package biblatex Error: Biber backend is required by style.
+
+See the biblatex package documentation for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.14 \RequireBiber[3]
+                     
+The selected style or one of the .bib files requires Biber.
+It will not work at all with BibTeX..
+
+Package biblatex Info: Trying to load bibliography style 'standard'...
+Package biblatex Info: ... file 'standard.bbx' found.
+
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/biblatex/bbx\standard
+.bbx
+File: standard.bbx 2025/07/10 v3.21 biblatex bibliography style (PK/MW)
+\c@bbx:relatedcount=\count458
+\c@bbx:relatedtotal=\count459
+)
+Package biblatex Info: Delimiter 'nameyeardelim' in context 'bib' already defin
+ed, overwriting.
+Package biblatex Info: Delimiter 'nameyeardelim' in context 'biblist' already d
+efined, overwriting.
+Package biblatex Info: Delimiter 'nonameyeardelim' in context 'bib' already def
+ined, overwriting.
+Package biblatex Info: Delimiter 'nonameyeardelim' in context 'biblist' already
+ defined, overwriting.
+)
+Package biblatex Info: Trying to load citation style 'apa'...
+Package biblatex Info: ... file 'apa.cbx' found.
+
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/biblatex-apa\apa.cbx
+File: apa.cbx 2025/08/27 v9.20 APA biblatex citation style
+
+
+! Package biblatex Error: Biber backend is required by style.
+
+See the biblatex package documentation for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.14 \RequireBiber[3]
+                     
+The selected style or one of the .bib files requires Biber.
+It will not work at all with BibTeX..
+
+Package biblatex Info: Delimiter 'nameyeardelim' in context '' already defined,
+ overwriting.
+Package biblatex Info: Delimiter 'andothersdelim' in context '' already defined
+, overwriting.
+Package biblatex Info: Redefining '\fullcite'.
+Package biblatex Info: Redefining '\citeauthor'.
+Package biblatex Info: Redefining '\citeyear'.
+Package biblatex Info: Redefining '\cite'.
+Package biblatex Info: Redefining '\cites'.
+Package biblatex Info: Redefining '\parencite'.
+Package biblatex Info: Redefining '\parencites'.
+Package biblatex Info: Redefining '\footcite'.
+Package biblatex Info: Redefining '\footcites'.
+Package biblatex Info: Redefining '\footcitetext'.
+Package biblatex Info: Redefining '\footcitetexts'.
+Package biblatex Info: Redefining '\smartcite'.
+Package biblatex Info: Redefining '\smartcites'.
+Package biblatex Info: Redefining '\textcite'.
+Package biblatex Info: Redefining '\textcites'.
+)
+Package biblatex Info: Trying to load configuration file...
+Package biblatex Info: ... file 'biblatex.cfg' found.
+
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/biblatex\biblatex.cfg
+File: biblatex.cfg 
+)
+Package biblatex Info: Input encoding 'utf8' detected.
+Package biblatex Info: Document encoding is UTF8 ....
+ (C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/l3kernel\expl3.sty
+Package: expl3 2025-12-24 L3 programming layer (loader) 
+
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/l3backend\l3backend-p
+dftex.def
+File: l3backend-pdftex.def 2025-10-09 L3 backend support: PDF output (pdfTeX)
+\l__color_backend_stack_int=\count460
+))
+Package biblatex Info: ... and expl3
+(biblatex)             2025-12-24 L3 programming layer (loader) 
+(biblatex)             is new enough (at least 2020/04/06),
+(biblatex)             setting 'casechanger=expl3'.
+
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/biblatex\blx-case-exp
+l3.sty
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/l3packages/xparse\xpa
+rse.sty
+Package: xparse 2025-10-09 L3 Experimental document command parser
+)
+Package: blx-case-expl3 2025/07/10 v3.21 expl3 case changing code for biblatex
+))
+Package csquotes Info: Checking for multilingual support...
+Package csquotes Info: ... none found.
+
+
+! Package biblatex Error: Conflicting options (maxbibnames/minbibnames).
+
+See the biblatex package documentation for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.59 \begin{document}
+                     
+'maxbibnames' must be greater than or equal to 'minbibnames'.
+
+
+! Package biblatex Error: Conflicting options (maxsortnames/minsortnames).
+
+See the biblatex package documentation for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.59 \begin{document}
+                     
+'maxsortnames' must be greater than or equal to 'minsortnames'.
+
+(survey_deep.aux)
+\openout1 = `survey_deep.aux'.
+
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 59.
+LaTeX Font Info:    ... okay on input line 59.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 59.
+LaTeX Font Info:    ... okay on input line 59.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 59.
+LaTeX Font Info:    ... okay on input line 59.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 59.
+LaTeX Font Info:    ... okay on input line 59.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 59.
+LaTeX Font Info:    ... okay on input line 59.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 59.
+LaTeX Font Info:    ... okay on input line 59.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 59.
+LaTeX Font Info:    ... okay on input line 59.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 59.
+LaTeX Font Info:    ... okay on input line 59.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 59.
+LaTeX Font Info:    ... okay on input line 59.
+
+*geometry* driver: auto-detecting
+*geometry* detected driver: pdftex
+*geometry* verbose mode - [ preamble ] result:
+* driver: pdftex
+* paper: a4paper
+* layout: <same size as paper>
+* layoutoffset:(h,v)=(0.0pt,0.0pt)
+* modes: 
+* h-part:(L,W,R)=(72.26999pt, 452.9679pt, 72.26999pt)
+* v-part:(T,H,B)=(72.26999pt, 700.50687pt, 72.26999pt)
+* \paperwidth=597.50787pt
+* \paperheight=845.04684pt
+* \textwidth=452.9679pt
+* \textheight=700.50687pt
+* \oddsidemargin=0.0pt
+* \evensidemargin=0.0pt
+* \topmargin=-37.0pt
+* \headheight=12.0pt
+* \headsep=25.0pt
+* \topskip=11.0pt
+* \footskip=30.0pt
+* \marginparwidth=50.0pt
+* \marginparsep=10.0pt
+* \columnsep=10.0pt
+* \skip\footins=10.0pt plus 4.0pt minus 2.0pt
+* \hoffset=0.0pt
+* \voffset=0.0pt
+* \mag=1000
+* \@twocolumnfalse
+* \@twosidefalse
+* \@mparswitchfalse
+* \@reversemarginfalse
+* (1in=72.27pt=25.4mm, 1cm=28.453pt)
+
+Package hyperref Info: Link coloring ON on input line 59.
+(survey_deep.out) (survey_deep.out)
+\@outlinefile=\write4
+\openout4 = `survey_deep.out'.
+
+
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/context/base/mkii\supp-pdf.
+mkii
+[Loading MPS to PDF converter (version 2006.09.02).]
+\scratchcounter=\count461
+\scratchdimen=\dimen192
+\scratchbox=\box59
+\nofMPsegments=\count462
+\nofMParguments=\count463
+\everyMPshowfont=\toks36
+\MPscratchCnt=\count464
+\MPscratchDim=\dimen193
+\MPnumerator=\count465
+\makeMPintoPDFobject=\count466
+\everyMPtoPDFconversion=\toks37
+)
+Package biblatex Info: Trying to load language 'english' -> 'english-apa'...
+Package biblatex Info: ... file 'english-apa.lbx' found.
+
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/biblatex-apa\english-
+apa.lbx
+File: english-apa.lbx 2025/08/27 v9.20 APA biblatex localisation
+Package biblatex Info: Trying to load language 'english'...
+Package biblatex Info: ... file 'english.lbx' found.
+
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/biblatex/lbx\english.
+lbx
+File: english.lbx 2025/07/10 v3.21 biblatex localization (PK/MW)
+)
+Package biblatex Info: Trying to load language 'american' -> 'american-apa'...
+Package biblatex Info: ... file 'american-apa.lbx' found.
+
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/biblatex-apa\american
+-apa.lbx
+File: american-apa.lbx 2025/08/27 v9.20 APA biblatex localisation
+Package biblatex Info: Trying to load language 'american'...
+Package biblatex Info: ... file 'american.lbx' found.
+
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/biblatex/lbx\american
+.lbx
+File: american.lbx 2025/07/10 v3.21 biblatex localization (PK/MW)
+Package biblatex Info: Trying to load language 'english'...
+Package biblatex Info: ... file 'english.lbx' found.
+
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/biblatex/lbx\english.
+lbx
+File: english.lbx 2025/07/10 v3.21 biblatex localization (PK/MW)
+))))
+Package biblatex Info: Input encoding 'utf8' detected.
+Package biblatex Info: Automatic encoding selection.
+(biblatex)             Assuming data encoding 'utf8'.
+Package biblatex Info: Input encoding 'utf8' detected.
+Package biblatex Info: Data encoding 'utf8' specified.
+(biblatex)             No need to reencode data.
+
+
+Package biblatex Warning: Sorting template 'apa'
+(biblatex)                not available with BibTeX backend.
+(biblatex)                Switch to Biber or select one of the default template
+s.
+
+\openout3 = `survey_deep-blx.bib'.
+
+Package biblatex Info: Trying to load bibliographic data...
+Package biblatex Info: ... file 'survey_deep.bbl' found.
+(survey_deep.bbl)
+Package biblatex Info: Reference section=0 on input line 59.
+Package biblatex Info: Reference segment=0 on input line 59.
+LaTeX Font Info:    Trying to load font information for U+msa on input line 62.
+
+
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsa.fd
+File: umsa.fd 2013/01/14 v3.01 AMS symbols A
+)
+LaTeX Font Info:    Trying to load font information for U+msb on input line 62.
+
+
+(C:\Users\Twinkle\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsb.fd
+File: umsb.fd 2013/01/14 v3.01 AMS symbols B
+)
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 100.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 105.
+
+[1
+
+{C:/Users/Twinkle/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}]
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 113.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 117.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 119.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 123.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 127.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 169.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 171.
+
+[2]
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 188.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 194.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 199.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 201.
+
+
+Overfull \hbox (4.52129pt too wide) in paragraph at lines 198--202
+\T1/cmr/m/n/10.95 Fischlin (2006) pro-posed a generic con-struc-tion trans-form
+-ing any three-move iden-ti-fi-ca-tion scheme
+ []
+
+[3]
+Overfull \hbox (14.68782pt too wide) in paragraph at lines 223--227
+\T1/cmr/m/n/10.95 in-vo-ca-tion in a ZK cir-cuit, mak-ing a full SPHINCS+ ver-i
+-fi-ca-tion proof im-prac-ti-cal. Arithmetisation-
+ []
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 230.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 230.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 240.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 244.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 247.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 249.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 258.
+
+[4]
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 276.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 277.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 301.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 302.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 303.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 304.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 305.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 306.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 308.
+
+
+Overfull \hbox (184.74434pt too wide) in paragraph at lines 297--320
+ [] 
+ []
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 324.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 325.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 328.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 339.
+
+[5]
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 347.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 364.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 367.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 370.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 374.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 381.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 385.
+
+[6]
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 403.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 416.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 417.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 418.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 419.
+
+
+Overfull \hbox (43.59856pt too wide) in paragraph at lines 412--431
+ [] 
+ []
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 433.
+
+
+Overfull \hbox (2.70311pt too wide) in paragraph at lines 445--447
+[]\T1/cmr/m/n/10.95 STARK AIR con-straints (Po-sei-don2 per-mu-ta-tion equal-it
+y checks, sponge con-ti-nu-ity, Merkle
+ []
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 449.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 453.
+
+[7]
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 486.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 487.
+
+
+Overfull \hbox (62.61365pt too wide) in paragraph at lines 481--499
+ [] 
+ []
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 502.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 503.
+
+[8]
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 526.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 536.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 550.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 551.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 566.
+
+
+Overfull \hbox (28.2865pt too wide) in paragraph at lines 571--573
+[]\T1/cmr/m/n/10.95 Verifying that Po-sei-don2 sat-is-fies the multi-instance s
+e-cu-rity prop-er-ties re-quired for SPHINCS+'s
+ []
+
+[9]
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 587.
+
+
+Overfull \hbox (29.85738pt too wide) in paragraph at lines 600--602
+\T1/cmr/m/n/10.95 The project's the-o-ret-i-cal ar-chi-tec-ture com-prises thre
+e stacked lay-ers, uni-fied by a sin-gle arithmetisation-
+ []
+
+[10]
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 677.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 677.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 677.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 677.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 677.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 677.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 677.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 677.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 677.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 677.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 677.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 677.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 677.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 677.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 677.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 677.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 677.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 677.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 677.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 677.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 677.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 677.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 677.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 677.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 677.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 677.
+
+
+Overfull \hbox (179.11884pt too wide) in alignment at lines 677--677
+[][][][][][][] 
+ []
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 684.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 686.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 690.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 692.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 710.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 717.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 726.
+
+[11]
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 738.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 738.
+
+
+Package biblatex Warning: The refcontext option
+(biblatex)                'sortingnamekeytemplatename'
+(biblatex)                is not supported by the BibTeX backend.
+(biblatex)                Consider switching to Biber instead.
+(biblatex)                The option will be ignored on input line 748.
+
+[12] [13] [14] [15] [16] (survey_deep.aux)
+ ***********
+LaTeX2e <2025-11-01>
+L3 programming layer <2025-12-24>
+ ***********
+Package rerunfilecheck Info: File `survey_deep.out' has not changed.
+(rerunfilecheck)             Checksum: CD924C33777929AD12E416869620B18A;6413.
+Package logreq Info: Writing requests to 'survey_deep.run.xml'.
+\openout1 = `survey_deep.run.xml'.
+
+ ) 
+Here is how much of TeX's memory you used:
+ 22020 strings out of 467871
+ 394503 string characters out of 5417408
+ 1091334 words of memory out of 5000000
+ 50547 multiletter control sequences out of 15000+600000
+ 654453 words of font info for 106 fonts, out of 8000000 for 9000
+ 1141 hyphenation exceptions out of 8191
+ 75i,13n,79p,1892b,5052s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ <C:\Users\Twinkle\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ec
+rm0900.pk> <C:\Users\Twinkle\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/d
+pi600\ecbx0900.pk> <C:\Users\Twinkle\AppData\Local\MiKTeX\fonts/pk/ljfour/jknap
+pen/ec/dpi600\ectt1095.pk> <C:\Users\Twinkle\AppData\Local\MiKTeX\fonts/pk/ljfo
+ur/jknappen/ec/dpi600\ecrm0800.pk> <C:\Users\Twinkle\AppData\Local\MiKTeX\fonts
+/pk/ljfour/jknappen/ec/dpi600\tcrm1095.pk> <C:\Users\Twinkle\AppData\Local\MiKT
+eX\fonts/pk/ljfour/jknappen/ec/dpi600\ecbx1200.pk> <C:\Users\Twinkle\AppData\Lo
+cal\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecbx1095.pk> <C:\Users\Twinkle\Ap
+pData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecss1095.pk> <C:\Users\Tw
+inkle\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecti1095.pk> <C:\
+Users\Twinkle\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecrm1095.
+pk> <C:\Users\Twinkle\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\e
+cbx1440.pk> <C:\Users\Twinkle\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/
+dpi600\ecti1000.pk> <C:\Users\Twinkle\AppData\Local\MiKTeX\fonts/pk/ljfour/jkna
+ppen/ec/dpi600\ecrm1000.pk> <C:\Users\Twinkle\AppData\Local\MiKTeX\fonts/pk/ljf
+our/jknappen/ec/dpi600\ecbx1000.pk> <C:\Users\Twinkle\AppData\Local\MiKTeX\font
+s/pk/ljfour/jknappen/ec/dpi600\ecss1200.pk> <C:\Users\Twinkle\AppData\Local\MiK
+TeX\fonts/pk/ljfour/jknappen/ec/dpi600\ecbx1728.pk><C:/Users/Twinkle/AppData/Lo
+cal/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmbx10.pfb><C:/Users/Twinkle
+/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi10.pfb><C:/Us
+ers/Twinkle/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi5.
+pfb><C:/Users/Twinkle/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts
+/cm/cmmi6.pfb><C:/Users/Twinkle/AppData/Local/Programs/MiKTeX/fonts/type1/publi
+c/amsfonts/cm/cmmi8.pfb><C:/Users/Twinkle/AppData/Local/Programs/MiKTeX/fonts/t
+ype1/public/amsfonts/cm/cmr10.pfb><C:/Users/Twinkle/AppData/Local/Programs/MiKT
+eX/fonts/type1/public/amsfonts/cm/cmr6.pfb><C:/Users/Twinkle/AppData/Local/Prog
+rams/MiKTeX/fonts/type1/public/amsfonts/cm/cmr8.pfb><C:/Users/Twinkle/AppData/L
+ocal/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users/Twinkl
+e/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/symbols/msbm10.pfb>
+
+Output written on survey_deep.pdf (16 pages, 406192 bytes).
+PDF statistics:
+ 1189 PDF objects out of 1200 (max. 8388607)
+ 106 named destinations out of 1000 (max. 500000)
+ 209 words of extra memory for PDF output out of 10000 (max. 10000000)
+

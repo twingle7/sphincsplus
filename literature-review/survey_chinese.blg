@@ -1,0 +1,15 @@
+[0] Config.pm:328> INFO - This is Biber 2.21
+[0] Config.pm:331> INFO - Logfile is 'survey_chinese.blg'
+[120] biber-MSWIN64:342> INFO - === 
+[162] Biber.pm:421> INFO - Reading 'survey_chinese.bcf'
+[293] Biber.pm:1002> INFO - Found 26 citekeys in bib section 0
+[309] Biber.pm:4487> INFO - Processing section 0
+[320] Biber.pm:4678> INFO - Looking for bibtex file 'bibliography.bib' for section 0
+[382] bibtex.pm:1713> INFO - LaTeX decoding ...
+[421] bibtex.pm:1519> INFO - Found BibTeX data source 'bibliography.bib'
+[644] UCollate.pm:68> INFO - Overriding locale 'en-US' defaults 'normalization = NFD' with 'normalization = prenormalized'
+[644] UCollate.pm:68> INFO - Overriding locale 'en-US' defaults 'variable = shifted' with 'variable = non-ignorable'
+[645] Biber.pm:4307> INFO - Sorting list 'nty/global//global/global/global' of type 'entry' with template 'nty' and locale 'en-US'
+[645] Biber.pm:4313> INFO - No sort tailoring available for locale 'en-US'
+[673] bbl.pm:676> INFO - Writing 'survey_chinese.bbl' with encoding 'UTF-8'
+[693] bbl.pm:779> INFO - Output to survey_chinese.bbl

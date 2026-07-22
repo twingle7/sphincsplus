@@ -1,0 +1,476 @@
+% ============================================================
+%  survey_chinese.tex — 后量子盲签名综述（中文）
+%  编译: xelatex → biber → xelatex → xelatex
+% ============================================================
+\documentclass[11pt,a4paper]{ctexart}
+
+% ---------- 字体（Windows 系统自带）----------
+\setCJKmainfont{SimSun}[BoldFont=SimHei,AutoFakeBold=2.5]
+\setCJKsansfont{SimHei}
+\setCJKmonofont{KaiTi}
+
+% ---------- 基础包 ----------
+\usepackage{amsmath,amssymb}
+\usepackage[margin=1in]{geometry}
+\usepackage{setspace}\onehalfspacing
+\usepackage{booktabs,tabularx,threeparttable}
+\usepackage[colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue]{hyperref}
+\usepackage{enumitem}
+
+% ---------- 参考文献 ----------
+\usepackage[backend=biber,style=numeric]{biblatex}
+\addbibresource{bibliography.bib}
+
+% ---------- 标题 ----------
+\title{\textbf{后量子盲签名综述：基于哈希的Fischlin框架实例化}}
+\author{文献综述 —— SPHINCS+ / Poseidon2 / STARK 项目组\\ 2026年7月22日}
+\date{}
+
+\begin{document}
+\maketitle
+
+% ============================================================
+\begin{abstract}
+后量子密码标准化进程已选出 CRYSTALS-Dilithium、Falcon 和 SPHINCS+（SLH-DSA）
+三种数字签名标准，然而后量子\emph{盲签名}方案的标准化仍未启动。
+当前文献几乎被基于格的构造所主导。2026 年，
+Bouillaguet 等人提出了一种通用编译器，可将\emph{任意}哈希-签名方案转换为
+Fischlin 框架下的轮数最优盲签名，但未提供 SPHINCS+ 的具体实例化。
+本文系统梳理了实现基于哈希的 Fischlin 盲签名所需的四条技术路线：
+（1）SPHINCS+ 作为底层签名方案；
+（2）Fischlin 通用盲签名框架；
+（3）面向算术化的哈希函数（Poseidon2、Monolith）；
+（4）STARK 透明后量子证明系统。
+通过对 26 篇关键文献的五维对比分析，
+本文识别出三个关键研究空白并论证了基于 Poseidon2 的协同设计方案
+可消除历史上阻碍基于哈希构造的电路翻译瓶颈。
+
+\medskip
+\noindent\textbf{关键词：}
+后量子密码；盲签名；SPHINCS+；Fischlin 框架；Poseidon2；STARK；零知识证明
+\end{abstract}
+
+% ============================================================
+\section{引言}
+
+NIST 后量子密码标准化进程已进入最终阶段，选定了三种签名方案作为标准：
+CRYSTALS-Dilithium（基于格）、Falcon（基于格）和 SPHINCS+（SLH-DSA，基于哈希）
+\cite{Bernstein2019SPHINCS,NIST2022IR8413}。
+这些方案保证了对抗量子敌手的不可伪造性，然而标准数字签名具有固有的可链接性：
+验证者可以轻易地将每个签名与其公钥相关联。这一特性与需要不可链接性的应用场景不兼容，
+包括匿名凭证、电子投票、隐私保护认证以及分布式账本的链下证明等
+\cite{Buser2022ExoticSigs,Chathurangi2025Advances}。
+
+盲签名由 Chaum 于 1983 年提出，允许签名者在不知晓消息内容的情况下产生有效签名。
+用户先对消息进行盲化后发送给签名者；收到盲化签名后，用户去盲化得到标准签名，
+该签名与签名会话不可链接。盲签名是隐私保护凭证和电子现金系统的密码学基石。
+
+Fischlin（2006）提出了通用构造范式，将任意三轮身份识别方案转化为轮数最优（两轮）的盲签名。
+该框架随后被基于格的假设实例化，产生了最高效的后量子盲签名
+\cite{delPino2022Framework,Beullens2023LatticeBlind,Agrawal2022Practical,Katsumata2021}。
+然而，所有这些实例化都依赖结构化格假设（Module-SIS、Module-LWE），
+Dietz 等人~\cite{Dietz2026Impossibility} 的最新不可能性结果进一步激发了对替代假设的探索。
+
+Bouillaguet 等人~\cite{Bouillaguet2026BlindingPH} 于 2026 年的成果改变了格局：
+他们提出了通用编译器，可将任意后量子哈希-签名方案转化为盲签名，
+并在 ROM 中证明了安全性。该编译器适用于 SPHINCS+，但作者未提供具体实例化或性能基准。
+Herranz 和 Louiso~\cite{Herranz2025HashBased} 独立探索了哈希盲签名的理论可行性，
+同样没有提供实现。
+
+\medskip
+\noindent\textbf{本文贡献。} 作为系统综述，本文梳理了四条汇聚型技术路线：
+（1）基于哈希的签名——SPHINCS+；
+（2）Fischlin 框架——通用编译与格基实例化；
+（3）面向算术化的哈希函数——Poseidon2 及竞争者；
+（4）基于 STARK 的零知识证明。
+
+\medskip
+\noindent\textbf{路线图。}
+第 2 节回顾基础技术。第 3 节综述后量子盲签名现状。
+第 4 节分析面向算术化的哈希函数及其 ZK 效率。
+第 5 节分析 STARK 证明系统。第 6 节识别研究空白并定位项目。第 7 节进行五维对比分析。
+第 8 节总结全文。
+
+% ============================================================
+\section{基础知识}
+
+\subsection{SPHINCS+：无状态基于哈希的签名方案}
+
+SPHINCS+~\cite{Bernstein2019SPHINCS} 现已标准化为 NIST FIPS 205（SLH-DSA），
+是一种无状态的基于哈希的签名方案。
+与 NIST SP 800-208~\cite{NIST2020SP800} 所涉及的有状态方案（XMSS、LMS）不同，
+SPHINCS+ 在签名操作之间无需维护状态。
+
+其核心构造为三层：（1）WOTS+：一次性签名，安全性仅依赖哈希函数的抗第二原像性；
+（2）FORS：少量签名方案，替代早期 SPHINCS 中的 HORST；
+（3）XMSS-MT 超树：多层 Merkle 树将大量 WOTS+ 公钥压缩为单一根值。
+SPHINCS+ 的每个操作均纯粹基于哈希，不依赖任何数论假设。
+其主要缺点是签名尺寸较大（7--50 KB），但 NIST IR 8413~\cite{NIST2022IR8413}
+认为这对许多应用是可接受的。
+
+对于盲签名而言，关键性质在于 SPHINCS+ 是一种哈希-签名方案：
+签名者通过可调哈希函数（THASH）对消息进行哈希，然后对哈希值进行签名。
+该结构直接适配 Bouillaguet 编译器~\cite{Bouillaguet2026BlindingPH}。
+
+\subsection{Fischlin 盲签名框架的演进}
+
+Fischlin（2006）提出了一个通用构造范式，将任意三轮身份识别方案转化为轮数最优的盲签名。
+\textbf{关键洞察：}与基于 RSA 的 Chaum 盲签名不同，
+Fischlin 框架\emph{不依赖代数同态性质}进行去盲化，
+而是使用承诺-揭示（commit-and-prove）策略——这对于 SPHINCS+
+等无代数结构的哈希-签名方案至关重要。
+
+Fischlin 框架经历了三个重要演进阶段：
+
+\begin{enumerate}[label=\textbf{\arabic*.},leftmargin=*]
+\item \textbf{Fuchsbauer 等人（CRYPTO 2015）~\cite{Fuchsbauer2015Practical}}：
+  首个实用的轮数最优 Fischlin 构造，基于等价类上的结构保持签名（SPS-EQ），
+  在标准模型（DLIN 假设）下达到安全性。
+  \textbf{局限性：}依赖配对群代数结构，\emph{不适用于 SPHINCS+}。
+\item \textbf{格基实例化（2021--2024）
+  \cite{delPino2022Framework,Beullens2023LatticeBlind,Agrawal2022Practical,Katsumata2021,Kastner2024PairingFree}}：
+  利用格（SIS/LWE）的代数结构实现 Fischlin 编译器。
+  \textbf{局限性：}仍需要代数结构（陷门采样、NTRU 等），SPHINCS+ 不具备。
+\item \textbf{Bouillaguet 等人（IEEE S\&P 2026）~\cite{Bouillaguet2026BlindingPH}}：
+  \textbf{通用编译器}，将\emph{任意}后量子哈希-签名方案转化为盲签名，
+  仅使用统计隐藏承诺和零知识证明，无需任何代数结构。
+  \textbf{核心突破：}首次将 Fischlin 框架扩展到\emph{无代数结构}的签名方案。
+\end{enumerate}
+
+\noindent\textbf{Bouillaguet 编译器协议流程（唯一适用于 SPHINCS+ 的 Fischlin 构造）：}
+
+\begin{enumerate}[label=\textbf{阶段 \arabic*.},leftmargin=*]
+\item \textbf{承诺（Commit）。}用户采样随机数 $r$，使用统计隐藏的承诺方案
+  计算 $c = \mathrm{Commit}(m; r)$，仅将承诺 $c$ 发送给签名者。
+  签名者无法从 $c$ 中恢复 $m$——这是盲性的密码学基础。
+\item \textbf{签发（Issue）。}签名者在标准签名流程中对承诺进行签名：
+  $\sigma_{\mathrm{blind}} \leftarrow \Sigma.\mathrm{Sign}(sk, c)$。
+  对于 SPHINCS+，即对承诺的哈希进行 WOTS+/FORS 签名。
+\item \textbf{完成凭证（Finalise）。}
+  \textbf{关键：不进行代数去盲化。}
+  SPHINCS+ 如大多数哈希-签名方案一样\emph{不具备同态性质}，
+  无法通过代数运算从 $\sigma_{\mathrm{blind}}$ 中``除以''盲化因子。
+  用户直接将开包信息和盲化签名 $\mathrm{cred} = (m, r, \sigma_{\mathrm{blind}})$ 保存为凭证。
+  验证时检查 $\mathrm{Verify}(pk, \mathrm{Commit}(m; r), \sigma_{\mathrm{blind}}) = 1$。
+\item \textbf{展示（Show）。}用户生成零知识证明 $\pi$，证明其知道 $(m, r)$
+  满足 $\Sigma.\mathrm{Verify}(pk, \mathrm{Commit}(m; r), \sigma_{\mathrm{blind}}) = 1$。
+  对于 SPHINCS+ 实现，该证明为 STARK 证明，覆盖完整的验证轨迹。
+\end{enumerate}
+
+安全性要求一多不可伪造性（OMUF）——用户不得在 $k$ 次签名会话外产生 $k+1$ 个有效凭证，
+以及盲性——签名者无法将最终凭证与特定会话相关联~\cite{Bouillaguet2026BlindingPH}。
+
+\textbf{与项目的对应关系。}
+本项目实现的 Commit $\to$ Issue $\to$ FinalizeCredential $\to$ Show $\to$ Verify 协议栈
+正是 Bouillaguet 编译器的具体实例化：
+\begin{itemize}
+\item 使用 Poseidon2 海绵构造作为 Commit 方案（统计隐藏，源于 Poseidon2 的抗碰撞性）；
+\item SPHINCS+（Poseidon2 后端）对承诺进行签名；
+\item 凭证即为 $(m, r, \sigma_{\mathrm{blind}})$，不经代数去盲化；
+\item Show 阶段使用 Winterfell STARK 全 AIR 证明器。
+\end{itemize}
+
+\subsection{Poseidon2：面向算术化的哈希函数}
+
+标准哈希函数（SHA-256）在 ZK 电路中每次调用需要约 25,000 R1CS 约束，
+使完整的 SPHINCS+ 验证证明不可行。面向算术化（AO）的哈希函数通过在
+大素数域上原生运算来解决这一问题。
+
+Poseidon2~\cite{Grassi2023Poseidon2} 是 Poseidon~\cite{Grassi2019Poseidon} 的后继方案，
+实例化为 Goldilocks 素数域 $\mathbb{F}_p$
+（$p = 2^{64} - 2^{32} + 1$）上的海绵构造。
+置换宽度 $t = 12$（速率 $r = 6$，容量 $c = 6$），
+$R_F = 8$ 全轮，$R_P = 22$ 半轮。非线性层为 $x \mapsto x^3$。
+每个 Poseidon2 置换约需 300 R1CS 约束，相比 SHA-256 减少约 80 倍。
+
+Monolith~\cite{Grassi2024Monolith} 在 CPU 性能上优于 Poseidon2（可比肩 SHA3-256），
+但对 ZK 约束最小化略逊一筹，Poseidon2 对纯 ZK 证明更优。
+Kovalchuk 等人~\cite{2021Security} 分析了 Poseidon 的抗差分/线性攻击安全性，
+确认宽轨迹策略的安全边际。
+
+\subsection{STARK 证明系统}
+
+STARK（可扩展透明知识论证）~\cite{2019DEEP} 具有三个关键特性：
+透明（无需信任设置，安全仅依赖抗碰撞哈希）、
+后量子安全（对称密钥假设）、
+可扩展（证明尺寸以多重对数增长）。
+
+Winterfell 提供基于 Rust 的 STARK 证明器，原生支持 Goldilocks 域。
+对于 SPHINCS+ 验证，全 AIR 方法将整个验证轨迹编码为代数执行表，
+强制执行 Poseidon2 置换约束、海绵连续性、消息吸收和根断言。
+128-bit 安全下：53 个约束，
+23,861 行 $\times$ 64 列轨迹，2,091 个 Poseidon2 置换，
+证明尺寸约 85 KB，证明时间约 37 s，验证约 4.2 ms。
+
+% ============================================================
+\section{后量子盲签名：技术现状}
+
+\subsection{基于格的构造}
+
+表~\ref{tab:blind} 总结了已发表的后量子盲签名方案。
+
+\begin{table}[h]
+\centering
+\caption{后量子盲签名方案对比}
+\label{tab:blind}
+\small
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{方案} & \textbf{轮数} & \textbf{密码假设} & \textbf{大小} & \textbf{模型} \\
+\midrule
+Fuchsbauer 等（2015）\cite{Fuchsbauer2015Practical} & 2 & DLIN（配对群） & --- & 标准 \\
+del Pino--Katsumata（2022）\cite{delPino2022Framework} & 2 & Module-SIS/LWE & $\sim$100 KB & ROM \\
+Agrawal 等（2022）\cite{Agrawal2022Practical} & 2 & Module-SIS/LWE & $\sim$80 KB & ROM \\
+Beullens 等（2023）\cite{Beullens2023LatticeBlind} & 2 & SIS/LWE + NTRU & $\sim$20 KB & ROM \\
+Kastner 等（2024）\cite{Kastner2024PairingFree} & 2 & SIS & $\sim$50 KB & ROM \\
+Katsumata 等（2021）\cite{Katsumata2021} & 2 & LWE + ABET & $\sim$100 KB & 标准 \\
+\midrule
+\textbf{Bouillaguet 等（2026）}\cite{Bouillaguet2026BlindingPH} & \textbf{2} & \textbf{任意哈希-签名} & $\sim$Sig & \textbf{ROM} \\
+\midrule
+\textit{本项目} & \textit{2} & \textit{哈希（SPHINCS+）} & \textit{$\sim$8--50 KB} & \textit{ROM} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+所有六个旗舰会议构造均基于格假设。
+Bouillaguet 编译器证明 Fischlin 框架不要求格，但哈希路径仍未被探索。
+
+\subsection{基于哈希的盲签名：新兴前沿}
+
+Herranz 和 Louiso~\cite{Herranz2025HashBased} 首次系统探索了基于哈希的盲签名，
+识别了三项挑战：（i）SPHINCS+ 的随机叶选择对盲性有利；
+（ii）签名尺寸影响证明大小；（iii）需要 ZK 友好哈希。
+他们的工作建立了问题框架，但无具体实现。
+
+Bouillaguet 等人~\cite{Bouillaguet2026BlindingPH} 的通用编译器实现了四项核心性质：
+（1）统计隐藏承诺提供设计层面的盲性；
+（2）OMUF 归约到底层 EUF-CMA 安全性；
+（3）两轮协议（轮数最优）；
+（4）适用于任意哈希-签名方案。
+但仍\emph{未}提供 SPHINCS+ 的具体实现和基准。
+
+Dietz 等人~\cite{Dietz2026Impossibility} 证明标准模型下无配对的轮数最优盲签名不可能存在，
+但该结果不涉及 ROM 中的构造（如 Bouillaguet 编译器）。
+
+\subsection{匿名凭证与更广泛的应用}
+
+Argo 等人~\cite{Argo2024PracticalPQ} 实现并基准测试了
+基于格的后量子盲签名/群签名/环签名，达到实用性能。
+Buser 等人~\cite{Buser2022ExoticSigs} 系统综述了区块链应用中的异类 PQ 签名。
+Chathurangi 等人~\cite{Chathurangi2025Advances} 追踪匿名凭证的演变，
+确认不存在哈希基匿名凭证系统。Slamanig~\cite{Slamanig2025PrivacyAuth}
+讨论了隐私保护认证中理论与实践的鸿沟。
+
+% ============================================================
+\section{面向算术化的哈希函数及其 ZK 效率}
+
+表~\ref{tab:hash} 比较了主要的 AO 哈希函数。
+
+\begin{table}[h]
+\centering
+\caption{面向算术化的哈希函数对比}
+\label{tab:hash}
+\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{哈希函数} & \textbf{域} & \textbf{约束/置换} & \textbf{CPU 速度} \\
+\midrule
+Poseidon2~\cite{Grassi2023Poseidon2} & $\mathbb{F}_p$（Goldilocks） & $\sim$300 R1CS & 中等 \\
+Monolith~\cite{Grassi2024Monolith} & $\mathbb{F}_p$（Goldilocks） & $\sim$400 R1CS & 快（$\approx$SHA3） \\
+Poseidon(2)b~\cite{Grassi2026Poseidon2b} & $\mathbb{F}_{2^k}$ & $\sim$250 R1CS & 中等 \\
+SHA-256（基线） & 二元域 & $\sim$25,000 R1CS & 快（ASIC） \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textbf{协同设计论题。}
+将 Poseidon2 同时作为 SPHINCS+ 的 THASH 后端和 STARK AIR 底层，
+消除了哈希函数翻译层，使约束次数降低约 80 倍。
+Adomnicai~\cite{Adomnicai2026} 在多方计算场景中验证了这一方法。
+Quan~\cite{Quan2022} 展示了格+STARK 的组合方法。
+
+% ============================================================
+\section{基于 STARK 的签名持有证明}
+
+Fischlin 的展示阶段要求持有者以零知识方式证明签名持有。
+表~\ref{tab:proof} 比较了四种候选证明系统。
+
+\begin{table}[h]
+\centering
+\caption{零知识证明系统对比}
+\label{tab:proof}
+\small
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{证明系统} & \textbf{假设} & \textbf{证明大小} & \textbf{信任设置} & \textbf{PQ安全} \\
+\midrule
+STARK（Winterfell） & 哈希（Poseidon2） & $\sim$85 KB & 无 & 是 \\
+Bulletproofs~\cite{Bunz2018Bulletproofs} & 离散对数 & $\sim$1 KB & 无 & 否 \\
+MPC-in-the-head~\cite{Katz2018ImprovedNIZK} & 哈希（SHA-256） & $\sim$1 MB & 无 & 是 \\
+Groth16（SNARK） & 配对（BLS12-381） & $\sim$200 B & 需要 & 否 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+STARK 是唯一同时满足后量子安全、透明、简洁和域原生四个要求的方案。
+
+Winterfell 全 AIR 方法将完整 SPHINCS+ 验证轨迹编码为代数执行表。
+128-bit 安全下：53 约束，23,861 行 $\times$ 64 列，2,091 Poseidon2 置换，
+证明 $\sim$85 KB，证明 $\sim$37 s，验证 $\sim$4.2 ms。
+37 s 对于低频凭证签发可接受，4.2 ms 验证对大多数场景实用。
+
+% ============================================================
+\section{研究空白与项目定位}
+
+\subsection{G-1：缺乏具体 SPHINCS+-Fischlin 实例化}
+
+Bouillaguet 编译器~\cite{Bouillaguet2026BlindingPH} 证明了可行性，
+Herranz 和 Louiso~\cite{Herranz2025HashBased} 确立了理论方向，
+但截至 2026 年中仍不存在实现。
+
+\noindent\textbf{项目回应。}
+本项目首次将 Bouillaguet 编译器针对 SPHINCS+（Poseidon2）进行实例化，
+实现完整的 Fischlin 协议栈（Commit--Issue--Finalise--Show--Verify），
+展示阶段使用 Winterfell STARK 证明器。
+
+\subsection{G-2：缺乏 Poseidon2--SPHINCS+ 协同设计分析}
+
+原始 SPHINCS+ 规范包含五种哈希后端但不含 AO 哈希。
+替换为 Poseidon2 需要：（1）适配 THASH 抽象到海绵构造；
+（2）验证多实例安全性质（SM-TCR、SM-DSPR、SM-PRE、SM-UD）；
+（3）证明约束效率增益可转化为可行 STARK 证明。
+
+\noindent\textbf{项目回应。}
+本项目首次实现 Poseidon2 作为 SPHINCS+ THASH 后端的协同设计，
+提供适配器层、128/192-bit 参数选择及 STARK AIR 约束。
+
+\subsection{G-3：缺乏哈希 vs 格盲签名基准对比}
+
+后量子盲签名文献几乎全部基于格。
+等效安全级别下哈希与格的证明尺寸、证明时间、验证时间对比从未被进行。
+
+\noindent\textbf{项目回应。}
+本项目在 128/192-bit 安全级别下基准测试 SPHINCS+-Poseidon2-Fischlin 构造，
+与已发表格基准对比。
+
+\subsection{三层体系结构}
+
+本项目由三层统一架构组成：
+\textbf{第 1 层：SPHINCS+}（Goldilocks 域上基于 Poseidon2 的 EUF-CMA 安全签名）；
+\textbf{第 2 层：Fischlin 变换 + STARK}（轮数最优盲签名 + Winterfell 证明）；
+\textbf{第 3 层：Poseidon2 over Goldilocks}（统一代数基底——同时充当
+THASH、AIR 置换和 FRI 预言机）。
+
+\textbf{创新之处：}首次使用单一 AO 哈希作为盲签名协议三层的统一基底，
+消除了历史上阻碍基于哈希构造的翻译瓶颈。
+
+% ============================================================
+\section{五维对比分析}
+
+表~\ref{tab:dim} 按五个维度评估 26 篇文献。
+
+\begin{table}[h]
+\centering
+\caption{26 篇文献五维分析}
+\label{tab:dim}
+\fontsize{8}{10}\selectfont
+\begin{tabular}{@{}p{3.5cm}p{2.8cm}ccccc@{}}
+\toprule
+\textbf{论文} & \textbf{核心贡献} & \textbf{D1} & \textbf{D2} & \textbf{D3} & \textbf{D4} & \textbf{D5} \\
+\midrule
+Bernstein 等（2019）\cite{Bernstein2019SPHINCS} & SPHINCS+框架 & 证明 & 实现 & EUF-CMA & --- & 哈希 \\
+NIST IR 8413（2022）\cite{NIST2022IR8413} & 第三轮PQC报告 & 报告 & --- & --- & --- & --- \\
+NIST SP 800-208（2020）\cite{NIST2020SP800} & 有状态HBS标准 & 报告 & --- & EUF-CMA & --- & 哈希 \\
+Fuchsbauer 等（2015）\cite{Fuchsbauer2015Practical} & 轮数最优盲签名 & 证明 & --- & OMUF+BL & --- & 配对 \\
+del Pino--Katsumata（2022）\cite{delPino2022Framework} & 格Fischlin框架 & 证明 & --- & OMUF+BL & --- & 格 \\
+Beullens 等（2023）\cite{Beullens2023LatticeBlind} & 短格盲签名 & 证明 & --- & OMUF+BL & --- & 格 \\
+Agrawal 等（2022）\cite{Agrawal2022Practical} & 实用格盲签名 & 证明 & 基准 & OMUF+BL & --- & 格 \\
+Katsumata 等（2021）\cite{Katsumata2021} & 标准模型盲签名 & 证明 & --- & OMUF+BL & --- & 格 \\
+Kastner 等（2024）\cite{Kastner2024PairingFree} & 无配对盲签名 & 证明 & --- & OMUF+BL & --- & 格 \\
+Dietz 等（2026）\cite{Dietz2026Impossibility} & 不可能性结果 & 证明 & --- & --- & --- & 格 \\
+Bouillaguet 等（2026）\cite{Bouillaguet2026BlindingPH} & 通用编译器 & 证明 & --- & OMUF+BL & --- & 哈希 \\
+Herranz--Louiso（2025）\cite{Herranz2025HashBased} & HBS可行性 & 理论 & --- & --- & --- & 哈希 \\
+Grassi 等（2023）\cite{Grassi2023Poseidon2} & Poseidon2设计 & 证明 & 实现 & --- & STARK & $\mathbb{F}_p$ \\
+Grassi 等（2019）\cite{Grassi2019Poseidon} & Poseidon设计 & 证明 & 实现 & --- & STARK & $\mathbb{F}_p$ \\
+Grassi 等（2024）\cite{Grassi2024Monolith} & Monolith设计 & 证明 & 实现 & --- & STARK & $\mathbb{F}_p$ \\
+Grassi 等（2026）\cite{Grassi2026Poseidon2b} & Poseidon(2)b & 证明 & 实现 & --- & STARK & $\mathbb{F}_{2^k}$ \\
+Adomnicai（2026）\cite{Adomnicai2026} & AO哈希链 & 证明 & 实现 & --- & MPC & $\mathbb{F}_p$ \\
+Kovalchuk 等（2021）\cite{2021Security} & Poseidon分析 & 分析 & --- & --- & --- & $\mathbb{F}_p$ \\
+Ben-Sasson 等（2020）\cite{2019DEEP} & DEEP-FRI & 证明 & --- & --- & STARK & $\mathbb{F}_p$ \\
+B\"unz 等（2018）\cite{Bunz2018Bulletproofs} & Bulletproofs & 证明 & 实现 & --- & BP & DL \\
+Katz 等（2018）\cite{Katz2018ImprovedNIZK} & MPCitH NIZK & 证明 & 实现 & --- & MPCitH & 哈希 \\
+Quan（2022）\cite{Quan2022} & BTC+格+STARK & --- & 实现 & --- & STARK & 格+$\mathbb{F}_p$ \\
+Argo 等（2024）\cite{Argo2024PracticalPQ} & PQ隐私签名 & 证明 & 实现 & OMUF+BL & --- & 格 \\
+Chathurangi 等（2025）\cite{Chathurangi2025Advances} & 匿名凭证综述 & 综述 & --- & --- & --- & 多重 \\
+Slamanig（2025）\cite{Slamanig2025PrivacyAuth} & 理论vs实践 & 综述 & --- & --- & --- & 多重 \\
+Buser 等（2022）\cite{Buser2022ExoticSigs} & 异类PQ签名综述 & 综述 & --- & --- & --- & 多重 \\
+\midrule
+\textbf{本项目} & \textbf{SPHINCS+-PoS-Fischlin} & \textbf{证明} & \textbf{实现+基准} & \textbf{OMUF+BL} & \textbf{STARK} & \textbf{哈希+$\mathbb{F}_p$} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{D1}：理论基础；\textbf{D2}：实现与基准；\textbf{D3}：安全模型；
+\textbf{D4}：证明系统；\textbf{D5}：域算术。
+
+\textbf{覆盖图分析。}
+格区域（D5）呈现明显聚类：六个旗帜会议 Fischlin 方案均为格基。
+哈希行的 Bouillaguet 等人提供通用理论（D1）但缺乏实现（D2）。
+项目目标行——哈希签名$\cap$Fischlin盲签名$\cap$AO哈希$\cap$STARK证明——
+在现有文献中完全空白。
+
+% ============================================================
+\section{结论}
+
+本综述梳理了四条汇聚型技术路线。26 篇文献分析得出五项核心发现：
+
+\medskip
+\noindent\textbf{发现一：通用编译器已存在但未实例化。}
+Bouillaguet 等人~\cite{Bouillaguet2026BlindingPH}（IEEE S\&P 2026）
+提出 ROM 中可证安全的通用编译器，但无 SPHINCS+ 实例化发表。
+
+\medskip
+\noindent\textbf{发现二：格基方案占绝对主导但并非固有。}
+六个旗舰构造全部基于格~\cite{delPino2022Framework,Beullens2023LatticeBlind,Agrawal2022Practical,Katsumata2021,Kastner2024PairingFree,Fuchsbauer2015Practical}，
+但编译器证明 Fischlin 框架不要求格假设。
+
+\medskip
+\noindent\textbf{发现三：Poseidon2--SPHINCS+ 协同设计最优但未经验证。}
+约 80 倍约束减少使电路可行，但四个 THF 性质
+（SM-TCR、SM-DSPR、SM-PRE、SM-UD）
+尚未在 ROM 下针对 Poseidon2 得到形式化验证。
+
+\medskip
+\noindent\textbf{发现四：STARK 证明成本在凭证用例中可控。}
+$\sim$37 s 证明器、$\sim$85 KB 证明、$\sim$4.2 ms 验证，
+对于非交互凭证签发场景是实用的。
+
+\medskip
+\noindent\textbf{发现五：基于哈希的盲签名占据独特且有价值的利基。}
+唯一仅依赖哈希安全性的 PQ 盲签名方法，为高安全保障提供最保守配置。
+Chathurangi~\cite{Chathurangi2025Advances} 和 Slamanig~\cite{Slamanig2025PrivacyAuth}
+确认无哈希基匿名凭证系统存在。
+
+\subsection{未来工作建议}
+
+\begin{enumerate}
+\item 实现并基准测试 SPHINCS+-Poseidon2-Fischlin 构造；
+\item 形式化验证 Poseidon2 针对 SPHINCS+ 的 THF 性质；
+\item 优化 STARK 证明时间（递归合成、硬件加速）；
+\item 推动 PQ 盲签名标准化（CFRG/NIST 路线图）。
+\end{enumerate}
+
+\textbf{结语。}
+SPHINCS+、Poseidon2、Fischlin 框架和 STARK 证明的交汇提供了独特机遇——
+集后量子安全、隐私、透明和哈希函数保守保障于一身的盲签名原语。
+本文识别的空白均可通过现有技术解决。
+
+\medskip
+\noindent\textbf{AI 使用声明。}
+本综述借助 AI 辅助研究工具完成，包括文献搜索、来源验证、证据综合和报告起草。
+所有发现均基于已引用来源核实，全过程在人工监督下完成。
+
+% ============================================================
+\printbibliography[title={参考文献}]
+
+\end{document}
