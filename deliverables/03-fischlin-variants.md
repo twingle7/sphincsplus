@@ -93,7 +93,7 @@ Send: c
    输入: Hash-and-Sign 方案 Σ = (Σ.KeyGen, Σ.Sign, Σ.Verify)
    输出: Fischlin 盲签名方案 BS = (BS.KeyGen, BS.Sign, BS.User, BS.Verify)
 
-   承诺阶段:  User 抽样 r ←$ {0,1}^λ, 计算 c = H(m, r)   // H 是另一个 RO
+   承诺阶段:  User 抽样 r ← {0,1}^λ, 计算 c = H(m, r)   // H 是另一个 RO
    签发阶段:  Signer 计算 σ_blind = Σ.Sign(sk, c)
    凭证最终化: User 验证 Σ.Verify(pk, c, σ_blind) = 1
               User 保存 credential = (c, σ_blind, m, r) // 签名原封不动!
@@ -108,8 +108,6 @@ Send: c
    对于 SPHINCS+ 这样的哈希基 Hash-and-Sign 方案，不存在任何代数同态结构能支持 `σ = Unblind(σ_blind, r)` 这样的操作。但这**不影响 Fischlin 框架的正确性**——因为 Fischlin/Bouillaguet 框架**从不需要去盲**。凭证 `(c, σ_blind, π)` 中，`σ_blind` 是对承诺值 `c` 的有效签名，π 证明 `c` 是某 (m, r) 的承诺。Verifier 检查的是这两条，**从不检查签名是否对原始消息 m 有效**。
 
    这与 RSA 盲签名有本质区别: RSA 中 `σ_blind = (m·r^e)^d = m^d·r (mod N)` → `σ = σ_blind/r = m^d`，最终得到的是对 m 的标准签名。Fischlin 中最终凭证包含的是对 c 的签名 + 对 c 的零知识打开证明 —— 从不产生对 m 的标准签名。
-
-   > **本项目代码中的命名遗留问题:** `protocol_poseidon2.c` 中 `spx_p2_unblind()` 函数注释写明 `/* Compatibility wrapper: this step only packages issuer response into credential witness. */`，实现仅做 `memcpy(out_cred->sigma_com, sigma_blind, SPX_BYTES)` —— 没有变换。函数名 `unblind` 是早期对 Fischlin 框架理解不充分时的误命名。外部调用者早已使用 `finalize_credential` / `issue_finalize`。此遗留命名与 Fischlin 语义无冲突，但建议在论文写作中不使用 "unblind" 术语。（重命名仅涉及 2 个文件，改动量极小。）
 
 4. **安全性归约:**
    ```
@@ -156,20 +154,20 @@ Send: c
 │ Fischlin 框架层次                                        │
 ├─────────────────────────────────────────────────────────┤
 │ 顶层: Bouillaguet 通用编译器 (IEEE S&P 2026)             │
-│    │                                                     │
-│    ├── 底层签名: SPHINCS+ (NIST FIPS 205)               │
+│    │                                                    │
+│    ├── 底层签名: SPHINCS+ (NIST FIPS 205)                │
 │    │     └── THF: Poseidon2 (Goldilocks, t=12)          │
 │    │           ├── 安全性: ROM 下 SM-TCR/DSPR/PRE/UD     │
 │    │           └── 参数: n=16, h=63, d=7, k=10, a=12    │
-│    │                                                     │
+│    │                                                    │
 │    ├── 零知识证明: STARK (Winterfell)                    │
-│    │     ├── AIR: 53 约束, 23,861 行 × 64 列            │
+│    │     ├── AIR: 53 约束, 23,861 行 × 64 列             │
 │    │     ├── 域: Goldilocks prime (co-design with hash)  │
 │    │     └── 安全性: ~108-bit conjectured (blowup=16)    │
 │    │                                                     │
 │    └── 安全归约:                                         │
-│          OMUF ← EUF-CMA ← THF ← Poseidon2                │
-│                 (Bouillaguet)  (SPHINCS+)  (ROM)         │
+│          OMUF ← EUF-CMA ← THF ← Poseidon2               │
+│                 (Bouillaguet)  (SPHINCS+)  (ROM)        │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -199,13 +197,13 @@ Fischlin 框架经过近 20 年的演化，从 CRS 依赖的通用 NIZK 构造�
 
 ## 参考文献
 
-- [Fischlin 2006] M. Fischlin, "Round-Optimal Composable Blind Signatures in the Common Reference String Model," CRYPTO 2006.
-- [Fuchsbauer et al. 2015] G. Fuchsbauer, C. Hanser, D. Slamanig, "Practical Round-Optimal Blind Signatures in the Standard Model," CRYPTO 2015.
-- [del Pino-Katsumata 2022] R. del Pino, S. Katsumata, "A New Framework for More Efficient Round-Optimal Lattice-Based (Partially) Blind Signature via Trapdoor Sampling," CRYPTO 2022. DOI: 10.1007/978-3-031-15979-4_11
-- [Beullens et al. 2023] W. Beullens, V. Lyubashevsky, N. K. Nguyen, G. Seiler, "Lattice-Based Blind Signatures: Short, Efficient, and Round-Optimal," CCS 2023. DOI: 10.1145/3576915.3616613
-- [Bouillaguet et al. 2026] C. Bouillaguet, T. Feneuil, J. Maire, M. Rivain, J. Sauvage, D. Vergnaud, "Blinding Post-Quantum Hash-and-Sign Signatures," IEEE S&P 2026. DOI: 10.1109/SP63933.2026.00032
-- [Dietz et al. 2026] M. Dietz, J. Kastner, S. Tessaro, "On the Impossibility of Round-Optimal Pairing-Free Blind Signatures in the ROM," IACR ePrint 2026.
-- [Herranz-Louiso 2025] J. Herranz, H. Louiso, "Hash-Based Blind Signatures: First Steps," IACR ePrint 2025/2097.
-- [Kastner et al. 2024] J. Kastner, K. Nguyen, M. Reichle, "Pairing-Free Blind Signatures from Standard Assumptions in the ROM," CRYPTO 2024. DOI: 10.1007/978-3-031-68376-3_7
-- [Bernstein et al. 2019] D. J. Bernstein et al., "The SPHINCS+ Signature Framework," CCS 2019. DOI: 10.1145/3319535.3363229
-- [Grassi et al. 2023] L. Grassi, D. Khovratovich, M. Schofnegger, "Poseidon2: A Faster Version of the Poseidon Hash Function," AFRICACRYPT 2023. DOI: 10.1007/978-3-031-37679-5_8
+- [Fischlin 2006] M. Fischlin, "Round-Optimal Composable Blind Signatures in the Common Reference String Model," CRYPTO 2006. [DOI: 10.1007/11818175_4](https://doi.org/10.1007/11818175_4)
+- [Fuchsbauer et al. 2015] G. Fuchsbauer, C. Hanser, D. Slamanig, "Practical Round-Optimal Blind Signatures in the Standard Model," CRYPTO 2015. [DOI: 10.1007/978-3-662-48000-7_34](https://doi.org/10.1007/978-3-662-48000-7_34)
+- [del Pino-Katsumata 2022] R. del Pino, S. Katsumata, "A New Framework for More Efficient Round-Optimal Lattice-Based (Partially) Blind Signature via Trapdoor Sampling," CRYPTO 2022. [DOI: 10.1007/978-3-031-15979-4_11](https://doi.org/10.1007/978-3-031-15979-4_11)
+- [Beullens et al. 2023] W. Beullens, V. Lyubashevsky, N. K. Nguyen, G. Seiler, "Lattice-Based Blind Signatures: Short, Efficient, and Round-Optimal," CCS 2023. [DOI: 10.1145/3576915.3616613](https://doi.org/10.1145/3576915.3616613)
+- [Bouillaguet et al. 2026] C. Bouillaguet, T. Feneuil, J. Maire, M. Rivain, J. Sauvage, D. Vergnaud, "Blinding Post-Quantum Hash-and-Sign Signatures," IEEE S&P 2026. [DOI: 10.1109/SP63933.2026.00032](https://doi.org/10.1109/SP63933.2026.00032)
+- [Dietz et al. 2026] M. Dietz, J. Kastner, S. Tessaro, "On the Impossibility of Round-Optimal Pairing-Free Blind Signatures in the ROM," IACR [ePrint 2026/090](https://eprint.iacr.org/2026/090).
+- [Herranz-Louiso 2025] J. Herranz, H. Louiso, "Hash-Based Blind Signatures: First Steps," IACR [[ePrint 2025/209](https://eprint.iacr.org/2025/209)7](https://eprint.iacr.org/2025/2097).
+- [Kastner et al. 2024] J. Kastner, K. Nguyen, M. Reichle, "Pairing-Free Blind Signatures from Standard Assumptions in the ROM," CRYPTO 2024. [DOI: 10.1007/978-3-031-68376-3_7](https://doi.org/10.1007/978-3-031-68376-3_7)
+- [Bernstein et al. 2019] D. J. Bernstein et al., "The SPHINCS+ Signature Framework," CCS 2019. [DOI: 10.1145/3319535.3363229](https://doi.org/10.1145/3319535.3363229)
+- [Grassi et al. 2023] L. Grassi, D. Khovratovich, M. Schofnegger, "Poseidon2: A Faster Version of the Poseidon Hash Function," AFRICACRYPT 2023. [DOI: 10.1007/978-3-031-37679-5_8](https://doi.org/10.1007/978-3-031-37679-5_8)

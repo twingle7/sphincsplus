@@ -7,39 +7,6 @@
 #include "air_verify_full.h"
 #include "relation_migration.h"
 
-#ifdef SPX_P2_USE_RUST_STARK
-extern int spx_p2_rust_validate_strict_relation_inputs_v1(const spx_p2_ffi_public_inputs *pub,
-                                                          const spx_p2_ffi_private_witness *wit,
-                                                          int require_witness);
-extern int spx_p2_rust_validate_strict_witness_relation_v1(const spx_p2_ffi_public_inputs *pub,
-                                                           const spx_p2_ffi_private_witness *wit);
-#define SPX_P2_RUST_OK 0
-#define SPX_P2_RUST_ERR_NULL -1
-#define SPX_P2_RUST_ERR_INPUT -2
-#define SPX_P2_RUST_ERR_PROVE -4
-
-static int spx_p2_map_rust_relation_status_to_ffi(int rust_ret)
-{
-    if (rust_ret == SPX_P2_RUST_OK)
-    {
-        return SPX_P2_FFI_STATUS_OK;
-    }
-    if (rust_ret == SPX_P2_RUST_ERR_NULL)
-    {
-        return SPX_P2_FFI_STATUS_ERR_NULL;
-    }
-    if (rust_ret == SPX_P2_RUST_ERR_INPUT)
-    {
-        return SPX_P2_FFI_STATUS_ERR_INPUT;
-    }
-    if (rust_ret == SPX_P2_RUST_ERR_PROVE)
-    {
-        return SPX_P2_FFI_STATUS_ERR_PROVE;
-    }
-    return SPX_P2_FFI_STATUS_ERR_INPUT;
-}
-#endif
-
 int spx_p2_relation_eval_verify_full_guard(const uint8_t *pk,
                                            const uint8_t *com,
                                            const uint8_t *sigma_com)
@@ -105,7 +72,7 @@ static int spx_p2_relation_validate_sigma_c_local(const spx_p2_ffi_public_inputs
     {
         return SPX_P2_FFI_STATUS_ERR_INPUT;
     }
-    if (spx_p2_build_sigma_c_ciphertext(expected_sigma_c, &expected_sigma_c_len,
+    if (spx_p2_build_sigma_c(expected_sigma_c, &expected_sigma_c_len,
                                         pub->com, wit->sigma_com,
                                         pub->pk_e, pub->pk_e_len,
                                         wit->omega2, wit->omega2_len) != 0)
@@ -123,12 +90,6 @@ static int spx_p2_relation_validate_sigma_c_local(const spx_p2_ffi_public_inputs
 int spx_p2_relation_validate_strict_prove_inputs(const spx_p2_ffi_public_inputs *pub,
                                                  const spx_p2_ffi_private_witness *wit)
 {
-#ifdef SPX_P2_USE_RUST_STARK
-    {
-        int rust_ret = spx_p2_rust_validate_strict_relation_inputs_v1(pub, wit, 1);
-        return spx_p2_map_rust_relation_status_to_ffi(rust_ret);
-    }
-#else
     if (pub == 0 || wit == 0)
     {
         return SPX_P2_FFI_STATUS_ERR_NULL;
@@ -164,17 +125,10 @@ int spx_p2_relation_validate_strict_prove_inputs(const spx_p2_ffi_public_inputs 
         return SPX_P2_FFI_STATUS_ERR_INPUT;
     }
     return SPX_P2_FFI_STATUS_OK;
-#endif
 }
 
 int spx_p2_relation_validate_strict_verify_inputs(const spx_p2_ffi_public_inputs *pub)
 {
-#ifdef SPX_P2_USE_RUST_STARK
-    {
-        int rust_ret = spx_p2_rust_validate_strict_relation_inputs_v1(pub, 0, 0);
-        return spx_p2_map_rust_relation_status_to_ffi(rust_ret);
-    }
-#else
     if (pub == 0)
     {
         return SPX_P2_FFI_STATUS_ERR_NULL;
@@ -193,18 +147,11 @@ int spx_p2_relation_validate_strict_verify_inputs(const spx_p2_ffi_public_inputs
         return SPX_P2_FFI_STATUS_ERR_INPUT;
     }
     return SPX_P2_FFI_STATUS_OK;
-#endif
 }
 
 int spx_p2_relation_precheck_strict_prove_witness(const spx_p2_ffi_public_inputs *pub,
                                                   const spx_p2_ffi_private_witness *wit)
 {
-#ifdef SPX_P2_USE_RUST_STARK
-    {
-        int rust_ret = spx_p2_rust_validate_strict_witness_relation_v1(pub, wit);
-        return spx_p2_map_rust_relation_status_to_ffi(rust_ret);
-    }
-#else
     {
         uint8_t expected_com[SPX_N];
         spx_p2_commit(expected_com, wit->m, wit->mlen, wit->r, wit->rlen);
@@ -229,5 +176,4 @@ int spx_p2_relation_precheck_strict_prove_witness(const spx_p2_ffi_public_inputs
         return SPX_P2_FFI_STATUS_ERR_PROVE;
     }
     return SPX_P2_FFI_STATUS_OK;
-#endif
 }

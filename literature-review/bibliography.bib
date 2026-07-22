@@ -168,13 +168,6 @@
   note = {MEDIUM: VOLE-based blind sig, 1+ citations}
 }
 
-@article{2023lattice,
-  author = {Ward Beullens and Vadim Lyubashevsky and Ngoc Khanh Nguyen and Gregor Seiler},
-  title = {Lattice-Based Blind Signatures: Short, Efficient, and Round-Optimal},
-  journal = {Proceedings of the 2023 ACM SIGSAC Conference on Computer and Communications Security (CCS)},
-  year = {2023},
-  doi = {10.1145/3576915.3616613}
-}
 
 @inproceedings{Agrawal2022Practical,
   author = {Shweta Agrawal and Elena Kirshanova and Damien Stehle and Anshu Yadav},
@@ -190,6 +183,17 @@
   booktitle = {EUROCRYPT},
   year = {2021},
   doi = {10.1007/978-3-030-77870-5_15}
+}
+
+@inproceedings{Katsumata2023CSI,
+  author = {Shuichi Katsumata and Yi-Fu Lai and Michael Reichle},
+  title = {{CSI-Otter}: Isogeny-based (Partially) Blind Signatures from the Class Group Action with a Twist},
+  booktitle = {Advances in Cryptology -- CRYPTO 2023},
+  year = {2023},
+  series = {LNCS},
+  publisher = {Springer},
+  doi = {10.1007/978-3-031-38554-4_11},
+  note = {KEY: Smallest PQ blind signatures (4--8 KB), isogeny-based}
 }
 
 @article{2019DEEP,
@@ -294,6 +298,41 @@
   publisher = {IEEE},
   doi = {10.1109/sp.2018.00020},
   note = {FOUNDATION: Bulletproofs, 1000+ citations}
+}
+
+% ---------- MISSING ENTRIES ADDED FOR PAPER ----------
+
+@article{Sun2023SPHINCSSM3,
+  author = {孙思维 and others},
+  title = {{SPHINCS$^+$-SM3}: 基于{SM3}的无状态数字签名算法},
+  journal = {密码学报},
+  year = {2023},
+  volume = {10},
+  number = {6},
+  pages = {1266--1278},
+  note = {KEY: SPHINCS+ hash replacement precedent in same journal}
+}
+
+@inproceedings{Fischlin2006,
+  author = {Marc Fischlin},
+  title = {Round-Optimal Composable Blind Signatures in the Common Reference String Model},
+  booktitle = {Advances in Cryptology -- CRYPTO 2006},
+  year = {2006},
+  series = {LNCS},
+  volume = {4117},
+  publisher = {Springer},
+  doi = {10.1007/11818175_2},
+  note = {FOUNDATION: Original Fischlin framework for blind signatures}
+}
+
+@techreport{NIST2024FIPS205,
+  author = {{National Institute of Standards and Technology}},
+  title = {Stateless Hash-Based Digital Signature Standard},
+  institution = {NIST},
+  year = {2024},
+  number = {FIPS PUB 205},
+  doi = {10.6028/NIST.FIPS.205},
+  note = {STANDARD: SPHINCS+ as NIST FIPS 205 (SLH-DSA)}
 }
 
 @inproceedings{Katz2018ImprovedNIZK,

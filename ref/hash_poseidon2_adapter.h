@@ -50,33 +50,15 @@ int spx_p2_trace_verify_com(spx_p2_trace *trace,
                             const uint8_t *sigma_com);
 
 /*
- * Legacy compatibility helper: build Sigma.C = (c || EncTag), where EncTag binds
- * (pk_E, c, sigma', omega2). If omega2 is absent, use deterministic fallback.
+ * Build Sigma.C = (c || C_tail), where C_tail binds
+ * (label || pk_E || c || sigma' || omega2) via Poseidon2 sponge.
+ * omega2 is explicit witness randomness for statement binding.
  */
-#define spx_p2_build_sigma_c_m19 SPX_NAMESPACE(spx_p2_build_sigma_c_m19)
-int spx_p2_build_sigma_c_m19(uint8_t *out_sigma_c, size_t *out_sigma_c_len,
-                             const uint8_t *com,
-                             const uint8_t *sigma_com,
-                             const uint8_t *pk_e, size_t pk_e_len,
-                             const uint8_t *omega2, size_t omega2_len);
-
-/*
- * Final helper: build Sigma.C = (c || C_tail), where C_tail models
- * Enc(pk_E, c || sigma', omega2) with explicit witness randomness omega2.
- */
-#define spx_p2_build_sigma_c_ciphertext SPX_NAMESPACE(spx_p2_build_sigma_c_ciphertext)
-int spx_p2_build_sigma_c_ciphertext(uint8_t *out_sigma_c, size_t *out_sigma_c_len,
-                                    const uint8_t *com,
-                                    const uint8_t *sigma_com,
-                                    const uint8_t *pk_e, size_t pk_e_len,
-                                    const uint8_t *omega2, size_t omega2_len);
-
-/* Legacy compatibility alias retained for older callers. */
-#define spx_p2_build_sigma_c_m20_pke SPX_NAMESPACE(spx_p2_build_sigma_c_m20_pke)
-int spx_p2_build_sigma_c_m20_pke(uint8_t *out_sigma_c, size_t *out_sigma_c_len,
-                                 const uint8_t *com,
-                                 const uint8_t *sigma_com,
-                                 const uint8_t *pk_e, size_t pk_e_len,
-                                 const uint8_t *omega2, size_t omega2_len);
+#define spx_p2_build_sigma_c SPX_NAMESPACE(spx_p2_build_sigma_c)
+int spx_p2_build_sigma_c(uint8_t *out_sigma_c, size_t *out_sigma_c_len,
+                         const uint8_t *com,
+                         const uint8_t *sigma_com,
+                         const uint8_t *pk_e, size_t pk_e_len,
+                         const uint8_t *omega2, size_t omega2_len);
 
 #endif

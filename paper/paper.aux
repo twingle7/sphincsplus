@@ -1,0 +1,222 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand*\HyPL@Entry[1]{}
+\abx@aux@refcontext{none/global//global/global/global}
+\abx@aux@cite{0}{NIST2024FIPS205}
+\abx@aux@segm{0}{0}{NIST2024FIPS205}
+\abx@aux@cite{0}{NIST2022IR8413}
+\abx@aux@segm{0}{0}{NIST2022IR8413}
+\HyPL@Entry{0<</S/D>>}
+\providecommand \oddpage@label [2]{}
+\@writefile{toc}{\contentsline {section}{\numberline {1}引言}{1}{section.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.1}后量子迁移与隐私保护的缺口}{1}{subsection.1.1}\protected@file@percent }
+\abx@aux@cite{0}{delPino2022Framework}
+\abx@aux@segm{0}{0}{delPino2022Framework}
+\abx@aux@cite{0}{Beullens2023LatticeBlind}
+\abx@aux@segm{0}{0}{Beullens2023LatticeBlind}
+\abx@aux@cite{0}{Agrawal2022Practical}
+\abx@aux@segm{0}{0}{Agrawal2022Practical}
+\abx@aux@cite{0}{Kastner2024PairingFree}
+\abx@aux@segm{0}{0}{Kastner2024PairingFree}
+\abx@aux@cite{0}{Argo2024PracticalPQ}
+\abx@aux@segm{0}{0}{Argo2024PracticalPQ}
+\abx@aux@cite{0}{Bouillaguet2026BlindingPH}
+\abx@aux@segm{0}{0}{Bouillaguet2026BlindingPH}
+\abx@aux@cite{0}{Herranz2025HashBased}
+\abx@aux@segm{0}{0}{Herranz2025HashBased}
+\abx@aux@cite{0}{Dietz2026Impossibility}
+\abx@aux@segm{0}{0}{Dietz2026Impossibility}
+\abx@aux@cite{0}{Bouillaguet2026BlindingPH}
+\abx@aux@segm{0}{0}{Bouillaguet2026BlindingPH}
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.2}现有后量子盲签名路线}{2}{subsection.1.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.3}核心研究空白与本文贡献}{2}{subsection.1.3}\protected@file@percent }
+\abx@aux@cite{0}{Bernstein2019SPHINCS}
+\abx@aux@segm{0}{0}{Bernstein2019SPHINCS}
+\abx@aux@cite{0}{NIST2024FIPS205}
+\abx@aux@segm{0}{0}{NIST2024FIPS205}
+\abx@aux@cite{0}{Bernstein2019SPHINCS}
+\abx@aux@segm{0}{0}{Bernstein2019SPHINCS}
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.4}与产业技术栈的关系}{3}{subsection.1.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.5}论文结构}{3}{subsection.1.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {2}预备知识}{3}{section.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}符号约定}{3}{subsection.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}SPHINCS$^+$ 签名方案}{3}{subsection.2.2}\protected@file@percent }
+\abx@aux@cite{0}{Fischlin2006}
+\abx@aux@segm{0}{0}{Fischlin2006}
+\abx@aux@cite{0}{Fuchsbauer2015Practical}
+\abx@aux@segm{0}{0}{Fuchsbauer2015Practical}
+\abx@aux@cite{0}{Bouillaguet2026BlindingPH}
+\abx@aux@segm{0}{0}{Bouillaguet2026BlindingPH}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces SPHINCS$^+$ 关键参数}}{4}{table.1}\protected@file@percent }
+\newlabel{tab:params}{{1}{4}{SPHINCS$^+$ 关键参数}{table.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Fischlin 盲签名框架}{4}{subsection.2.3}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Fischlin 盲签名协议流程（2 轮交互 + 1 轮展示）}}{4}{figure.1}\protected@file@percent }
+\newlabel{fig:fischlin}{{1}{4}{Fischlin 盲签名协议流程（2 轮交互 + 1 轮展示）}{figure.1}{}}
+\abx@aux@cite{0}{Grassi2023Poseidon2}
+\abx@aux@segm{0}{0}{Grassi2023Poseidon2}
+\abx@aux@cite{0}{Grassi2023Poseidon2}
+\abx@aux@segm{0}{0}{Grassi2023Poseidon2}
+\abx@aux@cite{0}{2021Security}
+\abx@aux@segm{0}{0}{2021Security}
+\abx@aux@cite{0}{2019DEEP}
+\abx@aux@segm{0}{0}{2019DEEP}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.4}Poseidon2 海绵构造}{5}{subsection.2.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.5}STARK 证明系统与 Winterfell}{5}{subsection.2.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}方案构造}{5}{section.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Poseidon2 作为 SPHINCS$^+$ 的可调哈希}{6}{subsection.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.1.1}THASH 实例化}{6}{subsubsection.3.1.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces THASH 域标签}}{6}{table.2}\protected@file@percent }
+\newlabel{tab:domain}{{2}{6}{THASH 域标签}{table.2}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.1.2}ADRS 编码与多目标防护}{6}{subsubsection.3.1.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces ADRS 地址结构}}{6}{table.3}\protected@file@percent }
+\newlabel{tab:adrs}{{3}{6}{ADRS 地址结构}{table.3}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.1.3}参数选择}{7}{subsubsection.3.1.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Fischlin 盲签名协议实例化}{7}{subsection.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.2.1}协议角色与流程}{7}{subsubsection.3.2.1}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces SPHINCS$^+$-Poseidon2 Fischlin 盲签名协议完整流程}}{7}{figure.2}\protected@file@percent }
+\newlabel{fig:protocol}{{2}{7}{SPHINCS$^+$-Poseidon2 Fischlin 盲签名协议完整流程}{figure.2}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.2.2}协议详细步骤}{7}{subsubsection.3.2.2}\protected@file@percent }
+\abx@aux@cite{0}{Bouillaguet2026BlindingPH}
+\abx@aux@segm{0}{0}{Bouillaguet2026BlindingPH}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.2.3}公开输入与上下文绑定}{8}{subsubsection.3.2.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.2.4}与 Bouillaguet 编译器的关系}{8}{subsubsection.3.2.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Full-AIR STARK 证明系统}{9}{subsection.3.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.3.1}设计原则：全内生证明}{9}{subsubsection.3.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.3.2}执行跟踪构建}{9}{subsubsection.3.3.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces 执行跟踪列布局（64 列）}}{9}{table.4}\protected@file@percent }
+\newlabel{tab:columns}{{4}{9}{执行跟踪列布局（64 列）}{table.4}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.3.3}AIR 约束系统}{9}{subsubsection.3.3.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces AIR 约束分类（53 条）}}{9}{table.5}\protected@file@percent }
+\newlabel{tab:constraints}{{5}{9}{AIR 约束分类（53 条）}{table.5}{}}
+\abx@aux@cite{0}{Sun2023SPHINCSSM3}
+\abx@aux@segm{0}{0}{Sun2023SPHINCSSM3}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.3.4}证明生成与验证参数}{10}{subsubsection.3.3.4}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces STARK 证明参数}}{10}{table.6}\protected@file@percent }
+\newlabel{tab:starkparams}{{6}{10}{STARK 证明参数}{table.6}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}安全分析}{10}{section.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}四层模块化归约框架}{10}{subsection.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Poseidon2 满足 THF 四性质}{10}{subsection.4.2}\protected@file@percent }
+\abx@aux@cite{0}{2021Security}
+\abx@aux@segm{0}{0}{2021Security}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces 四层模块化安全归约链}}{11}{figure.3}\protected@file@percent }
+\newlabel{fig:reduction}{{3}{11}{四层模块化安全归约链}{figure.3}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.2.1}SM-TCR（单函数多目标碰撞抵抗）}{11}{subsubsection.4.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.2.2}SM-DSPR（单函数多目标决定性第二原像抵抗）}{11}{subsubsection.4.2.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.2.3}SM-PRE（单函数多目标原像抵抗）}{11}{subsubsection.4.2.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.2.4}SM-UD（单函数多目标不可区分性）}{11}{subsubsection.4.2.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.2.5}多目标安全边际评估}{11}{subsubsection.4.2.5}\protected@file@percent }
+\abx@aux@cite{0}{Bouillaguet2026BlindingPH}
+\abx@aux@segm{0}{0}{Bouillaguet2026BlindingPH}
+\abx@aux@cite{0}{2019DEEP}
+\abx@aux@segm{0}{0}{2019DEEP}
+\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces 不同签名预算 $q_s$ 下的安全比特数（$n=16$）}}{12}{table.7}\protected@file@percent }
+\newlabel{tab:security}{{7}{12}{不同签名预算 $q_s$ 下的安全比特数（$n=16$）}{table.7}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Fischlin 盲签名安全性}{12}{subsection.4.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.3.1}Blindness（盲性）}{12}{subsubsection.4.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.3.2}One-More Unforgeability（一多不可伪造性）}{12}{subsubsection.4.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.3.3}STARK Soundness}{12}{subsubsection.4.3.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}参数安全性评估}{13}{subsection.4.4}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces 参数安全性评估汇总（$n=16$, $q_s = 2^{20}$）}}{13}{table.8}\protected@file@percent }
+\newlabel{tab:paramsecurity}{{8}{13}{参数安全性评估汇总（$n=16$, $q_s = 2^{20}$）}{table.8}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}当前局限性}{13}{subsection.4.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5}实现与评估}{13}{section.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}实现概览}{13}{subsection.5.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}测试与正确性验证}{13}{subsection.5.2}\protected@file@percent }
+\abx@aux@cite{0}{Beullens2023LatticeBlind}
+\abx@aux@segm{0}{0}{Beullens2023LatticeBlind}
+\abx@aux@cite{0}{Argo2024PracticalPQ}
+\abx@aux@segm{0}{0}{Argo2024PracticalPQ}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces 实现架构（C + Rust + FFI）}}{14}{figure.4}\protected@file@percent }
+\newlabel{fig:arch}{{4}{14}{实现架构（C + Rust + FFI）}{figure.4}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces 测试覆盖矩阵}}{14}{table.9}\protected@file@percent }
+\newlabel{tab:tests}{{9}{14}{测试覆盖矩阵}{table.9}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}性能基准}{14}{subsection.5.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.3.1}实验环境}{14}{subsubsection.5.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.3.2}核心性能指标}{14}{subsubsection.5.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.3.3}与格基方案对比}{14}{subsubsection.5.3.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {10}{\ignorespaces 核心性能指标（$n=16$, 开发参数）}}{15}{table.10}\protected@file@percent }
+\newlabel{tab:perf}{{10}{15}{核心性能指标（$n=16$, 开发参数）}{table.10}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {11}{\ignorespaces 与格基后量子盲签名方案对比}}{15}{table.11}\protected@file@percent }
+\newlabel{tab:comparison}{{11}{15}{与格基后量子盲签名方案对比}{table.11}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}区块链场景适用性分析}{15}{subsection.5.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.4.1}场景一：匿名凭证与链上身份}{15}{subsubsection.5.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.4.2}场景二：机构合规证明}{16}{subsubsection.5.4.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.4.3}链上验证成本分析}{16}{subsubsection.5.4.3}\protected@file@percent }
+\abx@aux@cite{0}{Beullens2023LatticeBlind}
+\abx@aux@segm{0}{0}{Beullens2023LatticeBlind}
+\abx@aux@cite{0}{Argo2024PracticalPQ}
+\abx@aux@segm{0}{0}{Argo2024PracticalPQ}
+\abx@aux@cite{0}{Katsumata2023CSI}
+\abx@aux@segm{0}{0}{Katsumata2023CSI}
+\abx@aux@cite{0}{Baum2026ConcretelyEfficientBlind}
+\abx@aux@segm{0}{0}{Baum2026ConcretelyEfficientBlind}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.4.4}产业技术栈验证}{17}{subsubsection.5.4.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.4.5}当前方案局限性}{17}{subsubsection.5.4.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.5}与后量子盲签名方案的综合对比}{17}{subsection.5.5}\protected@file@percent }
+\abx@aux@cite{0}{Sun2023SPHINCSSM3}
+\abx@aux@segm{0}{0}{Sun2023SPHINCSSM3}
+\abx@aux@cite{0}{Bernstein2019SPHINCS}
+\abx@aux@segm{0}{0}{Bernstein2019SPHINCS}
+\abx@aux@cite{0}{delPino2022Framework}
+\abx@aux@segm{0}{0}{delPino2022Framework}
+\abx@aux@cite{0}{Beullens2023LatticeBlind}
+\abx@aux@segm{0}{0}{Beullens2023LatticeBlind}
+\abx@aux@cite{0}{Argo2024PracticalPQ}
+\abx@aux@segm{0}{0}{Argo2024PracticalPQ}
+\abx@aux@cite{0}{Herranz2025HashBased}
+\abx@aux@segm{0}{0}{Herranz2025HashBased}
+\abx@aux@cite{0}{Bouillaguet2026BlindingPH}
+\abx@aux@segm{0}{0}{Bouillaguet2026BlindingPH}
+\@writefile{lot}{\contentsline {table}{\numberline {12}{\ignorespaces 与后量子盲签名方案的多维度对比}}{18}{table.12}\protected@file@percent }
+\newlabel{tab:pqblind}{{12}{18}{与后量子盲签名方案的多维度对比}{table.12}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}相关工作}{18}{section.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}SPHINCS$^+$ 哈希替换}{18}{subsection.6.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}后量子盲签名}{18}{subsection.6.2}\protected@file@percent }
+\abx@aux@cite{0}{Grassi2019Poseidon}
+\abx@aux@segm{0}{0}{Grassi2019Poseidon}
+\abx@aux@cite{0}{Grassi2023Poseidon2}
+\abx@aux@segm{0}{0}{Grassi2023Poseidon2}
+\abx@aux@cite{0}{Grassi2024Monolith}
+\abx@aux@segm{0}{0}{Grassi2024Monolith}
+\abx@aux@cite{0}{Grassi2026Poseidon2b}
+\abx@aux@segm{0}{0}{Grassi2026Poseidon2b}
+\abx@aux@cite{0}{Sekulic2025}
+\abx@aux@segm{0}{0}{Sekulic2025}
+\abx@aux@cite{0}{Quan2022}
+\abx@aux@segm{0}{0}{Quan2022}
+\abx@aux@cite{0}{Adomnicai2026}
+\abx@aux@segm{0}{0}{Adomnicai2026}
+\abx@aux@cite{0}{Buser2022ExoticSigs}
+\abx@aux@segm{0}{0}{Buser2022ExoticSigs}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}ZK 友好哈希与 STARK 证明系统}{19}{subsection.6.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.4}区块链隐私保护}{19}{subsection.6.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {7}结论}{19}{section.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.1}未来工作}{20}{subsection.7.1}\protected@file@percent }
+\abx@aux@read@bbl@mdfivesum{CC16D65547120CC09B32B1C5237BAFAA}
+\abx@aux@defaultrefcontext{0}{NIST2024FIPS205}{none/global//global/global/global}
+\abx@aux@defaultrefcontext{0}{NIST2022IR8413}{none/global//global/global/global}
+\abx@aux@defaultrefcontext{0}{delPino2022Framework}{none/global//global/global/global}
+\abx@aux@defaultrefcontext{0}{Beullens2023LatticeBlind}{none/global//global/global/global}
+\abx@aux@defaultrefcontext{0}{Agrawal2022Practical}{none/global//global/global/global}
+\abx@aux@defaultrefcontext{0}{Kastner2024PairingFree}{none/global//global/global/global}
+\abx@aux@defaultrefcontext{0}{Argo2024PracticalPQ}{none/global//global/global/global}
+\abx@aux@defaultrefcontext{0}{Bouillaguet2026BlindingPH}{none/global//global/global/global}
+\abx@aux@defaultrefcontext{0}{Herranz2025HashBased}{none/global//global/global/global}
+\abx@aux@defaultrefcontext{0}{Dietz2026Impossibility}{none/global//global/global/global}
+\abx@aux@defaultrefcontext{0}{Bernstein2019SPHINCS}{none/global//global/global/global}
+\abx@aux@defaultrefcontext{0}{Fischlin2006}{none/global//global/global/global}
+\abx@aux@defaultrefcontext{0}{Fuchsbauer2015Practical}{none/global//global/global/global}
+\abx@aux@defaultrefcontext{0}{Grassi2023Poseidon2}{none/global//global/global/global}
+\abx@aux@defaultrefcontext{0}{2021Security}{none/global//global/global/global}
+\abx@aux@defaultrefcontext{0}{2019DEEP}{none/global//global/global/global}
+\abx@aux@defaultrefcontext{0}{Sun2023SPHINCSSM3}{none/global//global/global/global}
+\abx@aux@defaultrefcontext{0}{Katsumata2023CSI}{none/global//global/global/global}
+\abx@aux@defaultrefcontext{0}{Baum2026ConcretelyEfficientBlind}{none/global//global/global/global}
+\abx@aux@defaultrefcontext{0}{Grassi2019Poseidon}{none/global//global/global/global}
+\abx@aux@defaultrefcontext{0}{Grassi2024Monolith}{none/global//global/global/global}
+\abx@aux@defaultrefcontext{0}{Grassi2026Poseidon2b}{none/global//global/global/global}
+\abx@aux@defaultrefcontext{0}{Sekulic2025}{none/global//global/global/global}
+\abx@aux@defaultrefcontext{0}{Quan2022}{none/global//global/global/global}
+\abx@aux@defaultrefcontext{0}{Adomnicai2026}{none/global//global/global/global}
+\abx@aux@defaultrefcontext{0}{Buser2022ExoticSigs}{none/global//global/global/global}
+\gdef \@abspage@last{22}

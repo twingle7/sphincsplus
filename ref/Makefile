@@ -28,19 +28,17 @@ POSEIDON2_SUPPORT_SOURCES = \
 		hash_poseidon2_adapter.c show/show_poseidon2.c show/protocol_poseidon2.c \
 		stark/witness_builder.c stark/air_poseidon2_perm.c stark/air_poseidon2_sponge.c \
 		stark/air_hashcall.c stark/air_verify_minimal.c stark/air_verify_full.c \
-		stark/pi_f_format_v1.c stark/pi_f_format_v2.c stark/pi_f_format.c \
-		stark/prover_v1.c stark/verifier_v1.c \
-		stark/relation_migration_v1.c stark/relation_migration.c \
-		stark/ffi_v1.c stark/ffi.c stark/stats_v1.c stark/stats.c
+		stark/pi_f_format_v2.c stark/pi_f_format.c \
+		stark/relation_migration.c \
+		stark/ffi.c stark/stats.c
 POSEIDON2_SUPPORT_HEADERS = \
 		poseidon2.h poseidon2_params_goldilocks_profile.h \
 		hash_poseidon2_adapter.h show/show_poseidon2.h show/protocol_poseidon2.h \
 		stark/witness_format.h stark/air_poseidon2_perm.h stark/air_poseidon2_sponge.h \
 		stark/air_hashcall.h stark/air_verify_minimal.h stark/air_verify_full.h \
-		stark/pi_f_format_v1.h stark/pi_f_format_v2.h stark/pi_f_format.h \
-		stark/show_proof_format.h stark/prover_v1.h stark/verifier_v1.h \
-		stark/relation_migration_v1.h stark/relation_migration.h \
-		stark/ffi_v1.h stark/ffi.h stark/stats_v1.h stark/stats.h stark/thash_bench.h
+		stark/pi_f_format_v2.h stark/pi_f_format.h stark/show_proof_format.h \
+		stark/relation_migration.h \
+		stark/ffi.h stark/stats.h stark/thash_bench.h
 POSEIDON2_TEST_SOURCES = $(SOURCES) $(filter-out $(SOURCES),$(POSEIDON2_SUPPORT_SOURCES))
 POSEIDON2_TEST_HEADERS = $(HEADERS) $(filter-out $(HEADERS),$(POSEIDON2_SUPPORT_HEADERS))
 
@@ -77,12 +75,6 @@ POSEIDON2_TESTS = \
 		test/poseidon2_kat \
 		test/poseidon2_adapter \
 		test/poseidon2_instantiation_m1 \
-		test/poseidon2_witness_v1 \
-		test/poseidon2_perm_air_v1 \
-		test/poseidon2_sponge_air_v1 \
-		test/poseidon2_hashcall_air_v1 \
-		test/poseidon2_verify_minimal_air_v1 \
-		test/poseidon2_verify_full_air_v1 \
 		test/poseidon2_fischlin_blind_e2e \
 		test/poseidon2_fischlin_statement_spec \
 		test/poseidon2_fischlin_statement_bound_spec \
@@ -94,7 +86,6 @@ POSEIDON2_TESTS = \
 		test/poseidon2_verify_full_guard \
 		test/poseidon2_cross_backend_consistency \
 		test/poseidon2_show_proof_format \
-		test/poseidon2_stark_ffi_v1 \
 		test/poseidon2_stark_strict_core_enforcement \
 		test/poseidon2_stark_stats \
 		test/thash_backend_stark_compare

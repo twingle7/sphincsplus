@@ -169,17 +169,17 @@ Argo et al. [CCS 2024] 的 "Practical Post-Quantum Signatures for Privacy" 是**
 
 ## 参考文献
 
-- [Chaum 1983] D. Chaum, "Blind Signatures for Untraceable Payments," CRYPTO 1982.
-- [Abe-Fujisaki 1996] M. Abe and E. Fujisaki, "How to Date Blind Signatures," CRYPTO 1996.
-- [Fischlin 2006] M. Fischlin, "Round-Optimal Composable Blind Signatures in the Common Reference String Model," CRYPTO 2006.
-- [NIST IR 8413] NIST, "Status Report on the Third Round of the NIST PQC Standardization Process," 2022.
-- [del Pino-Katsumata 2022] R. del Pino and S. Katsumata, "A New Framework for More Efficient Round-Optimal Lattice-Based (Partially) Blind Signature via Trapdoor Sampling," CRYPTO 2022. DOI: 10.1007/978-3-031-15979-4_11
-- [Beullens et al. 2023] W. Beullens, V. Lyubashevsky, N. K. Nguyen, G. Seiler, "Lattice-Based Blind Signatures: Short, Efficient, and Round-Optimal," CCS 2023. DOI: 10.1145/3576915.3616613
-- [Argo et al. 2024] S. Argo, T. Güneysu, C. Jeudy, G. Land, A. Roux-Langlois, "Practical Post-Quantum Signatures for Privacy," CCS 2024. DOI: 10.1145/3658644.3670297
-- [Kastner et al. 2024] J. Kastner, K. Nguyen, M. Reichle, "Pairing-Free Blind Signatures from Standard Assumptions in the ROM," CRYPTO 2024. DOI: 10.1007/978-3-031-68376-3_7
-- [Katsumata et al. 2023] S. Katsumata, Y.-F. Lai, J. T. LeGrow, L. Qin, "CSI-Otter: Isogeny-Based (Partially) Blind Signatures," CRYPTO 2023. DOI: 10.1007/978-3-031-38548-3_24
-- [Bouillaguet et al. 2026] C. Bouillaguet, T. Feneuil, J. Maire, M. Rivain, J. Sauvage, D. Vergnaud, "Blinding Post-Quantum Hash-and-Sign Signatures," IEEE S&P 2026. DOI: 10.1109/SP63933.2026.00032
-- [Buser et al. 2022] M. Buser et al., "A Survey on Exotic Signatures for Post-quantum Blockchain: Challenges and Research Directions," ACM Computing Surveys, 2022. DOI: 10.1145/3572771
-- [RFC 9578] Privacy Pass Working Group, "Privacy Pass Architecture," IETF RFC 9578, 2024.
-- [SPHINCS+ NIST] NIST FIPS 205, "Stateless Hash-Based Digital Signature Standard," 2024.
-- [Grassi et al. 2023] L. Grassi, D. Khovratovich, M. Schofnegger, "Poseidon2: A Faster Version of the Poseidon Hash Function," AFRICACRYPT 2023. DOI: 10.1007/978-3-031-37679-5_8
+- [Chaum 1983] D. Chaum, "Blind Signatures for Untraceable Payments," CRYPTO 1982. [DOI: 10.1007/978-1-4757-0602-4_18](https://doi.org/10.1007/978-1-4757-0602-4_18)
+- [Abe-Fujisaki 1996] M. Abe and E. Fujisaki, "How to Date Blind Signatures," CRYPTO 1996. [DOI: 10.1007/3-540-68697-5_3](https://doi.org/10.1007/3-540-68697-5_3)
+- [Fischlin 2006] M. Fischlin, "Round-Optimal Composable Blind Signatures in the Common Reference String Model," CRYPTO 2006. [DOI: 10.1007/11818175_4](https://doi.org/10.1007/11818175_4)
+- [NIST IR 8413] NIST, "Status Report on the Third Round of the NIST PQC Standardization Process," 2022. [PDF](https://nvlpubs.nist.gov/nistpubs/ir/2022/NIST.IR.8413-upd1.pdf)
+- [del Pino-Katsumata 2022] R. del Pino and S. Katsumata, "A New Framework for More Efficient Round-Optimal Lattice-Based (Partially) Blind Signature via Trapdoor Sampling," CRYPTO 2022. [DOI: 10.1007/978-3-031-15979-4_11](https://doi.org/10.1007/978-3-031-15979-4_11)
+- [Beullens et al. 2023] W. Beullens, V. Lyubashevsky, N. K. Nguyen, G. Seiler, "Lattice-Based Blind Signatures: Short, Efficient, and Round-Optimal," CCS 2023. [DOI: 10.1145/3576915.3616613](https://doi.org/10.1145/3576915.3616613)
+- [Argo et al. 2024] S. Argo, T. Güneysu, C. Jeudy, G. Land, A. Roux-Langlois, "Practical Post-Quantum Signatures for Privacy," CCS 2024. [DOI: 10.1145/3658644.3670297](https://doi.org/10.1145/3658644.3670297)
+- [Kastner et al. 2024] J. Kastner, K. Nguyen, M. Reichle, "Pairing-Free Blind Signatures from Standard Assumptions in the ROM," CRYPTO 2024. [DOI: 10.1007/978-3-031-68376-3_7](https://doi.org/10.1007/978-3-031-68376-3_7)
+- [Katsumata et al. 2023] S. Katsumata, Y.-F. Lai, J. T. LeGrow, L. Qin, "CSI-Otter: Isogeny-Based (Partially) Blind Signatures," CRYPTO 2023. [DOI: 10.1007/978-3-031-38548-3_24](https://doi.org/10.1007/978-3-031-38548-3_24)
+- [Bouillaguet et al. 2026] C. Bouillaguet, T. Feneuil, J. Maire, M. Rivain, J. Sauvage, D. Vergnaud, "Blinding Post-Quantum Hash-and-Sign Signatures," IEEE S&P 2026. [DOI: 10.1109/SP63933.2026.00032](https://doi.org/10.1109/SP63933.2026.00032)
+- [Buser et al. 2022] M. Buser et al., "A Survey on Exotic Signatures for Post-quantum Blockchain: Challenges and Research Directions," ACM Computing Surveys, 2022. [DOI: 10.1145/3572771](https://doi.org/10.1145/3572771)
+- [RFC 9578] Privacy Pass Working Group, "Privacy Pass Architecture," IETF RFC 9578, 2024. [Link](https://www.rfc-editor.org/rfc/rfc9578)
+- [SPHINCS+ NIST] NIST FIPS 205, "Stateless Hash-Based Digital Signature Standard," 2024. [PDF](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.205.pdf)
+- [Grassi et al. 2023] L. Grassi, D. Khovratovich, M. Schofnegger, "Poseidon2: A Faster Version of the Poseidon Hash Function," AFRICACRYPT 2023. [DOI: 10.1007/978-3-031-37679-5_8](https://doi.org/10.1007/978-3-031-37679-5_8)

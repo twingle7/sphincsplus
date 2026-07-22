@@ -1,0 +1,31 @@
+{
+  "_comment": "Consensus MCP 模板 — 填入 API key 后去掉各配置项的 _disabled 前缀即可启用",
+  "mcpServers": {
+    "_research_consensus_disabled": {
+      "_comment": "需要 OpenAI + Gemini API key。获取方式: https://platform.openai.com/api-keys 和 https://aistudio.google.com/app/apikey",
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@justintabb/research-consensus-mcp"
+      ],
+      "env": {
+        "OPENAI_API_KEY": "sk-your-openai-key-here",
+        "OPENAI_MODEL": "gpt-4o",
+        "GEMINI_API_KEY": "your-gemini-key-here",
+        "GEMINI_MODEL": "gemini-2.5-pro"
+      }
+    },
+    "_semantic_scholar_disabled": {
+      "_comment": "轻量级 Semantic Scholar 搜索（备选），用 uvx 自动安装。API key 可选，免费额度约 1 req/s",
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "s2-mcp-server"
+      ],
+      "env": {
+        "SEMANTIC_SCHOLAR_API_KEY": "s2k-MCYSqpUew1DxMR0gKw34HrM4yaxE300ksNkcQWKy"
+      }
+    }
+  }
+}

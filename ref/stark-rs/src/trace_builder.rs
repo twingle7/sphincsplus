@@ -112,7 +112,7 @@ fn lanes_to_bytes(lanes: &[BaseElement; P2_RATE]) -> [u8; 48] {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
-pub enum CallType { Hmsg=0, ForsLeaf=1, ForsAuth=2, ForsPk=3, WotsChain=4, WotsPk=5, WotsLeafHash=6, Merkle=7, FinalCheck=8, Commit=9, Encrypt=10 }
+pub enum CallType { Hmsg=0, ForsLeaf=1, ForsAuth=2, ForsPk=3, WotsChain=4, WotsPk=5, WotsLeafHash=6, Merkle=7, FinalCheck=8, Commit=9, SigmaC=10 }
 
 // ── Trace Recorder ──
 pub struct TraceRecorder {
@@ -405,7 +405,7 @@ pub fn build_verification_trace(pk: &[u8], sigma_com: &[u8], _m_pub: &[u8],
     // After record_permutation, perm_index points to the NEXT slot, so the first perm of
     // the last thash is at perm_index - 2 (since each thash does 2 perms for Merkle).
     let root_perm = (trace.perm_index - 2) as u64;
-    // ── Encrypt: sigma_C_enc = Poseidon2(domain=0xFF, label || pk_e || com || sigma_com || omega2) ──
+    // ── Sigma.C binding: sigma_C = Poseidon2(domain=0xFF, label || pk_e || com || sigma_com || omega2) ──
     let label = b"m20-pke-ct-v1";
     let mut enc_input = Vec::new();
     enc_input.push(DOMAIN_CUSTOM);
@@ -416,7 +416,7 @@ pub fn build_verification_trace(pk: &[u8], sigma_com: &[u8], _m_pub: &[u8],
     enc_input.extend_from_slice(omega2);
     let addr_enc = SpxAddr::new();
     let _enc_output = poseidon2_hash(&mut state, &enc_input, N, &mut trace,
-        CallType::Encrypt, DOMAIN_CUSTOM, &addr_enc);
+        CallType::SigmaC, DOMAIN_CUSTOM, &addr_enc);
 
     // Extract pk_root from the final HT root computation (2 BaseElements for N=16)
     let pk_root_l0 = BaseElement::new(u64::from_le_bytes(root[0..8].try_into().unwrap_or([0;8])));

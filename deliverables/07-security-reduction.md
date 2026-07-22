@@ -189,14 +189,14 @@ are acknowledged:
 
 ## 5. 参考文献
 
-- [Bernstein et al. 2019] D. J. Bernstein, A. Hulsing, S. Kolbl, R. Niederhagen, J. Rijneveld, T. Simson, "The SPHINCS+ Signature Framework," CCS 2019. DOI: 10.1145/3319535.3363229
-- [Bouillaguet et al. 2026] C. Bouillaguet, T. Feneuil, J. Maire, M. Rivain, J. Sauvage, D. Vergnaud, "Blinding Post-Quantum Hash-and-Sign Signatures," IEEE S&P 2026. DOI: 10.1109/SP63933.2026.00032
-- [SPHINCS+ v3.1] J. P. Aumasson et al., "SPHINCS+ — Submission to the NIST PQC Standardization Project, v3.1," 2022.
-- [NIST FIPS 205] NIST, "Stateless Hash-Based Digital Signature Standard," FIPS 205, 2024.
-- [Grassi et al. 2023] L. Grassi, D. Khovratovich, M. Schofnegger, "Poseidon2: A Faster Version of the Poseidon Hash Function," AFRICACRYPT 2023. DOI: 10.1007/978-3-031-37679-5_8
-- [孙思维等 2023] 孙思维等, "SPHINCS+-SM3: 基于SM3的无状态数字签名算法," 《密码学报》, 2023, 10(6): 1266-1278.
-- [Fischlin 2006] M. Fischlin, "Round-Optimal Composable Blind Signatures in the Common Reference String Model," CRYPTO 2006.
-- [del Pino-Katsumata 2022] R. del Pino, S. Katsumata, "A New Framework for More Efficient Round-Optimal Lattice-Based (Partially) Blind Signature via Trapdoor Sampling," CRYPTO 2022. DOI: 10.1007/978-3-031-15979-4_11
-- [Beullens et al. 2023] W. Beullens, V. Lyubashevsky, N. K. Nguyen, G. Seiler, "Lattice-Based Blind Signatures: Short, Efficient, and Round-Optimal," CCS 2023. DOI: 10.1145/3576915.3616613
-- [Ben-Sasson et al. 2020] E. Ben-Sasson et al., "DEEP-FRI: Sampling Outside the Box Improves Soundness," ITCS 2020.
-- [Adomnicai 2026] A. Adomnicai, "Towards Practical Multi-Party Hash Chains using Arithmetization-Oriented Primitives," IACR Comm. Cryptol., 2026.
+- [Bernstein et al. 2019] D. J. Bernstein, A. Hulsing, S. Kolbl, R. Niederhagen, J. Rijneveld, T. Simson, "The SPHINCS+ Signature Framework," CCS 2019. [DOI: 10.1145/3319535.3363229](https://doi.org/10.1145/3319535.3363229)
+- [Bouillaguet et al. 2026] C. Bouillaguet, T. Feneuil, J. Maire, M. Rivain, J. Sauvage, D. Vergnaud, "Blinding Post-Quantum Hash-and-Sign Signatures," IEEE S&P 2026. [DOI: 10.1109/SP63933.2026.00032](https://doi.org/10.1109/SP63933.2026.00032)
+- [SPHINCS+ v3.1] J. P. Aumasson et al., "SPHINCS+ — Submission to the NIST PQC Standardization Project, v3.1," 2022. [Link](https://sphincs.org/data/sphincs+-round3-submission-nist.zip)
+- [NIST FIPS 205] NIST, "Stateless Hash-Based Digital Signature Standard," FIPS 205, 2024. [PDF](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.205.pdf)
+- [Grassi et al. 2023] L. Grassi, D. Khovratovich, M. Schofnegger, "Poseidon2: A Faster Version of the Poseidon Hash Function," AFRICACRYPT 2023. [DOI: 10.1007/978-3-031-37679-5_8](https://doi.org/10.1007/978-3-031-37679-5_8)
+- [孙思维等 2023] 孙思维等, "SPHINCS+-SM3: 基于SM3的无状态数字签名算法," 《密码学报》, 2023, 10(6): 1266-1278. [DOI: 10.13868/j.cnki.jcr.000536](https://doi.org/10.13868/j.cnki.jcr.000536)
+- [Fischlin 2006] M. Fischlin, "Round-Optimal Composable Blind Signatures in the Common Reference String Model," CRYPTO 2006. [DOI: 10.1007/11818175_4](https://doi.org/10.1007/11818175_4)
+- [del Pino-Katsumata 2022] R. del Pino, S. Katsumata, "A New Framework for More Efficient Round-Optimal Lattice-Based (Partially) Blind Signature via Trapdoor Sampling," CRYPTO 2022. [DOI: 10.1007/978-3-031-15979-4_11](https://doi.org/10.1007/978-3-031-15979-4_11)
+- [Beullens et al. 2023] W. Beullens, V. Lyubashevsky, N. K. Nguyen, G. Seiler, "Lattice-Based Blind Signatures: Short, Efficient, and Round-Optimal," CCS 2023. [DOI: 10.1145/3576915.3616613](https://doi.org/10.1145/3576915.3616613)
+- [Ben-Sasson et al. 2020] E. Ben-Sasson et al., "DEEP-FRI: Sampling Outside the Box Improves Soundness," ITCS 2020. [DOI: 10.4230/LIPIcs.ITCS.2020.9](https://doi.org/10.4230/LIPIcs.ITCS.2020.9)
+- [Adomnicai 2026] A. Adomnicai, "Towards Practical Multi-Party Hash Chains using Arithmetization-Oriented Primitives," IACR Comm. Cryptol., 2026. [DOI: 10.62056/ahp2tx4e-](https://doi.org/10.62056/ahp2tx4e-)

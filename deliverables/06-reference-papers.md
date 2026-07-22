@@ -92,7 +92,7 @@
 
 ### 基本信息
 - **标题:** "Hash-Based Blind Signatures: First Steps"
-- **发表:** IACR ePrint 2025/2097（预印本，尚未正式发表）
+- **发表:** IACR [[ePrint 2025/209](https://eprint.iacr.org/2025/209)7](https://eprint.iacr.org/2025/2097)（预印本，尚未正式发表）
 - **贡献类型:** ⭐⭐⭐ 问题定义型 — 识别挑战和设计空间
 
 ### 贡献分析
@@ -138,11 +138,11 @@
 
 ---
 
-## 5. CAPSS — Feneuil & Rivain (ePrint 2025/061)
+## 5. CAPSS — Feneuil & Rivain ([ePrint 2025/061](https://eprint.iacr.org/2025/061))
 
 ### 基本信息
 - **标题:** "CAPSS: A Framework for SNARK-Friendly Post-Quantum Signatures"
-- **发表:** IACR ePrint 2025/061
+- **发表:** IACR [ePrint 2025/061](https://eprint.iacr.org/2025/061)
 - **贡献类型:** ⭐⭐⭐ 框架定义型 — 定义了"SNARK 友好签名"的概念
 
 ### 贡献分析
@@ -210,11 +210,11 @@
 
 ## 参考文献
 
-- [Argo et al. 2024] S. Argo, T. Güneysu, C. Jeudy, G. Land, A. Roux-Langlois, O. Sanders, "Practical Post-Quantum Signatures for Privacy," CCS 2024. DOI: 10.1145/3658644.3670297
-- [Bouillaguet et al. 2026] C. Bouillaguet et al., "Blinding Post-Quantum Hash-and-Sign Signatures," IEEE S&P 2026. DOI: 10.1109/SP63933.2026.00032
-- [Herranz-Louiso 2025] J. Herranz, H. Louiso, "Hash-Based Blind Signatures: First Steps," IACR ePrint 2025/2097.
-- [Feneuil-Rivain 2025] T. Feneuil, M. Rivain, "CAPSS: A Framework for SNARK-Friendly Post-Quantum Signatures," IACR ePrint 2025/061.
-- [孙思维等 2023] 孙思维等, "SPHINCS+-SM3: 基于SM3的无状态数字签名算法," 《密码学报》, 2023, 10(6): 1266-1278.
-- [Liu et al. 2025] S. Liu et al., "A hash-based post-quantum ring signature scheme for the Internet of Vehicles," JSA, 2025. DOI: 10.1016/j.sysarc.2025.103345
-- [Bernstein et al. 2019] D. J. Bernstein et al., "The SPHINCS+ Signature Framework," CCS 2019. DOI: 10.1145/3319535.3363229
-- [Beullens et al. 2023] W. Beullens et al., "Lattice-Based Blind Signatures," CCS 2023. DOI: 10.1145/3576915.3616613
+- [Argo et al. 2024] S. Argo, T. Güneysu, C. Jeudy, G. Land, A. Roux-Langlois, O. Sanders, "Practical Post-Quantum Signatures for Privacy," CCS 2024. [DOI: 10.1145/3658644.3670297](https://doi.org/10.1145/3658644.3670297)
+- [Bouillaguet et al. 2026] C. Bouillaguet et al., "Blinding Post-Quantum Hash-and-Sign Signatures," IEEE S&P 2026. [DOI: 10.1109/SP63933.2026.00032](https://doi.org/10.1109/SP63933.2026.00032)
+- [Herranz-Louiso 2025] J. Herranz, H. Louiso, "Hash-Based Blind Signatures: First Steps," IACR [[ePrint 2025/209](https://eprint.iacr.org/2025/209)7](https://eprint.iacr.org/2025/2097).
+- [Feneuil-Rivain 2025] T. Feneuil, M. Rivain, "CAPSS: A Framework for SNARK-Friendly Post-Quantum Signatures," IACR [ePrint 2025/061](https://eprint.iacr.org/2025/061).
+- [孙思维等 2023] 孙思维等, "SPHINCS+-SM3: 基于SM3的无状态数字签名算法," 《密码学报》, 2023, 10(6): 1266-1278. [DOI: 10.13868/j.cnki.jcr.000536](https://doi.org/10.13868/j.cnki.jcr.000536)
+- [Liu et al. 2025] S. Liu et al., "A hash-based post-quantum ring signature scheme for the Internet of Vehicles," JSA, 2025. [DOI: 10.1016/j.sysarc.2025.103345](https://doi.org/10.1016/j.sysarc.2025.103345)
+- [Bernstein et al. 2019] D. J. Bernstein et al., "The SPHINCS+ Signature Framework," CCS 2019. [DOI: 10.1145/3319535.3363229](https://doi.org/10.1145/3319535.3363229)
+- [Beullens et al. 2023] W. Beullens et al., "Lattice-Based Blind Signatures," CCS 2023. [DOI: 10.1145/3576915.3616613](https://doi.org/10.1145/3576915.3616613)

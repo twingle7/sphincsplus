@@ -13,7 +13,7 @@ Holder                              Issuer                     Verifier
   │    sigma_com = sigma_blind (verbatim)│                        │
   │    (no mathematical unblinding)     │                          │
   │                                    │                          │
-  │  sigma_C = Enc(pk_E, c||sigma_com; │                          │
+  │  sigma_C = Bind(pk_E, c||sigma_com; │                          │
   │    omega2)                         │                          │
   │                                    │                          │
   │  pi_F = FullAIR.Prove(pk_sig,      │                          │
@@ -68,9 +68,9 @@ Because the trace IS the SPHINCS+ verification, proving the trace is correct = p
 **Now proven** (since 2026-07-21):
 - ✅ All 12 Poseidon2 state lanes constrained (full + internal rounds)
 - ✅ pk_root bound to proof header and start/end state assertions
-- ✅ Commit and Encrypt computations are endogenous (in-trace, CallType::Commit + CallType::Encrypt)
+- ✅ Commit and Sigma.C computations are endogenous (in-trace, CallType::Commit + CallType::SigmaC)
 - ✅ Commit output bound to public input `com` via boundary assertions at row 30
-- ✅ OOM resolved: blowup_factor 32→8, num_queries 32→27 (~4x memory reduction)
+- ✅ OOM resolved: blowup_factor 32→16, num_queries 32→27 (~4x memory reduction)
 - ✅ Public input context binding: ctx_hash = Blake3(pk ‖ pk_e ‖ com ‖ m_pub ‖ public_ctx ‖ sigma_c) in proof header (296 bytes), verified on verification
 - ✅ C-level signature guard: spx_p2_verify_com rejects invalid sigma_com before Rust prover
 - ✅ Proof format: magic "PFP2" + version=2 for format detection

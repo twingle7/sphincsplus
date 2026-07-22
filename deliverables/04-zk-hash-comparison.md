@@ -182,13 +182,13 @@ Poseidon2 的选型基于三个原则：
 
 ## 参考文献
 
-- [Grassi et al. 2023] L. Grassi, D. Khovratovich, M. Schofnegger, "Poseidon2: A Faster Version of the Poseidon Hash Function," AFRICACRYPT 2023. DOI: 10.1007/978-3-031-37679-5_8
-- [Grassi et al. 2019] L. Grassi, D. Khovratovich, C. Rechberger, A. Roy, M. Schofnegger, "Poseidon: A New Hash Function for Zero-Knowledge Proof Systems," ePrint 2019.
-- [Grassi et al. 2024] L. Grassi, D. Khovratovich, R. Lüftenegger, C. Rechberger, M. Schofnegger, R. Walch, "Monolith: Circuit-Friendly Hash Functions with New Nonlinear Layers for Fast and Constant-Time Implementations," IACR ToSC 2024. DOI: 10.46586/tosc.v2024.i3.44-83
-- [Grassi et al. 2026] L. Grassi et al., "Poseidon(2)b," IACR Comm. Cryptol., 2026.
-- [Kovalchuk et al. 2021] L. Kovalchuk, R. Oliynykov, M. Rodinko, "Security of the Poseidon Hash Function Against Non-Binary Differential and Linear Attacks," Cybernetics and Systems Analysis, 2021.
-- [Adomnicai 2026] A. Adomnicai, "Towards Practical Multi-Party Hash Chains using Arithmetization-Oriented Primitives," IACR Comm. Cryptol., 2026.
-- [Sekulic et al. 2025] J. Sekulic et al., "A Short Survey of ZK-Friendly Hash Functions," INFOTEH 2025.
-- [Ben-Sasson et al. 2020] E. Ben-Sasson et al., "DEEP-FRI: Sampling Outside the Box Improves Soundness," ITCS 2020.
-- [Bernstein et al. 2019] D. J. Bernstein et al., "The SPHINCS+ Signature Framework," CCS 2019. DOI: 10.1145/3319535.3363229
-- [NIST FIPS 205] NIST, "Stateless Hash-Based Digital Signature Standard," FIPS 205, 2024.
+- [Grassi et al. 2023] L. Grassi, D. Khovratovich, M. Schofnegger, "Poseidon2: A Faster Version of the Poseidon Hash Function," AFRICACRYPT 2023. [DOI: 10.1007/978-3-031-37679-5_8](https://doi.org/10.1007/978-3-031-37679-5_8)
+- [Grassi et al. 2019] L. Grassi, D. Khovratovich, C. Rechberger, A. Roy, M. Schofnegger, "Poseidon: A New Hash Function for Zero-Knowledge Proof Systems," [ePrint 2019/458](https://eprint.iacr.org/2019/458).
+- [Grassi et al. 2024] L. Grassi, D. Khovratovich, R. Lüftenegger, C. Rechberger, M. Schofnegger, R. Walch, "Monolith: Circuit-Friendly Hash Functions with New Nonlinear Layers for Fast and Constant-Time Implementations," IACR ToSC 2024. [DOI: 10.46586/tosc.v2024.i3.44-83](https://doi.org/10.46586/tosc.v2024.i3.44-83)
+- [Grassi et al. 2026] L. Grassi et al., "Poseidon(2)b," IACR Comm. Cryptol., 2026. [DOI: 10.62056/a66ce0zn4](https://doi.org/10.62056/a66ce0zn4)
+- [Kovalchuk et al. 2021] L. Kovalchuk, R. Oliynykov, M. Rodinko, "Security of the Poseidon Hash Function Against Non-Binary Differential and Linear Attacks," Cybernetics and Systems Analysis, 2021. [DOI: 10.1007/s10559-021-00455-y](https://doi.org/10.1007/s10559-021-00455-y)
+- [Adomnicai 2026] A. Adomnicai, "Towards Practical Multi-Party Hash Chains using Arithmetization-Oriented Primitives," IACR Comm. Cryptol., 2026. [DOI: 10.62056/ahp2tx4e-](https://doi.org/10.62056/ahp2tx4e-)
+- [Sekulic et al. 2025] J. Sekulic et al., "A Short Survey of ZK-Friendly Hash Functions," INFOTEH 2025. [Semantic Scholar](https://www.semanticscholar.org/search?q=A+Short+Survey+of+ZK-Friendly+Hash+Functions+Sekulic)
+- [Ben-Sasson et al. 2020] E. Ben-Sasson et al., "DEEP-FRI: Sampling Outside the Box Improves Soundness," ITCS 2020. [DOI: 10.4230/LIPIcs.ITCS.2020.9](https://doi.org/10.4230/LIPIcs.ITCS.2020.9)
+- [Bernstein et al. 2019] D. J. Bernstein et al., "The SPHINCS+ Signature Framework," CCS 2019. [DOI: 10.1145/3319535.3363229](https://doi.org/10.1145/3319535.3363229)
+- [NIST FIPS 205] NIST, "Stateless Hash-Based Digital Signature Standard," FIPS 205, 2024. [PDF](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.205.pdf)

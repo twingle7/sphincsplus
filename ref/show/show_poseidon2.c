@@ -17,11 +17,11 @@ int spx_p2_show_extract_commitment(uint8_t out_com[SPX_N],
     return 0;
 }
 
-static int spx_p2_build_sigma_c_from_ciphertext_witness(uint8_t *out_sigma_c,
-                                                        size_t *out_sigma_c_len,
-                                                        const uint8_t *pk_e,
-                                                        size_t pk_e_len,
-                                                        const spx_p2_cred_internal *cred)
+static int spx_p2_build_sigma_c_from_witness(uint8_t *out_sigma_c,
+                                              size_t *out_sigma_c_len,
+                                              const uint8_t *pk_e,
+                                              size_t pk_e_len,
+                                              const spx_p2_cred_internal *cred)
 {
     if (out_sigma_c == 0 || out_sigma_c_len == 0 || pk_e == 0 || cred == 0)
     {
@@ -31,10 +31,10 @@ static int spx_p2_build_sigma_c_from_ciphertext_witness(uint8_t *out_sigma_c,
     {
         return -1;
     }
-    return spx_p2_build_sigma_c_ciphertext(out_sigma_c, out_sigma_c_len,
-                                           cred->com, cred->sigma_com,
-                                           pk_e, pk_e_len,
-                                           cred->omega2, cred->omega2_len);
+    return spx_p2_build_sigma_c(out_sigma_c, out_sigma_c_len,
+                                cred->com, cred->sigma_com,
+                                pk_e, pk_e_len,
+                                cred->omega2, cred->omega2_len);
 }
 
 static int spx_p2_sigma_c_is_valid(const spx_p2_show *show)
@@ -143,7 +143,7 @@ int spx_p2_show_prove_statement_bound(spx_p2_show *out,
         return -1;
     }
     memset(out, 0, sizeof(*out));
-    if (spx_p2_build_sigma_c_from_ciphertext_witness(out->sigma_C, &out->sigma_C_len, pk_e, pk_e_len, cred) != 0)
+    if (spx_p2_build_sigma_c_from_witness(out->sigma_C, &out->sigma_C_len, pk_e, pk_e_len, cred) != 0)
     {
         return -1;
     }

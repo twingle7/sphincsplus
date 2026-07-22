@@ -35,7 +35,7 @@ int spx_p2_show_extract_commitment(uint8_t out_com[SPX_N],
 
 /*
  * Holder-side private witness used to prove existence of a valid opening,
- * issuer signature and encryption randomness for the final Fischlin statement.
+ * issuer signature and binding randomness omega2 for the final Fischlin statement.
  */
 typedef struct
 {

@@ -1,0 +1,1205 @@
+% $ biblatex auxiliary file $
+% $ biblatex bbl format version 3.3 $
+% Do not modify the above lines!
+%
+% This is an auxiliary file used by the 'biblatex' package.
+% This file may safely be deleted. It will be recreated by
+% biber as required.
+%
+\begingroup
+\makeatletter
+\@ifundefined{ver@biblatex.sty}
+  {\@latex@error
+     {Missing 'biblatex' package}
+     {The bibliography requires the 'biblatex' package.}
+      \aftergroup\endinput}
+  {}
+\endgroup
+
+
+\refsection{0}
+  \datalist[entry]{none/global//global/global/global}
+    \entry{NIST2024FIPS205}{report}{}{}
+      \name{author}{1}{}{%
+        {{hash=ef9cb61878e61d434507444346b29d1a}{%
+           family={{National Institute of Standards and Technology}},
+           familyi={N\bibinitperiod}}}%
+      }
+      \list{institution}{1}{%
+        {NIST}%
+      }
+      \strng{namehash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{fullhash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{fullhashraw}{ef9cb61878e61d434507444346b29d1a}
+      \strng{bibnamehash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{authorbibnamehash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{authornamehash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{authorfullhash}{ef9cb61878e61d434507444346b29d1a}
+      \strng{authorfullhashraw}{ef9cb61878e61d434507444346b29d1a}
+      \field{sortinit}{1}
+      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{note}{STANDARD: SPHINCS+ as NIST FIPS 205 (SLH-DSA)}
+      \field{number}{FIPS PUB 205}
+      \field{title}{Stateless Hash-Based Digital Signature Standard}
+      \field{type}{techreport}
+      \field{year}{2024}
+      \verb{doi}
+      \verb 10.6028/NIST.FIPS.205
+      \endverb
+    \endentry
+    \entry{NIST2022IR8413}{report}{}{}
+      \name{author}{13}{}{%
+        {{hash=a44b6b00e5eebd7494e1fd00658685e2}{%
+           family={{NIST}},
+           familyi={N\bibinitperiod}}}%
+        {{hash=e4e83670fd29d3a81f42a34ac1ed019f}{%
+           family={Alagic},
+           familyi={A\bibinitperiod},
+           given={Gorjan},
+           giveni={G\bibinitperiod}}}%
+        {{hash=f2afafeb5c44fcb9dd64127677b36970}{%
+           family={Apon},
+           familyi={A\bibinitperiod},
+           given={Daniel},
+           giveni={D\bibinitperiod}}}%
+        {{hash=55ce8a11ba5c4de991df997ca57511ac}{%
+           family={Cooper},
+           familyi={C\bibinitperiod},
+           given={David},
+           giveni={D\bibinitperiod}}}%
+        {{hash=bfe98c6e1d0328442703ca43a1c33fde}{%
+           family={Dang},
+           familyi={D\bibinitperiod},
+           given={Quynh},
+           giveni={Q\bibinitperiod}}}%
+        {{hash=49fafe3b1ae0ecce198dd52396dbe500}{%
+           family={Kelsey},
+           familyi={K\bibinitperiod},
+           given={John\bibnamedelima M.},
+           giveni={J\bibinitperiod\bibinitdelim M\bibinitperiod}}}%
+        {{hash=5da0ddf1e099d7c8e2b3e138c0b66c21}{%
+           family={Liu},
+           familyi={L\bibinitperiod},
+           given={Yi-Kai},
+           giveni={Y\bibinithyphendelim K\bibinitperiod}}}%
+        {{hash=d47c507fc26d5e60241429f551e0fdcd}{%
+           family={Miller},
+           familyi={M\bibinitperiod},
+           given={Carl\bibnamedelima A.},
+           giveni={C\bibinitperiod\bibinitdelim A\bibinitperiod}}}%
+        {{hash=0e1eeb81de980f2a551bcbe23852e709}{%
+           family={Moody},
+           familyi={M\bibinitperiod},
+           given={Dustin},
+           giveni={D\bibinitperiod}}}%
+        {{hash=a7349e5f866027972ca3bf6227abae6a}{%
+           family={Peralta},
+           familyi={P\bibinitperiod},
+           given={Rene},
+           giveni={R\bibinitperiod}}}%
+        {{hash=20c82fb388246102cd4367b814682576}{%
+           family={Perlner},
+           familyi={P\bibinitperiod},
+           given={Ray},
+           giveni={R\bibinitperiod}}}%
+        {{hash=c5b8437c576f13b7017c1baec87b7fd1}{%
+           family={Robinson},
+           familyi={R\bibinitperiod},
+           given={Angela},
+           giveni={A\bibinitperiod}}}%
+        {{hash=dc7da0abb12ce254bebb4221f0904f21}{%
+           family={Smith-Tone},
+           familyi={S\bibinithyphendelim T\bibinitperiod},
+           given={Daniel},
+           giveni={D\bibinitperiod}}}%
+      }
+      \list{institution}{2}{%
+        {National Institute of Standards}%
+        {Technology}%
+      }
+      \strng{namehash}{dd5a72991ec878774b2a2417d087cf17}
+      \strng{fullhash}{b58d3f52f85b4674d8b63d9e607cf5eb}
+      \strng{fullhashraw}{b58d3f52f85b4674d8b63d9e607cf5eb}
+      \strng{bibnamehash}{dd5a72991ec878774b2a2417d087cf17}
+      \strng{authorbibnamehash}{dd5a72991ec878774b2a2417d087cf17}
+      \strng{authornamehash}{dd5a72991ec878774b2a2417d087cf17}
+      \strng{authorfullhash}{b58d3f52f85b4674d8b63d9e607cf5eb}
+      \strng{authorfullhashraw}{b58d3f52f85b4674d8b63d9e607cf5eb}
+      \field{sortinit}{1}
+      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{note}{FOUNDATION: NIST PQC round 3 status report}
+      \field{number}{NIST IR 8413}
+      \field{title}{Status Report on the Third Round of the {NIST} Post-Quantum Cryptography Standardization Process}
+      \field{type}{techreport}
+      \field{year}{2022}
+      \verb{doi}
+      \verb 10.6028/nist.ir.8413
+      \endverb
+    \endentry
+    \entry{delPino2022Framework}{inproceedings}{}{}
+      \name{author}{2}{}{%
+        {{hash=e51165490284e7ecd1b5f1b5f88652ab}{%
+           family={Pino},
+           familyi={P\bibinitperiod},
+           given={Rafael},
+           giveni={R\bibinitperiod},
+           prefix={del},
+           prefixi={d\bibinitperiod}}}%
+        {{hash=5f50a6056e6df6b8c29ee6ce02e27194}{%
+           family={Katsumata},
+           familyi={K\bibinitperiod},
+           given={Shuichi},
+           giveni={S\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {Springer}%
+      }
+      \strng{namehash}{b7df6296287f782045edc18708a50d94}
+      \strng{fullhash}{b7df6296287f782045edc18708a50d94}
+      \strng{fullhashraw}{b7df6296287f782045edc18708a50d94}
+      \strng{bibnamehash}{b7df6296287f782045edc18708a50d94}
+      \strng{authorbibnamehash}{b7df6296287f782045edc18708a50d94}
+      \strng{authornamehash}{b7df6296287f782045edc18708a50d94}
+      \strng{authorfullhash}{b7df6296287f782045edc18708a50d94}
+      \strng{authorfullhashraw}{b7df6296287f782045edc18708a50d94}
+      \field{sortinit}{2}
+      \field{sortinithash}{8b555b3791beccb63322c22f3320aa9a}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{CRYPTO 2022}
+      \field{note}{HIGH: Round-optimal Fischlin-style lattice blind sig, 43+ citations}
+      \field{series}{LNCS}
+      \field{title}{A New Framework for More Efficient Round-Optimal Lattice-Based (Partially) Blind Signature via Trapdoor Sampling}
+      \field{year}{2022}
+      \verb{doi}
+      \verb 10.1007/978-3-031-15979-4\_11
+      \endverb
+    \endentry
+    \entry{Beullens2023LatticeBlind}{inproceedings}{}{}
+      \name{author}{4}{}{%
+        {{hash=78deeb3ba30d09f84ba380a7ea9d1530}{%
+           family={Beullens},
+           familyi={B\bibinitperiod},
+           given={Ward},
+           giveni={W\bibinitperiod}}}%
+        {{hash=928bcadb00050adca6148fe4cbefc5d7}{%
+           family={Lyubashevsky},
+           familyi={L\bibinitperiod},
+           given={Vadim},
+           giveni={V\bibinitperiod}}}%
+        {{hash=1dfffa47d1e83d167c8a536119dc0a3b}{%
+           family={Nguyen},
+           familyi={N\bibinitperiod},
+           given={Ngoc\bibnamedelima Khanh},
+           giveni={N\bibinitperiod\bibinitdelim K\bibinitperiod}}}%
+        {{hash=6ad6aaf85bcdaa083e71211a4c9cd987}{%
+           family={Seiler},
+           familyi={S\bibinitperiod},
+           given={Gregor},
+           giveni={G\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {ACM}%
+      }
+      \strng{namehash}{3b41994b9a3b067b3251dffe9265a500}
+      \strng{fullhash}{4b9e05c2b81a0723f4879d57de3f09bc}
+      \strng{fullhashraw}{4b9e05c2b81a0723f4879d57de3f09bc}
+      \strng{bibnamehash}{3b41994b9a3b067b3251dffe9265a500}
+      \strng{authorbibnamehash}{3b41994b9a3b067b3251dffe9265a500}
+      \strng{authornamehash}{3b41994b9a3b067b3251dffe9265a500}
+      \strng{authorfullhash}{4b9e05c2b81a0723f4879d57de3f09bc}
+      \strng{authorfullhashraw}{4b9e05c2b81a0723f4879d57de3f09bc}
+      \field{sortinit}{3}
+      \field{sortinithash}{ad6fe7482ffbd7b9f99c9e8b5dccd3d7}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{Proceedings of the 2023 ACM SIGSAC Conference on Computer and Communications Security (CCS)}
+      \field{note}{HIGH: Round-optimal lattice blind sig, Fischlin-style, 28+ citations}
+      \field{title}{Lattice-Based Blind Signatures: Short, Efficient, and Round-Optimal}
+      \field{year}{2023}
+      \verb{doi}
+      \verb 10.1145/3576915.3616613
+      \endverb
+    \endentry
+    \entry{Agrawal2022Practical}{inproceedings}{}{}
+      \name{author}{4}{}{%
+        {{hash=8cf8465f13e0d63329ee59cb1551f3bb}{%
+           family={Agrawal},
+           familyi={A\bibinitperiod},
+           given={Shweta},
+           giveni={S\bibinitperiod}}}%
+        {{hash=b85153ecb1f31f780aa1bcd513b3358c}{%
+           family={Kirshanova},
+           familyi={K\bibinitperiod},
+           given={Elena},
+           giveni={E\bibinitperiod}}}%
+        {{hash=589d33cc0094d51211bef3b93ec84fcd}{%
+           family={Stehle},
+           familyi={S\bibinitperiod},
+           given={Damien},
+           giveni={D\bibinitperiod}}}%
+        {{hash=5d95f81b520e1e0ba900ad2b53503338}{%
+           family={Yadav},
+           familyi={Y\bibinitperiod},
+           given={Anshu},
+           giveni={A\bibinitperiod}}}%
+      }
+      \strng{namehash}{c20214121d5f8ea9fd5a31cd7d63c51d}
+      \strng{fullhash}{70db642e682d37d1e45c14b50e57014e}
+      \strng{fullhashraw}{70db642e682d37d1e45c14b50e57014e}
+      \strng{bibnamehash}{c20214121d5f8ea9fd5a31cd7d63c51d}
+      \strng{authorbibnamehash}{c20214121d5f8ea9fd5a31cd7d63c51d}
+      \strng{authornamehash}{c20214121d5f8ea9fd5a31cd7d63c51d}
+      \strng{authorfullhash}{70db642e682d37d1e45c14b50e57014e}
+      \strng{authorfullhashraw}{70db642e682d37d1e45c14b50e57014e}
+      \field{sortinit}{4}
+      \field{sortinithash}{9381316451d1b9788675a07e972a12a7}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{ACM CCS}
+      \field{title}{Practical, Round-Optimal Lattice-Based Blind Signatures}
+      \field{year}{2022}
+      \verb{doi}
+      \verb 10.1145/3548606.3560650
+      \endverb
+    \endentry
+    \entry{Kastner2024PairingFree}{inproceedings}{}{}
+      \name{author}{3}{}{%
+        {{hash=90428fdada70b0c4532f47beeab60833}{%
+           family={Kästner},
+           familyi={K\bibinitperiod},
+           given={Julia},
+           giveni={J\bibinitperiod}}}%
+        {{hash=6c0a654c4f3f738fe24f6eb15f65b2da}{%
+           family={Nguyen},
+           familyi={N\bibinitperiod},
+           given={Ky},
+           giveni={K\bibinitperiod}}}%
+        {{hash=7042db7106c1490116f9061a1475f98b}{%
+           family={Reichle},
+           familyi={R\bibinitperiod},
+           given={Michael},
+           giveni={M\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {Springer}%
+      }
+      \strng{namehash}{c4c36dca539bcd92a06602f31cba1775}
+      \strng{fullhash}{c4c36dca539bcd92a06602f31cba1775}
+      \strng{fullhashraw}{c4c36dca539bcd92a06602f31cba1775}
+      \strng{bibnamehash}{c4c36dca539bcd92a06602f31cba1775}
+      \strng{authorbibnamehash}{c4c36dca539bcd92a06602f31cba1775}
+      \strng{authornamehash}{c4c36dca539bcd92a06602f31cba1775}
+      \strng{authorfullhash}{c4c36dca539bcd92a06602f31cba1775}
+      \strng{authorfullhashraw}{c4c36dca539bcd92a06602f31cba1775}
+      \field{sortinit}{5}
+      \field{sortinithash}{20e9b4b0b173788c5dace24730f47d8c}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{CRYPTO 2024}
+      \field{note}{MEDIUM: Pairing-free construction, 9+ citations}
+      \field{series}{LNCS}
+      \field{title}{Pairing-Free Blind Signatures from Standard Assumptions in the ROM}
+      \field{year}{2024}
+      \verb{doi}
+      \verb 10.1007/978-3-031-68376-3\_7
+      \endverb
+    \endentry
+    \entry{Argo2024PracticalPQ}{inproceedings}{}{}
+      \name{author}{6}{}{%
+        {{hash=66e3266c7eb1ae0008dfd0f23688a559}{%
+           family={Argo},
+           familyi={A\bibinitperiod},
+           given={Sven},
+           giveni={S\bibinitperiod}}}%
+        {{hash=e9e81439eeb31c3904e597d0b967c750}{%
+           family={Güneysu},
+           familyi={G\bibinitperiod},
+           given={Tim},
+           giveni={T\bibinitperiod}}}%
+        {{hash=0af15d03ddf217d25bba4df76ad78d1a}{%
+           family={Jeudy},
+           familyi={J\bibinitperiod},
+           given={Corentin},
+           giveni={C\bibinitperiod}}}%
+        {{hash=c99b983fe013de8a5f51c910688f4867}{%
+           family={Land},
+           familyi={L\bibinitperiod},
+           given={Georg},
+           giveni={G\bibinitperiod}}}%
+        {{hash=0cc1512268171f015f11753eaba4ac65}{%
+           family={Roux-Langlois},
+           familyi={R\bibinithyphendelim L\bibinitperiod},
+           given={Adeline},
+           giveni={A\bibinitperiod}}}%
+        {{hash=94b900073343789012ab47231dea00b6}{%
+           family={Sanders},
+           familyi={S\bibinitperiod},
+           given={Olivier},
+           giveni={O\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {ACM}%
+      }
+      \strng{namehash}{2f9fc62365f001d577f8cac20e4085e0}
+      \strng{fullhash}{83388e12b089dbf5cd62e88f9f2c32d1}
+      \strng{fullhashraw}{83388e12b089dbf5cd62e88f9f2c32d1}
+      \strng{bibnamehash}{2f9fc62365f001d577f8cac20e4085e0}
+      \strng{authorbibnamehash}{2f9fc62365f001d577f8cac20e4085e0}
+      \strng{authornamehash}{2f9fc62365f001d577f8cac20e4085e0}
+      \strng{authorfullhash}{83388e12b089dbf5cd62e88f9f2c32d1}
+      \strng{authorfullhashraw}{83388e12b089dbf5cd62e88f9f2c32d1}
+      \field{sortinit}{6}
+      \field{sortinithash}{b33bc299efb3c36abec520a4c896a66d}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{Proceedings of the 2024 ACM SIGSAC Conference on Computer and Communications Security (CCS)}
+      \field{note}{HIGH: PQ blind sigs, group sigs, anonymous credentials, 16+ citations}
+      \field{title}{Practical Post-Quantum Signatures for Privacy}
+      \field{year}{2024}
+      \verb{doi}
+      \verb 10.1145/3658644.3670297
+      \endverb
+    \endentry
+    \entry{Bouillaguet2026BlindingPH}{inproceedings}{}{}
+      \name{author}{6}{}{%
+        {{hash=426b6bcdf1f388cdd2523ae484d9c4f4}{%
+           family={Bouillaguet},
+           familyi={B\bibinitperiod},
+           given={Charles},
+           giveni={C\bibinitperiod}}}%
+        {{hash=236b1aa7b7c9a1d3f6899a709f6ad567}{%
+           family={Feneuil},
+           familyi={F\bibinitperiod},
+           given={Thibauld},
+           giveni={T\bibinitperiod}}}%
+        {{hash=cdbc84e56c1c4d67db62852197fc0a6e}{%
+           family={Maire},
+           familyi={M\bibinitperiod},
+           given={Jules},
+           giveni={J\bibinitperiod}}}%
+        {{hash=139c256f346d2392d6b04876a74446b5}{%
+           family={Rivain},
+           familyi={R\bibinitperiod},
+           given={Matthieu},
+           giveni={M\bibinitperiod}}}%
+        {{hash=1ac2877822ce9b491c0e94cb406502a2}{%
+           family={Sauvage},
+           familyi={S\bibinitperiod},
+           given={Julia},
+           giveni={J\bibinitperiod}}}%
+        {{hash=09e2e44f2c53e2428a7674306c5e71da}{%
+           family={Vergnaud},
+           familyi={V\bibinitperiod},
+           given={Damien},
+           giveni={D\bibinitperiod}}}%
+      }
+      \strng{namehash}{3f9ec31262f78a5ee3c73d772096b321}
+      \strng{fullhash}{16b2227ac5d7cbd736ab337437e00ac8}
+      \strng{fullhashraw}{16b2227ac5d7cbd736ab337437e00ac8}
+      \strng{bibnamehash}{3f9ec31262f78a5ee3c73d772096b321}
+      \strng{authorbibnamehash}{3f9ec31262f78a5ee3c73d772096b321}
+      \strng{authornamehash}{3f9ec31262f78a5ee3c73d772096b321}
+      \strng{authorfullhash}{16b2227ac5d7cbd736ab337437e00ac8}
+      \strng{authorfullhashraw}{16b2227ac5d7cbd736ab337437e00ac8}
+      \field{sortinit}{7}
+      \field{sortinithash}{108d0be1b1bee9773a1173443802c0a3}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{Proceedings of the 2026 IEEE Symposium on Security and Privacy (S\&P)}
+      \field{note}{CRITICAL: Generic Fischlin compiler — any PQ hash-and-sign → blind signature. No SPHINCS+ instantiation provided.}
+      \field{title}{Blinding Post-Quantum Hash-and-Sign Signatures}
+      \field{year}{2026}
+      \field{pages}{1\bibrangedash 18}
+      \range{pages}{18}
+      \verb{doi}
+      \verb 10.1109/SP63933.2026.00032
+      \endverb
+    \endentry
+    \entry{Herranz2025HashBased}{misc}{}{}
+      \name{author}{2}{}{%
+        {{hash=870d4e9baa8b18293d6de340155a584d}{%
+           family={Herranz},
+           familyi={H\bibinitperiod},
+           given={Javier},
+           giveni={J\bibinitperiod}}}%
+        {{hash=f27f8a11b7be60471bfcd5cf234db101}{%
+           family={Louiso},
+           familyi={L\bibinitperiod},
+           given={Hugo},
+           giveni={H\bibinitperiod}}}%
+      }
+      \strng{namehash}{c8393b6bd36dd91447d3103e33ba529e}
+      \strng{fullhash}{c8393b6bd36dd91447d3103e33ba529e}
+      \strng{fullhashraw}{c8393b6bd36dd91447d3103e33ba529e}
+      \strng{bibnamehash}{c8393b6bd36dd91447d3103e33ba529e}
+      \strng{authorbibnamehash}{c8393b6bd36dd91447d3103e33ba529e}
+      \strng{authornamehash}{c8393b6bd36dd91447d3103e33ba529e}
+      \strng{authorfullhash}{c8393b6bd36dd91447d3103e33ba529e}
+      \strng{authorfullhashraw}{c8393b6bd36dd91447d3103e33ba529e}
+      \field{sortinit}{8}
+      \field{sortinithash}{a231b008ebf0ecbe0b4d96dcc159445f}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{howpublished}{IACR Cryptology ePrint Archive}
+      \field{note}{KEY PAPER: First exploration of hash-based blind signatures}
+      \field{title}{Hash-Based Blind Signatures: First Steps}
+      \field{year}{2025}
+    \endentry
+    \entry{Dietz2026Impossibility}{misc}{}{}
+      \name{author}{3}{}{%
+        {{hash=919e2f1f44507f66d8da3ccffecd5157}{%
+           family={Dietz},
+           familyi={D\bibinitperiod},
+           given={Marian},
+           giveni={M\bibinitperiod}}}%
+        {{hash=90428fdada70b0c4532f47beeab60833}{%
+           family={Kästner},
+           familyi={K\bibinitperiod},
+           given={Julia},
+           giveni={J\bibinitperiod}}}%
+        {{hash=b0b680d9cec06a9edc8b249bf895f6f8}{%
+           family={Tessaro},
+           familyi={T\bibinitperiod},
+           given={Stefano},
+           giveni={S\bibinitperiod}}}%
+      }
+      \strng{namehash}{5bfca0d055d0c2e6c130748b5e94bd10}
+      \strng{fullhash}{5bfca0d055d0c2e6c130748b5e94bd10}
+      \strng{fullhashraw}{5bfca0d055d0c2e6c130748b5e94bd10}
+      \strng{bibnamehash}{5bfca0d055d0c2e6c130748b5e94bd10}
+      \strng{authorbibnamehash}{5bfca0d055d0c2e6c130748b5e94bd10}
+      \strng{authornamehash}{5bfca0d055d0c2e6c130748b5e94bd10}
+      \strng{authorfullhash}{5bfca0d055d0c2e6c130748b5e94bd10}
+      \strng{authorfullhashraw}{5bfca0d055d0c2e6c130748b5e94bd10}
+      \field{sortinit}{9}
+      \field{sortinithash}{0a5ebc79d83c96b6579069544c73c7d4}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{howpublished}{IACR Cryptology ePrint Archive}
+      \field{note}{MEDIUM: Theoretical impossibility result, 1+ citations}
+      \field{title}{On the Impossibility of Round-Optimal Pairing-Free Blind Signatures in the ROM}
+      \field{year}{2026}
+    \endentry
+    \entry{Bernstein2019SPHINCS}{inproceedings}{}{}
+      \name{author}{6}{}{%
+        {{hash=cc77f8b5fa3840f90938819e591aae07}{%
+           family={Bernstein},
+           familyi={B\bibinitperiod},
+           given={Daniel\bibnamedelima J.},
+           giveni={D\bibinitperiod\bibinitdelim J\bibinitperiod}}}%
+        {{hash=e07df980cdbfba600caca198384a3e85}{%
+           family={Hülsing},
+           familyi={H\bibinitperiod},
+           given={Andreas},
+           giveni={A\bibinitperiod}}}%
+        {{hash=fe391f7e19dfca255947eb107e21327b}{%
+           family={Kölbl},
+           familyi={K\bibinitperiod},
+           given={Stefan},
+           giveni={S\bibinitperiod}}}%
+        {{hash=bb5b512ed728a3c1bb3aa19834ddc78c}{%
+           family={Niederhagen},
+           familyi={N\bibinitperiod},
+           given={Ruben},
+           giveni={R\bibinitperiod}}}%
+        {{hash=c64359006336c5372b142310b5e4eee4}{%
+           family={Rijneveld},
+           familyi={R\bibinitperiod},
+           given={Joost},
+           giveni={J\bibinitperiod}}}%
+        {{hash=35615b0203cca42ac26ee9be2895d953}{%
+           family={Simson},
+           familyi={S\bibinitperiod},
+           given={Tanel},
+           giveni={T\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {ACM}%
+      }
+      \strng{namehash}{ad63d5a879ce705516adb9af26e5193b}
+      \strng{fullhash}{14ac106f53934e7e723fd1a9d3fe30ca}
+      \strng{fullhashraw}{14ac106f53934e7e723fd1a9d3fe30ca}
+      \strng{bibnamehash}{ad63d5a879ce705516adb9af26e5193b}
+      \strng{authorbibnamehash}{ad63d5a879ce705516adb9af26e5193b}
+      \strng{authornamehash}{ad63d5a879ce705516adb9af26e5193b}
+      \strng{authorfullhash}{14ac106f53934e7e723fd1a9d3fe30ca}
+      \strng{authorfullhashraw}{14ac106f53934e7e723fd1a9d3fe30ca}
+      \field{sortinit}{1}
+      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{Proceedings of the 2019 ACM SIGSAC Conference on Computer and Communications Security (CCS)}
+      \field{note}{FOUNDATION: The SPHINCS+ scheme specification, 401+ citations}
+      \field{title}{The {SPHINCS$^+$} Signature Framework}
+      \field{year}{2019}
+      \field{pages}{2129\bibrangedash 2146}
+      \range{pages}{18}
+      \verb{doi}
+      \verb 10.1145/3319535.3363229
+      \endverb
+    \endentry
+    \entry{Fischlin2006}{inproceedings}{}{}
+      \name{author}{1}{}{%
+        {{hash=23091f1713beeb72d7a1d501b5d5923e}{%
+           family={Fischlin},
+           familyi={F\bibinitperiod},
+           given={Marc},
+           giveni={M\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {Springer}%
+      }
+      \strng{namehash}{23091f1713beeb72d7a1d501b5d5923e}
+      \strng{fullhash}{23091f1713beeb72d7a1d501b5d5923e}
+      \strng{fullhashraw}{23091f1713beeb72d7a1d501b5d5923e}
+      \strng{bibnamehash}{23091f1713beeb72d7a1d501b5d5923e}
+      \strng{authorbibnamehash}{23091f1713beeb72d7a1d501b5d5923e}
+      \strng{authornamehash}{23091f1713beeb72d7a1d501b5d5923e}
+      \strng{authorfullhash}{23091f1713beeb72d7a1d501b5d5923e}
+      \strng{authorfullhashraw}{23091f1713beeb72d7a1d501b5d5923e}
+      \field{sortinit}{1}
+      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{Advances in Cryptology -- CRYPTO 2006}
+      \field{note}{FOUNDATION: Original Fischlin framework for blind signatures}
+      \field{series}{LNCS}
+      \field{title}{Round-Optimal Composable Blind Signatures in the Common Reference String Model}
+      \field{volume}{4117}
+      \field{year}{2006}
+      \verb{doi}
+      \verb 10.1007/11818175_2
+      \endverb
+    \endentry
+    \entry{Fuchsbauer2015Practical}{inproceedings}{}{}
+      \name{author}{3}{}{%
+        {{hash=0aa628700fd6e08292093a9653252fa1}{%
+           family={Fuchsbauer},
+           familyi={F\bibinitperiod},
+           given={Georg},
+           giveni={G\bibinitperiod}}}%
+        {{hash=25c0038c5979fda11c9c2d371daeb60f}{%
+           family={Hanser},
+           familyi={H\bibinitperiod},
+           given={Christian},
+           giveni={C\bibinitperiod}}}%
+        {{hash=974711f38eedf496f32a39b18d092718}{%
+           family={Slamanig},
+           familyi={S\bibinitperiod},
+           given={Daniel},
+           giveni={D\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {Springer}%
+      }
+      \strng{namehash}{47b72ae139f75e273c218dfc7844b6c7}
+      \strng{fullhash}{47b72ae139f75e273c218dfc7844b6c7}
+      \strng{fullhashraw}{47b72ae139f75e273c218dfc7844b6c7}
+      \strng{bibnamehash}{47b72ae139f75e273c218dfc7844b6c7}
+      \strng{authorbibnamehash}{47b72ae139f75e273c218dfc7844b6c7}
+      \strng{authornamehash}{47b72ae139f75e273c218dfc7844b6c7}
+      \strng{authorfullhash}{47b72ae139f75e273c218dfc7844b6c7}
+      \strng{authorfullhashraw}{47b72ae139f75e273c218dfc7844b6c7}
+      \field{sortinit}{1}
+      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{CRYPTO 2015}
+      \field{note}{FOUNDATION: Round-optimal blind sigs in standard model, 100+ citations}
+      \field{series}{LNCS}
+      \field{title}{Practical Round-Optimal Blind Signatures in the Standard Model}
+      \field{year}{2015}
+      \verb{doi}
+      \verb 10.1007/978-3-662-48000-7\_12
+      \endverb
+    \endentry
+    \entry{Grassi2023Poseidon2}{inproceedings}{}{}
+      \name{author}{3}{}{%
+        {{hash=1343334ddbeab81878ef64accc58db49}{%
+           family={Grassi},
+           familyi={G\bibinitperiod},
+           given={Lorenzo},
+           giveni={L\bibinitperiod}}}%
+        {{hash=d38e18b5ec4018e5f12aab4287c4a08f}{%
+           family={Khovratovich},
+           familyi={K\bibinitperiod},
+           given={Dmitry},
+           giveni={D\bibinitperiod}}}%
+        {{hash=d616c0a1cb9fd33376cd00f74ab5d314}{%
+           family={Schofnegger},
+           familyi={S\bibinitperiod},
+           given={Markus},
+           giveni={M\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {Springer}%
+      }
+      \strng{namehash}{f8252228a05b8a23da413a368cdede9e}
+      \strng{fullhash}{f8252228a05b8a23da413a368cdede9e}
+      \strng{fullhashraw}{f8252228a05b8a23da413a368cdede9e}
+      \strng{bibnamehash}{f8252228a05b8a23da413a368cdede9e}
+      \strng{authorbibnamehash}{f8252228a05b8a23da413a368cdede9e}
+      \strng{authornamehash}{f8252228a05b8a23da413a368cdede9e}
+      \strng{authorfullhash}{f8252228a05b8a23da413a368cdede9e}
+      \strng{authorfullhashraw}{f8252228a05b8a23da413a368cdede9e}
+      \field{sortinit}{1}
+      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{AFRICACRYPT 2023}
+      \field{note}{FOUNDATION: Poseidon2 design, 24+ citations}
+      \field{series}{LNCS}
+      \field{title}{Poseidon2: A Faster Version of the Poseidon Hash Function}
+      \field{year}{2023}
+      \verb{doi}
+      \verb 10.1007/978-3-031-37679-5\_8
+      \endverb
+    \endentry
+    \entry{2021Security}{article}{}{}
+      \name{author}{3}{}{%
+        {{hash=9c3055a1413d294475ff606cdda5ed05}{%
+           family={Kovalchuk},
+           familyi={K\bibinitperiod},
+           given={L.},
+           giveni={L\bibinitperiod}}}%
+        {{hash=f767aa198ac15f9fa8437f8a04278a4e}{%
+           family={Oliynykov},
+           familyi={O\bibinitperiod},
+           given={R.},
+           giveni={R\bibinitperiod}}}%
+        {{hash=c670e0d855214badc8eedeb3042807d1}{%
+           family={Rodinko},
+           familyi={R\bibinitperiod},
+           given={M.},
+           giveni={M\bibinitperiod}}}%
+      }
+      \strng{namehash}{c911281e20b12cfc3caa5884ae242af9}
+      \strng{fullhash}{c911281e20b12cfc3caa5884ae242af9}
+      \strng{fullhashraw}{c911281e20b12cfc3caa5884ae242af9}
+      \strng{bibnamehash}{c911281e20b12cfc3caa5884ae242af9}
+      \strng{authorbibnamehash}{c911281e20b12cfc3caa5884ae242af9}
+      \strng{authornamehash}{c911281e20b12cfc3caa5884ae242af9}
+      \strng{authorfullhash}{c911281e20b12cfc3caa5884ae242af9}
+      \strng{authorfullhashraw}{c911281e20b12cfc3caa5884ae242af9}
+      \field{sortinit}{1}
+      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Cybernetics and Systems Analysis}
+      \field{title}{Security of the Poseidon Hash Function Against Non-Binary Differential and Linear Attacks}
+      \field{year}{2021}
+      \verb{doi}
+      \verb 10.1007/s10559-021-00352-y
+      \endverb
+    \endentry
+    \entry{2019DEEP}{article}{}{}
+      \name{author}{4}{}{%
+        {{hash=c225b1561fdce9ac9f61f1edca0e0160}{%
+           family={Ben-Sasson},
+           familyi={B\bibinithyphendelim S\bibinitperiod},
+           given={Eli},
+           giveni={E\bibinitperiod}}}%
+        {{hash=acc1dbff027b77a09e92d358028425f3}{%
+           family={Goldberg},
+           familyi={G\bibinitperiod},
+           given={Lior},
+           giveni={L\bibinitperiod}}}%
+        {{hash=2e5f2317f0ac54b750326520280e9e9f}{%
+           family={Kopparty},
+           familyi={K\bibinitperiod},
+           given={Swastik},
+           giveni={S\bibinitperiod}}}%
+        {{hash=e09316de8cee370914849a4772d5d7fa}{%
+           family={Saraf},
+           familyi={S\bibinitperiod},
+           given={Shubhangi},
+           giveni={S\bibinitperiod}}}%
+      }
+      \strng{namehash}{efe95f795f4099043fbd4bc4466d77c6}
+      \strng{fullhash}{c11d6dee6f5d61c0cb0c04305b46ffa6}
+      \strng{fullhashraw}{c11d6dee6f5d61c0cb0c04305b46ffa6}
+      \strng{bibnamehash}{efe95f795f4099043fbd4bc4466d77c6}
+      \strng{authorbibnamehash}{efe95f795f4099043fbd4bc4466d77c6}
+      \strng{authornamehash}{efe95f795f4099043fbd4bc4466d77c6}
+      \strng{authorfullhash}{c11d6dee6f5d61c0cb0c04305b46ffa6}
+      \strng{authorfullhashraw}{c11d6dee6f5d61c0cb0c04305b46ffa6}
+      \field{sortinit}{1}
+      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Proceedings of ITCS}
+      \field{title}{DEEP-FRI: Sampling Outside the Box Improves Soundness}
+      \field{year}{2020}
+      \verb{doi}
+      \verb 10.4230/LIPICS.ITCS.2020.5
+      \endverb
+    \endentry
+    \entry{Sun2023SPHINCSSM3}{article}{}{}
+      \true{moreauthor}
+      \true{morelabelname}
+      \name{author}{1}{}{%
+        {{hash=a760259b73d77e8bc6c4c530ebe05e4b}{%
+           family={孙思维},
+           familyi={孙\bibinitperiod}}}%
+      }
+      \strng{namehash}{227f36c0e9522da8f3955d6a5561c84d}
+      \strng{fullhash}{227f36c0e9522da8f3955d6a5561c84d}
+      \strng{fullhashraw}{227f36c0e9522da8f3955d6a5561c84d}
+      \strng{bibnamehash}{227f36c0e9522da8f3955d6a5561c84d}
+      \strng{authorbibnamehash}{227f36c0e9522da8f3955d6a5561c84d}
+      \strng{authornamehash}{227f36c0e9522da8f3955d6a5561c84d}
+      \strng{authorfullhash}{227f36c0e9522da8f3955d6a5561c84d}
+      \strng{authorfullhashraw}{227f36c0e9522da8f3955d6a5561c84d}
+      \field{sortinit}{2}
+      \field{sortinithash}{8b555b3791beccb63322c22f3320aa9a}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{密码学报}
+      \field{note}{KEY: SPHINCS+ hash replacement precedent in same journal}
+      \field{number}{6}
+      \field{title}{{SPHINCS$^+$-SM3}: 基于{SM3}的无状态数字签名算法}
+      \field{volume}{10}
+      \field{year}{2023}
+      \field{pages}{1266\bibrangedash 1278}
+      \range{pages}{13}
+    \endentry
+    \entry{Katsumata2023CSI}{inproceedings}{}{}
+      \name{author}{3}{}{%
+        {{hash=5f50a6056e6df6b8c29ee6ce02e27194}{%
+           family={Katsumata},
+           familyi={K\bibinitperiod},
+           given={Shuichi},
+           giveni={S\bibinitperiod}}}%
+        {{hash=a7a336a01d88d7c5cd614c3c12af85ee}{%
+           family={Lai},
+           familyi={L\bibinitperiod},
+           given={Yi-Fu},
+           giveni={Y\bibinithyphendelim F\bibinitperiod}}}%
+        {{hash=7042db7106c1490116f9061a1475f98b}{%
+           family={Reichle},
+           familyi={R\bibinitperiod},
+           given={Michael},
+           giveni={M\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {Springer}%
+      }
+      \strng{namehash}{96eab5ca7b448c36ccaefcab0483914c}
+      \strng{fullhash}{96eab5ca7b448c36ccaefcab0483914c}
+      \strng{fullhashraw}{96eab5ca7b448c36ccaefcab0483914c}
+      \strng{bibnamehash}{96eab5ca7b448c36ccaefcab0483914c}
+      \strng{authorbibnamehash}{96eab5ca7b448c36ccaefcab0483914c}
+      \strng{authornamehash}{96eab5ca7b448c36ccaefcab0483914c}
+      \strng{authorfullhash}{96eab5ca7b448c36ccaefcab0483914c}
+      \strng{authorfullhashraw}{96eab5ca7b448c36ccaefcab0483914c}
+      \field{sortinit}{3}
+      \field{sortinithash}{ad6fe7482ffbd7b9f99c9e8b5dccd3d7}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{Advances in Cryptology -- CRYPTO 2023}
+      \field{note}{KEY: Smallest PQ blind signatures (4--8 KB), isogeny-based}
+      \field{series}{LNCS}
+      \field{title}{{CSI-Otter}: Isogeny-based (Partially) Blind Signatures from the Class Group Action with a Twist}
+      \field{year}{2023}
+      \verb{doi}
+      \verb 10.1007/978-3-031-38554-4_11
+      \endverb
+    \endentry
+    \entry{Baum2026ConcretelyEfficientBlind}{inproceedings}{}{}
+      \name{author}{5}{}{%
+        {{hash=ce26bbb3e7787f40d77fcf6d09e32698}{%
+           family={Baum},
+           familyi={B\bibinitperiod},
+           given={Carsten},
+           giveni={C\bibinitperiod}}}%
+        {{hash=d91445547c6b1eed73bee67c394703da}{%
+           family={Beckmann},
+           familyi={B\bibinitperiod},
+           given={Marvin},
+           giveni={M\bibinitperiod}}}%
+        {{hash=78deeb3ba30d09f84ba380a7ea9d1530}{%
+           family={Beullens},
+           familyi={B\bibinitperiod},
+           given={Ward},
+           giveni={W\bibinitperiod}}}%
+        {{hash=5887f22ed0e640aa70488b09c45e21a0}{%
+           family={Mukherjee},
+           familyi={M\bibinitperiod},
+           given={Shibam},
+           giveni={S\bibinitperiod}}}%
+        {{hash=29a803b439def048d1bbec17d5c5be6e}{%
+           family={Rechberger},
+           familyi={R\bibinitperiod},
+           given={Christian},
+           giveni={C\bibinitperiod}}}%
+      }
+      \strng{namehash}{4a36c2d40721896036317a8f6e381626}
+      \strng{fullhash}{58ec613e3be4bdea3ef9c2e5ff9c5af1}
+      \strng{fullhashraw}{58ec613e3be4bdea3ef9c2e5ff9c5af1}
+      \strng{bibnamehash}{4a36c2d40721896036317a8f6e381626}
+      \strng{authorbibnamehash}{4a36c2d40721896036317a8f6e381626}
+      \strng{authornamehash}{4a36c2d40721896036317a8f6e381626}
+      \strng{authorfullhash}{58ec613e3be4bdea3ef9c2e5ff9c5af1}
+      \strng{authorfullhashraw}{58ec613e3be4bdea3ef9c2e5ff9c5af1}
+      \field{sortinit}{3}
+      \field{sortinithash}{ad6fe7482ffbd7b9f99c9e8b5dccd3d7}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{IACR Cryptology ePrint Archive}
+      \field{note}{MEDIUM: VOLE-based blind sig, 1+ citations}
+      \field{title}{Concretely Efficient Blind Signatures Based on VOLE-in-the-Head Proofs and the MAYO Trapdoor}
+      \field{year}{2026}
+    \endentry
+    \entry{Grassi2019Poseidon}{article}{}{}
+      \name{author}{5}{}{%
+        {{hash=1343334ddbeab81878ef64accc58db49}{%
+           family={Grassi},
+           familyi={G\bibinitperiod},
+           given={Lorenzo},
+           giveni={L\bibinitperiod}}}%
+        {{hash=d38e18b5ec4018e5f12aab4287c4a08f}{%
+           family={Khovratovich},
+           familyi={K\bibinitperiod},
+           given={Dmitry},
+           giveni={D\bibinitperiod}}}%
+        {{hash=29a803b439def048d1bbec17d5c5be6e}{%
+           family={Rechberger},
+           familyi={R\bibinitperiod},
+           given={Christian},
+           giveni={C\bibinitperiod}}}%
+        {{hash=81408649d82d3bd96bb5f7262ebd609e}{%
+           family={Roy},
+           familyi={R\bibinitperiod},
+           given={Arnab},
+           giveni={A\bibinitperiod}}}%
+        {{hash=d616c0a1cb9fd33376cd00f74ab5d314}{%
+           family={Schofnegger},
+           familyi={S\bibinitperiod},
+           given={Markus},
+           giveni={M\bibinitperiod}}}%
+      }
+      \strng{namehash}{3bd088c6d495c35c1a6cfd717b643cab}
+      \strng{fullhash}{bde59e169e8ea693992359a06e4c2735}
+      \strng{fullhashraw}{bde59e169e8ea693992359a06e4c2735}
+      \strng{bibnamehash}{3bd088c6d495c35c1a6cfd717b643cab}
+      \strng{authorbibnamehash}{3bd088c6d495c35c1a6cfd717b643cab}
+      \strng{authornamehash}{3bd088c6d495c35c1a6cfd717b643cab}
+      \strng{authorfullhash}{bde59e169e8ea693992359a06e4c2735}
+      \strng{authorfullhashraw}{bde59e169e8ea693992359a06e4c2735}
+      \field{extraname}{1}
+      \field{sortinit}{4}
+      \field{sortinithash}{9381316451d1b9788675a07e972a12a7}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{howpublished}{IACR ePrint / DANS}
+      \field{note}{FOUNDATION: Original Poseidon hash for ZK proofs, 71+ citations}
+      \field{title}{Poseidon: A New Hash Function for Zero-Knowledge Proof Systems}
+      \field{year}{2019}
+    \endentry
+    \entry{Grassi2024Monolith}{article}{}{}
+      \name{author}{6}{}{%
+        {{hash=1343334ddbeab81878ef64accc58db49}{%
+           family={Grassi},
+           familyi={G\bibinitperiod},
+           given={Lorenzo},
+           giveni={L\bibinitperiod}}}%
+        {{hash=d38e18b5ec4018e5f12aab4287c4a08f}{%
+           family={Khovratovich},
+           familyi={K\bibinitperiod},
+           given={Dmitry},
+           giveni={D\bibinitperiod}}}%
+        {{hash=d8f9d67c842a3426b220b3a24d5c25da}{%
+           family={Lüftenegger},
+           familyi={L\bibinitperiod},
+           given={Reinhard},
+           giveni={R\bibinitperiod}}}%
+        {{hash=29a803b439def048d1bbec17d5c5be6e}{%
+           family={Rechberger},
+           familyi={R\bibinitperiod},
+           given={Christian},
+           giveni={C\bibinitperiod}}}%
+        {{hash=d616c0a1cb9fd33376cd00f74ab5d314}{%
+           family={Schofnegger},
+           familyi={S\bibinitperiod},
+           given={Markus},
+           giveni={M\bibinitperiod}}}%
+        {{hash=a0b62ebba518aae9ddb71ee05237dc2f}{%
+           family={Walch},
+           familyi={W\bibinitperiod},
+           given={Roman},
+           giveni={R\bibinitperiod}}}%
+      }
+      \strng{namehash}{3bd088c6d495c35c1a6cfd717b643cab}
+      \strng{fullhash}{22a3330445e31eea762ae0fd746289f1}
+      \strng{fullhashraw}{22a3330445e31eea762ae0fd746289f1}
+      \strng{bibnamehash}{3bd088c6d495c35c1a6cfd717b643cab}
+      \strng{authorbibnamehash}{3bd088c6d495c35c1a6cfd717b643cab}
+      \strng{authornamehash}{3bd088c6d495c35c1a6cfd717b643cab}
+      \strng{authorfullhash}{22a3330445e31eea762ae0fd746289f1}
+      \strng{authorfullhashraw}{22a3330445e31eea762ae0fd746289f1}
+      \field{extraname}{2}
+      \field{sortinit}{4}
+      \field{sortinithash}{9381316451d1b9788675a07e972a12a7}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{IACR Transactions on Symmetric Cryptology}
+      \field{note}{HIGH: Competitor ZK-friendly hash, compares to Poseidon2, 8+ citations}
+      \field{number}{3}
+      \field{title}{Monolith: Circuit-Friendly Hash Functions with New Nonlinear Layers for Fast and Constant-Time Implementations}
+      \field{volume}{2024}
+      \field{year}{2024}
+      \field{pages}{44\bibrangedash 83}
+      \range{pages}{40}
+      \verb{doi}
+      \verb 10.46586/tosc.v2024.i3.44-83
+      \endverb
+    \endentry
+    \entry{Grassi2026Poseidon2b}{misc}{}{}
+      \name{author}{7}{}{%
+        {{hash=1343334ddbeab81878ef64accc58db49}{%
+           family={Grassi},
+           familyi={G\bibinitperiod},
+           given={Lorenzo},
+           giveni={L\bibinitperiod}}}%
+        {{hash=d38e18b5ec4018e5f12aab4287c4a08f}{%
+           family={Khovratovich},
+           familyi={K\bibinitperiod},
+           given={Dmitry},
+           giveni={D\bibinitperiod}}}%
+        {{hash=62c33220ef208edbdf683d230d9b860f}{%
+           family={Koschatko},
+           familyi={K\bibinitperiod},
+           given={Katharina},
+           giveni={K\bibinitperiod}}}%
+        {{hash=29a803b439def048d1bbec17d5c5be6e}{%
+           family={Rechberger},
+           familyi={R\bibinitperiod},
+           given={Christian},
+           giveni={C\bibinitperiod}}}%
+        {{hash=d616c0a1cb9fd33376cd00f74ab5d314}{%
+           family={Schofnegger},
+           familyi={S\bibinitperiod},
+           given={Markus},
+           giveni={M\bibinitperiod}}}%
+        {{hash=4cc0e78b625d0783d9942abe8bfa184f}{%
+           family={Schroppel},
+           familyi={S\bibinitperiod},
+           given={Verena},
+           giveni={V\bibinitperiod}}}%
+        {{hash=5853925522035434168d29c76ec0efa1}{%
+           family={Wu},
+           familyi={W\bibinitperiod},
+           given={Zhuo},
+           giveni={Z\bibinitperiod}}}%
+      }
+      \strng{namehash}{3bd088c6d495c35c1a6cfd717b643cab}
+      \strng{fullhash}{fb16608ca5d2ed8674ec82aeb3defc72}
+      \strng{fullhashraw}{fb16608ca5d2ed8674ec82aeb3defc72}
+      \strng{bibnamehash}{3bd088c6d495c35c1a6cfd717b643cab}
+      \strng{authorbibnamehash}{3bd088c6d495c35c1a6cfd717b643cab}
+      \strng{authornamehash}{3bd088c6d495c35c1a6cfd717b643cab}
+      \strng{authorfullhash}{fb16608ca5d2ed8674ec82aeb3defc72}
+      \strng{authorfullhashraw}{fb16608ca5d2ed8674ec82aeb3defc72}
+      \field{extraname}{3}
+      \field{sortinit}{4}
+      \field{sortinithash}{9381316451d1b9788675a07e972a12a7}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Poseidon(2)b}
+      \field{year}{2026}
+      \verb{doi}
+      \verb 10.62056/a66ce0zn4
+      \endverb
+    \endentry
+    \entry{Sekulic2025}{inproceedings}{}{}
+      \name{author}{5}{}{%
+        {{hash=32e113e7b438c41421764f067a5f90c5}{%
+           family={Sekulic},
+           familyi={S\bibinitperiod},
+           given={Jelena},
+           giveni={J\bibinitperiod}}}%
+        {{hash=577e0ed24b62063237ecf8446be1f538}{%
+           family={Capko},
+           familyi={C\bibinitperiod},
+           given={Darko},
+           giveni={D\bibinitperiod}}}%
+        {{hash=d5ce594efa814a97ec21911c01cfce59}{%
+           family={Erdeljan},
+           familyi={E\bibinitperiod},
+           given={Aleksandar},
+           giveni={A\bibinitperiod}}}%
+        {{hash=d5b4a147886832081dfd4307b224f2fe}{%
+           family={Grbic},
+           familyi={G\bibinitperiod},
+           given={Tatjana},
+           giveni={T\bibinitperiod}}}%
+        {{hash=5df34112ae9b7cf78c99b50cd3fed8af}{%
+           family={Nenadic},
+           familyi={N\bibinitperiod},
+           given={Kosa},
+           giveni={K\bibinitperiod}}}%
+      }
+      \strng{namehash}{dcbb30081792a046c00ed0d1deb5ebbf}
+      \strng{fullhash}{44d2b0e1714df0591710fa70bc491ad0}
+      \strng{fullhashraw}{44d2b0e1714df0591710fa70bc491ad0}
+      \strng{bibnamehash}{dcbb30081792a046c00ed0d1deb5ebbf}
+      \strng{authorbibnamehash}{dcbb30081792a046c00ed0d1deb5ebbf}
+      \strng{authornamehash}{dcbb30081792a046c00ed0d1deb5ebbf}
+      \strng{authorfullhash}{44d2b0e1714df0591710fa70bc491ad0}
+      \strng{authorfullhashraw}{44d2b0e1714df0591710fa70bc491ad0}
+      \field{sortinit}{5}
+      \field{sortinithash}{20e9b4b0b173788c5dace24730f47d8c}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{INFOTEH}
+      \field{title}{A Short Survey of ZK-Friendly Hash Functions}
+      \field{year}{2025}
+      \verb{doi}
+      \verb 10.1109/INFOTEH64129.2025.10959296
+      \endverb
+    \endentry
+    \entry{Quan2022}{article}{}{}
+      \name{author}{1}{}{%
+        {{hash=70d478d7ec7cecc37df85f8d19bbce8c}{%
+           family={Quan},
+           familyi={Q\bibinitperiod},
+           given={Yunjia},
+           giveni={Y\bibinitperiod}}}%
+      }
+      \strng{namehash}{70d478d7ec7cecc37df85f8d19bbce8c}
+      \strng{fullhash}{70d478d7ec7cecc37df85f8d19bbce8c}
+      \strng{fullhashraw}{70d478d7ec7cecc37df85f8d19bbce8c}
+      \strng{bibnamehash}{70d478d7ec7cecc37df85f8d19bbce8c}
+      \strng{authorbibnamehash}{70d478d7ec7cecc37df85f8d19bbce8c}
+      \strng{authornamehash}{70d478d7ec7cecc37df85f8d19bbce8c}
+      \strng{authorfullhash}{70d478d7ec7cecc37df85f8d19bbce8c}
+      \strng{authorfullhashraw}{70d478d7ec7cecc37df85f8d19bbce8c}
+      \field{sortinit}{5}
+      \field{sortinithash}{20e9b4b0b173788c5dace24730f47d8c}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{IEEE Access}
+      \field{title}{Improving Bitcoin's Post-Quantum Transaction Efficiency With a Novel Lattice-Based Aggregate Signature Scheme Based on CRYSTALS-Dilithium and a STARK Protocol}
+      \field{year}{2022}
+      \verb{doi}
+      \verb 10.1109/ACCESS.2022.3227394
+      \endverb
+    \endentry
+    \entry{Adomnicai2026}{misc}{}{}
+      \name{author}{1}{}{%
+        {{hash=8ae9d3b3b6ab68f429ca9523bd96a89a}{%
+           family={Adomnicai},
+           familyi={A\bibinitperiod},
+           given={Alexandre},
+           giveni={A\bibinitperiod}}}%
+      }
+      \strng{namehash}{8ae9d3b3b6ab68f429ca9523bd96a89a}
+      \strng{fullhash}{8ae9d3b3b6ab68f429ca9523bd96a89a}
+      \strng{fullhashraw}{8ae9d3b3b6ab68f429ca9523bd96a89a}
+      \strng{bibnamehash}{8ae9d3b3b6ab68f429ca9523bd96a89a}
+      \strng{authorbibnamehash}{8ae9d3b3b6ab68f429ca9523bd96a89a}
+      \strng{authornamehash}{8ae9d3b3b6ab68f429ca9523bd96a89a}
+      \strng{authorfullhash}{8ae9d3b3b6ab68f429ca9523bd96a89a}
+      \strng{authorfullhashraw}{8ae9d3b3b6ab68f429ca9523bd96a89a}
+      \field{sortinit}{5}
+      \field{sortinithash}{20e9b4b0b173788c5dace24730f47d8c}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Towards Practical Multi-Party Hash Chains using Arithmetization-Oriented Primitives}
+      \field{year}{2026}
+      \verb{doi}
+      \verb 10.62056/ahp2tx4e-
+      \endverb
+    \endentry
+    \entry{Buser2022ExoticSigs}{article}{}{}
+      \name{author}{12}{}{%
+        {{hash=deec6536cd0fe81adcf2afa96627d011}{%
+           family={Buser},
+           familyi={B\bibinitperiod},
+           given={Maxime},
+           giveni={M\bibinitperiod}}}%
+        {{hash=6701dbaf9364991e8e7b5a417d0ca078}{%
+           family={Dowsley},
+           familyi={D\bibinitperiod},
+           given={Rafael},
+           giveni={R\bibinitperiod}}}%
+        {{hash=2c7c26e2bc9e73945c12c26a4936257d}{%
+           family={Esgin},
+           familyi={E\bibinitperiod},
+           given={Muhammed\bibnamedelima F.},
+           giveni={M\bibinitperiod\bibinitdelim F\bibinitperiod}}}%
+        {{hash=ad1762994bb3b9e588ccaad4f7e3d5e1}{%
+           family={Gritti},
+           familyi={G\bibinitperiod},
+           given={Clémentine},
+           giveni={C\bibinitperiod}}}%
+        {{hash=866df15728006479a06c72e1a490b77a}{%
+           family={Kermanshahi},
+           familyi={K\bibinitperiod},
+           given={Shabnam\bibnamedelima Kasra},
+           giveni={S\bibinitperiod\bibinitdelim K\bibinitperiod}}}%
+        {{hash=029271cc510e20709d06ca729c9321a8}{%
+           family={Kuchta},
+           familyi={K\bibinitperiod},
+           given={Veronika},
+           giveni={V\bibinitperiod}}}%
+        {{hash=abf8aff56f5835264308f0d597a84a0e}{%
+           family={LeGrow},
+           familyi={L\bibinitperiod},
+           given={Jason\bibnamedelima T.},
+           giveni={J\bibinitperiod\bibinitdelim T\bibinitperiod}}}%
+        {{hash=53e1794ecb8651ee2ee0d8ddbb520a74}{%
+           family={Liu},
+           familyi={L\bibinitperiod},
+           given={Joseph\bibnamedelima K.},
+           giveni={J\bibinitperiod\bibinitdelim K\bibinitperiod}}}%
+        {{hash=0d9e2b73fd89863161539f3eec21dc78}{%
+           family={Phan},
+           familyi={P\bibinitperiod},
+           given={Raphaël\bibnamedelima C.-W.},
+           giveni={R\bibinitperiod\bibinitdelim C\bibinithyphendelim W\bibinitperiod}}}%
+        {{hash=9188e98e94653f48b90a60e36575ea88}{%
+           family={Sakzad},
+           familyi={S\bibinitperiod},
+           given={Amin},
+           giveni={A\bibinitperiod}}}%
+        {{hash=96520fd9895afb4912b315a8d2a9528f}{%
+           family={Steinfeld},
+           familyi={S\bibinitperiod},
+           given={Ron},
+           giveni={R\bibinitperiod}}}%
+        {{hash=d61f1826c829016c3584cfefc4dc3283}{%
+           family={Yu},
+           familyi={Y\bibinitperiod},
+           given={Jiangshan},
+           giveni={J\bibinitperiod}}}%
+      }
+      \strng{namehash}{6cffacef01e6742136356680d515f3c9}
+      \strng{fullhash}{11c499a86986d25ac3014ad3629d8cb5}
+      \strng{fullhashraw}{11c499a86986d25ac3014ad3629d8cb5}
+      \strng{bibnamehash}{6cffacef01e6742136356680d515f3c9}
+      \strng{authorbibnamehash}{6cffacef01e6742136356680d515f3c9}
+      \strng{authornamehash}{6cffacef01e6742136356680d515f3c9}
+      \strng{authorfullhash}{11c499a86986d25ac3014ad3629d8cb5}
+      \strng{authorfullhashraw}{11c499a86986d25ac3014ad3629d8cb5}
+      \field{sortinit}{5}
+      \field{sortinithash}{20e9b4b0b173788c5dace24730f47d8c}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{ACM Computing Surveys}
+      \field{note}{HIGH: Survey covering PQ blind/ring/adaptor signatures, 40+ citations}
+      \field{title}{A Survey on Exotic Signatures for Post-quantum Blockchain: Challenges and Research Directions}
+      \field{year}{2022}
+      \verb{doi}
+      \verb 10.1145/3572771
+      \endverb
+    \endentry
+  \enddatalist
+\endrefsection
+\endinput
+

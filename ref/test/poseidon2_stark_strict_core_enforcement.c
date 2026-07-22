@@ -80,7 +80,7 @@ int main(void)
         return 1;
     }
     randombytes(omega2, SPX_N);
-    if (spx_p2_build_sigma_c_ciphertext(sigma_c, &sigma_c_len,
+    if (spx_p2_build_sigma_c(sigma_c, &sigma_c_len,
                                         com, sigma_com,
                                         pk, SPX_N,
                                         omega2, sizeof(omega2)) != 0 ||
