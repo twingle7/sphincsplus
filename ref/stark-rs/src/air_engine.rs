@@ -1,9 +1,12 @@
-//! Full SPHINCS+ verification AIR with sponge state continuity and input binding.
-//! Uses pre-computed expected-next-state columns (16..27) for constraint simplicity.
+//! Full SPHINCS+ verification AIR with sponge state continuity, input binding,
+//! and Poseidon2 round function correctness verification.
+//! Uses pre-computed expected-next-state columns (16..27) for low-degree consistency checks,
+//! complemented by high-degree round-function constraints (53..64) that verify S-box + MDS.
 //! Trace columns (64): state[0..12], round[12], perm[13], call[14], pad[15],
 //!   expected_next[16..28], absorb[28..34], domain[34], addr[35..39],
 //!   carries_from_prev[39], carries_to_next[40], init_state[41..53),
 //!   is_thash[53], expected_absorb[54..58]
+//! Total constraints: 65 (0..64). Periodic columns: 32 (8 flags + 12 RC + 12 diag).
 
 use winterfell::{
     crypto::{hashers::Blake3_256, DefaultRandomCoin, MerkleTree},
@@ -18,7 +21,18 @@ use winterfell::{
 
 use crate::trace_builder;
 use crate::thash_poseidon2_exact;
+use crate::thash_poseidon2_exact::{pow7_ext, P2_INTERNAL_DIAG_12, P2_ROUND_CONSTANTS};
 pub const P2_T: usize = 12;
+
+/// Returns the STARK blowup factor from env `SPX_P2_BLOWUP`, defaulting to 32.
+/// Lower values (8, 16) reduce memory ~linearly and are sufficient for correctness testing.
+fn proof_blowup() -> usize {
+    std::env::var("SPX_P2_BLOWUP")
+        .ok()
+        .and_then(|s| s.parse::<usize>().ok())
+        .unwrap_or(32)
+        .max(16) // Winterfell requires blowup >= 16 for this AIR's constraint degrees
+}
 pub const P2_RATE: usize = 6;
 pub const TOTAL_ROUNDS: usize = 30;
 pub const PERM_PERIOD: usize = 32;
@@ -88,11 +102,16 @@ impl Air for SpxVerifyAir {
         // Defect 1: measured degrees for is_first * is_thash * (1-carry) * absorb Lagrange
         let d389118 = TransitionConstraintDegree::with_cycles(3, vec![PERM_PERIOD]); // 3*131071-4095
         let d520189 = TransitionConstraintDegree::with_cycles(4, vec![PERM_PERIOD]); // 4*131071-4095
+        // Round function constraints (53-64): base degree 8 (x^7 + is_real).
+        // degree = (b-1)*(T-1) + c*(T/32)*31 where T=262144.
+        // Lane 0: b=8, c=2 -> 7*262143 + 2*253952 = 1835001 + 507904 = 2342905
+        // Lanes 1-11: b=8, c=1 -> 7*262143 + 1*253952 = 1835001 + 253952 = 2088953
+        let d_round0 = TransitionConstraintDegree::with_cycles(8, vec![PERM_PERIOD; 2]);
+        let d_round  = TransitionConstraintDegree::with_cycles(8, vec![PERM_PERIOD; 1]);
         let degrees = vec![
-            // 0-5: rate lanes 0-5 (deg=2, uses is_active+is_real periodic)
+            // 0-11: all 12 state lanes (rate + capacity, deg=2, uses is_active+is_real periodic)
             d258047.clone(), d258047.clone(), d258047.clone(), d258047.clone(),
             d258047.clone(), d258047.clone(),
-            // 6-11: capacity lanes (copies of rate checks)
             d258047.clone(), d258047.clone(), d258047.clone(), d258047.clone(),
             d258047.clone(), d258047.clone(),
             // 12-15: round counter checks (deg=1, uses is_active+is_real, two periods)
@@ -118,14 +137,20 @@ impl Air for SpxVerifyAir {
             d258047.clone(), d258047.clone(), d258047.clone(), d258047.clone(),
             // 45: is_thash boolean (deg=2, no periodic)
             d131071.clone(),
-            // 46: THASH absorb[0] Lagrange (deg=3*131071-4095=389118)
+            // 46: THASH absorb[0] Lagrange (deg=3)
             d389118.clone(),
-            // 47: THASH absorb[1] = pub_seed_hi (same degree)
+            // 47: THASH absorb[1] = pub_seed_hi
             d389118.clone(),
-            // 48: THASH domain membership (deg=4*131071-4095=520189)
+            // 48: THASH domain membership (deg=4)
             d520189.clone(),
-            // 49-52: THASH absorb[2..5] = expected (deg=3*131071-4095=389118, same as 46-47)
+            // 49-52: THASH absorb[2..5] = expected
             d389118.clone(), d389118.clone(), d389118.clone(), d389118.clone(),
+            // 53: lane 0 round function (higher degree — x^7 in both full and partial rounds)
+            d_round0.clone(),
+            // 54-64: lanes 1-11 round function (x^7 in full rounds only)
+            d_round.clone(), d_round.clone(), d_round.clone(), d_round.clone(),
+            d_round.clone(), d_round.clone(), d_round.clone(), d_round.clone(),
+            d_round.clone(), d_round.clone(), d_round.clone(),
         ];
         // Pre-compute expected absorb[0] per THASH domain tag
         // absorb[0] = LE(domain_byte || pub_seed[0..6]) = domain_byte + 256 * pub_seed_lo
@@ -164,13 +189,10 @@ impl Air for SpxVerifyAir {
         let is_real = E::ONE - is_pad;
         let is_active = E::ONE - is_last;
 
-        // Constraint 0-5: rate lanes checked against expected next
-        for lane in 0..P2_RATE {
+        // Constraint 0-11: all 12 state lanes checked against expected next
+        for lane in 0..P2_T {
             result[lane] = is_real * is_active * (nxt[lane] - cur[16 + lane]);
         }
-        // Constraint 6-11: copies of rate lane checks (capacity lanes share same constraint structure)
-        result[6] = result[0]; result[7] = result[1]; result[8] = result[2];
-        result[9] = result[3]; result[10] = result[4]; result[11] = result[5];
         // Constraint 12-15: round counter checks
         result[12] = is_real * is_active * (nxt_round - round - E::ONE);
         result[13] = result[12];
@@ -229,6 +251,53 @@ impl Air for SpxVerifyAir {
         result[50] = is_first * is_thash * is_first_in_chain * (cur[31] - cur[55]); // absorb[3] vs exp[3]
         result[51] = is_first * is_thash * is_first_in_chain * (cur[32] - cur[56]); // absorb[4] vs exp[4]
         result[52] = is_first * is_thash * is_first_in_chain * (cur[33] - cur[57]); // absorb[5] vs exp[5]
+
+        // ── Constraints 53-64: Poseidon2 round function correctness ──
+        // Verify that expected_next (cols 16-27) was computed by the actual Poseidon2 round function.
+        // Reference: Poseidon2ExactAir in thash_poseidon2_exact.rs (lines 787-854).
+        let is_full     = periodic_values[1];  // RF rows (0-3, 26-29)
+        let is_internal = periodic_values[2];  // RP rows (4-25)
+        let is_out_pad  = periodic_values[7];  // row 30 (identity pad)
+        let is_idle     = E::ONE - is_full - is_internal - is_out_pad; // row 31
+
+        // Add round constant: tmp_i = cur[i] + RC[row][i]
+        // Full round: x^7 on all 12 lanes, MDS = sum_all + self
+        // Partial round: x^7 on lane 0 only, MDS = sum_all + diag[i] * lane_i
+        for lane in 0..P2_T {
+            let tmp_lane = cur[lane] + periodic_values[8 + lane]; // RC from periodic cols 8..20
+
+            // Full round expected: sum_j(pow7(tmp_j)) + pow7(tmp_lane)
+            let s7_lane = pow7_ext(tmp_lane);
+            let mut full_sum = E::ZERO;
+            for j in 0..P2_T {
+                full_sum += pow7_ext(cur[j] + periodic_values[8 + j]);
+            }
+            let full_expected = full_sum + s7_lane;
+
+            // Partial round expected: pow7 only lane 0, sum + diag * lane
+            let internal_tmp = if lane == 0 { s7_lane } else { tmp_lane };
+            let mut internal_sum = E::ZERO;
+            for j in 0..P2_T {
+                internal_sum += if j == 0 {
+                    pow7_ext(cur[j] + periodic_values[8 + j])
+                } else {
+                    cur[j] + periodic_values[8 + j]
+                };
+            }
+            let internal_expected = internal_sum + periodic_values[20 + lane] * internal_tmp;
+
+            // Row 30 (identity pad): state unchanged, expected_next == cur
+            // Row 31 (terminating pad): skip (state is zeroed, checked by existing constraints)
+
+            // Select correct expected based on round-type flags
+            let expected = is_full * full_expected
+                + is_internal * internal_expected
+                + is_out_pad * cur[lane]     // row 30: identity (expected == current)
+                + is_idle * E::ZERO;          // row 31: terminating pad (expected_next = 0)
+
+            // expected_next column must match round function output
+            result[53 + lane] = is_real * (cur[16 + lane] - expected);
+        }
     }
 
     fn get_assertions(&self) -> Vec<Assertion<Self::BaseField>> {
@@ -255,8 +324,11 @@ impl Air for SpxVerifyAir {
 
     fn get_periodic_column_values(&self) -> Vec<Vec<Self::BaseField>> {
         let period = PERM_PERIOD;
-        // 0:row_idx, 1:is_full, 2:is_internal, 3:is_last, 4:is_absorb, 5:is_first, 6:is_pad1, 7:is_output_valid
-        let mut cols = vec![vec![BaseElement::ZERO; period]; 8];
+        // Cols 0..8: existing flags (row_idx, is_full, is_internal, is_last, is_absorb, is_first, is_pad1, is_output_valid)
+        // Cols 8..20: 12 lanes of round constants (RC[row][lane])
+        // Cols 20..32: 12 lanes of internal diagonal constants
+        let num_cols = 8 + P2_T + P2_T; // 32
+        let mut cols = vec![vec![BaseElement::ZERO; period]; num_cols];
         for row in 0..period {
             cols[0][row] = BaseElement::new(row as u64);
             // Round type for Poseidon2: RF=8 (4+4), RP=22
@@ -264,6 +336,11 @@ impl Air for SpxVerifyAir {
                 let (full, internal) = thash_poseidon2_exact::round_kind(row);
                 if full { cols[1][row] = BaseElement::ONE; }
                 if internal { cols[2][row] = BaseElement::ONE; }
+                // Round constants: 12 lanes × 30 active rows
+                for lane in 0..P2_T {
+                    cols[8 + lane][row] = BaseElement::new(P2_ROUND_CONSTANTS[row][lane]);
+                    cols[20 + lane][row] = BaseElement::new(P2_INTERNAL_DIAG_12[lane]);
+                }
             }
             cols[3][row] = if row == period - 1 { BaseElement::ONE } else { BaseElement::ZERO }; // is_last
             cols[4][row] = if row == period - 1 { BaseElement::ONE } else { BaseElement::ZERO }; // is_absorb (pos 31)
@@ -317,22 +394,35 @@ pub unsafe extern "C" fn spx_p2_rust_generate_pi_f_full_air(
 ) -> i32 {
     if out_proof.is_null() || pub_inputs.is_null() || wit.is_null() { return SPX_P2_FULL_AIR_ERR_NULL; }
     let out = &mut *out_proof; let pubi = &*pub_inputs; let witv = &*wit;
-    if out.data.is_null() || pubi.pk.is_null() || pubi.com.is_null() || witv.sigma_com.is_null() {
+    if out.data.is_null() || pubi.pk.is_null() || pubi.com.is_null() || witv.sigma_com.is_null()
+        || witv.m.is_null() || witv.r.is_null() {
         return SPX_P2_FULL_AIR_ERR_INPUT;
     }
     let pk = std::slice::from_raw_parts(pubi.pk, trace_builder::PK_BYTES);
     let m_pub = if pubi.m_pub_len > 0 && !pubi.m_pub.is_null() {
         std::slice::from_raw_parts(pubi.m_pub, pubi.m_pub_len) } else { &[] };
     let sigma_com = std::slice::from_raw_parts(witv.sigma_com, trace_builder::SIG_BYTES);
-    let m = if pubi.m_pub_len > 0 && !pubi.m_pub.is_null() {
-        std::slice::from_raw_parts(pubi.m_pub, pubi.m_pub_len) } else { &[] };
-    let r = if !witv.r.is_null() {
-        std::slice::from_raw_parts(witv.r, trace_builder::N) } else { &[] };
+    // Read m and r from the witness (not public inputs) to ensure binding
+    let m = std::slice::from_raw_parts(witv.m, witv.mlen);
+    let r = std::slice::from_raw_parts(witv.r, witv.rlen);
+    // Guard: witness m must equal public m_pub (prevents witness/public mismatch)
+    if m != m_pub {
+        return SPX_P2_FULL_AIR_ERR_INPUT;
+    }
     let pk_e = if !pubi.pk_e.is_null() {
         std::slice::from_raw_parts(pubi.pk_e, trace_builder::N) } else { &[] };
     let omega2 = if !witv.omega2.is_null() {
         std::slice::from_raw_parts(witv.omega2, trace_builder::N) } else { &[] };
-    let (trace_data, _, total_perms, pk_root_l0, pk_root_l1, com_l0, com_l1, pub_seed_lo, pub_seed_hi, root_perm, pub_seed_15) = trace_builder::build_verification_trace(pk, sigma_com, m_pub, m, r, pk_e, omega2);
+    let (trace_data, _, total_perms, computed_root_l0, computed_root_l1, com_l0, com_l1, pub_seed_lo, pub_seed_hi, root_perm, pub_seed_15) = trace_builder::build_verification_trace(pk, sigma_com, m_pub, m, r, pk_e, omega2);
+    // Bind pk_root to the ACTUAL public key root (pk[N..2*N]), NOT the trace builder's self-computed root.
+    // This breaks the self-referential loop and binds the AIR to the externally verifiable root.
+    let pk_root_expected = &pk[trace_builder::N..trace_builder::PK_BYTES];
+    let pk_root_l0 = BaseElement::new(u64::from_le_bytes(pk_root_expected[0..8].try_into().unwrap_or([0;8])));
+    let pk_root_l1 = BaseElement::new(u64::from_le_bytes(pk_root_expected[8..16].try_into().unwrap_or([0;8])));
+    // Verify trace builder correctly reconstructs the expected pk_root (sanity check)
+    if computed_root_l0 != pk_root_l0 || computed_root_l1 != pk_root_l1 {
+        return SPX_P2_FULL_AIR_ERR_PROVE; // trace builder root ≠ expected pk_root
+    }
     let trace_len = trace_data.len();
     // Extract all 12 start and result state lanes
     let mut start_state = [BaseElement::ZERO; P2_T];
@@ -342,7 +432,7 @@ pub unsafe extern "C" fn spx_p2_rust_generate_pi_f_full_air(
     let mut tt = TraceTable::new(TRACE_WIDTH, trace_len);
     for r in 0..trace_len { for c in 0..TRACE_WIDTH { tt.set(c, r, trace_data[r][c]); } }
     let pi = SpxVerifyPublicInputs::from_values(start_state, result_state, total_perms, root_perm, pk_root_l0, pk_root_l1, com_l0, com_l1, pub_seed_lo, pub_seed_hi, pub_seed_15);
-    let opts = ProofOptions::new(27, 16, 0, FieldExtension::None, 8, 31, BatchingMethod::Linear, BatchingMethod::Linear);
+    let opts = ProofOptions::new(27, proof_blowup(), 0, FieldExtension::None, 8, 31, BatchingMethod::Linear, BatchingMethod::Linear);
     let prover = SpxVerifyProver{options:opts, pub_inputs:pi, trace:tt};
     match prover.prove(prover.trace.clone()) {
         Ok(proof) => {
@@ -429,6 +519,14 @@ pub unsafe extern "C" fn spx_p2_rust_verify_pi_f_full_air(
     let pk_root_off = start_off + P2_T * 8 * 2;
     let pk_root_l0 = BaseElement::new(u64::from_le_bytes(data[pk_root_off .. pk_root_off + 8].try_into().unwrap()));
     let pk_root_l1 = BaseElement::new(u64::from_le_bytes(data[pk_root_off + 8 .. pk_root_off + 16].try_into().unwrap()));
+    // Cross-check: proof header pk_root must match public key pk[N..2*N]
+    let pk = std::slice::from_raw_parts(pubi.pk, trace_builder::PK_BYTES);
+    let pk_root_expected = &pk[trace_builder::N..trace_builder::PK_BYTES];
+    let expected_l0 = BaseElement::new(u64::from_le_bytes(pk_root_expected[0..8].try_into().unwrap_or([0;8])));
+    let expected_l1 = BaseElement::new(u64::from_le_bytes(pk_root_expected[8..16].try_into().unwrap_or([0;8])));
+    if pk_root_l0 != expected_l0 || pk_root_l1 != expected_l1 {
+        return SPX_P2_FULL_AIR_ERR_VERIFY; // proof pk_root ≠ public key root
+    }
     let com_off = pk_root_off + 16;
     let com_l0 = BaseElement::new(u64::from_le_bytes(data[com_off .. com_off + 8].try_into().unwrap()));
     let com_l1 = BaseElement::new(u64::from_le_bytes(data[com_off + 8 .. com_off + 16].try_into().unwrap()));
@@ -493,7 +591,7 @@ pub unsafe extern "C" fn spx_p2_rust_get_abi_version_full_air(out_version: *mut 
         let mut ss = [BaseElement::ZERO; P2_T]; for i in 0..P2_T { ss[i] = td[0][i]; }
         let mut rs = [BaseElement::ZERO; P2_T]; for i in 0..P2_T { rs[i] = td[tl-1][i]; }
         let pi = SpxVerifyPublicInputs::from_values(ss, rs, tp, rp, pk_l0, pk_l1, com_l0, com_l1, ps_lo, ps_hi, ps15);
-        let opts = ProofOptions::new(27, 16, 0, FieldExtension::None, 8, 31, BatchingMethod::Linear, BatchingMethod::Linear);
+        let opts = ProofOptions::new(27, proof_blowup(), 0, FieldExtension::None, 8, 31, BatchingMethod::Linear, BatchingMethod::Linear);
         let p = SpxVerifyProver{options:opts.clone(), pub_inputs:pi.clone(), trace:tt};
         let proof = p.prove(p.trace.clone()).unwrap();
         let proof_bytes = proof.to_bytes();
@@ -524,7 +622,7 @@ pub unsafe extern "C" fn spx_p2_rust_get_abi_version_full_air(out_version: *mut 
         let mut ss = [BaseElement::ZERO; P2_T]; for i in 0..P2_T { ss[i] = td[0][i]; }
         let mut rs = [BaseElement::ZERO; P2_T]; for i in 0..P2_T { rs[i] = td[tl-1][i]; }
         let pi = SpxVerifyPublicInputs::from_values(ss, rs, tp, rp, pk_l0, pk_l1, com_l0, com_l1, ps_lo, ps_hi, ps15);
-        let opts = ProofOptions::new(27, 16, 0, FieldExtension::None, 8, 31, BatchingMethod::Linear, BatchingMethod::Linear);
+        let opts = ProofOptions::new(27, proof_blowup(), 0, FieldExtension::None, 8, 31, BatchingMethod::Linear, BatchingMethod::Linear);
         let p = SpxVerifyProver{options:opts.clone(), pub_inputs:pi.clone(), trace:tt};
         // Prover may panic if trace violates constraints; catch that.
         let prove_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {

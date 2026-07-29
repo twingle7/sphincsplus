@@ -198,7 +198,7 @@ fn pow7_base(x: BaseElement) -> BaseElement {
 }
 
 #[inline(always)]
-fn pow7_ext<E: FieldElement>(x: E) -> E {
+pub(crate) fn pow7_ext<E: FieldElement>(x: E) -> E {
     let x2 = x * x;
     let x4 = x2 * x2;
     (x4 * x2) * x

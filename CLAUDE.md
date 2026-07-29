@@ -183,8 +183,6 @@ ref/
 │   ├── air_*.c                # AIR constraint evaluators (perm, sponge, hashcall, verify)
 │   ├── pi_f_format*.c         # Binary proof format encoding (pi_F v1/v2)
 │   ├── ffi.[ch]               # Public FFI: generate/verify STARK proofs (calls Rust)
-│   ├── prover_v1.c            # C fallback prover (placeholder; real proving via Rust)
-│   ├── verifier_v1.c          # C fallback verifier (placeholder)
 │   ├── relation_migration*.c  # Statement/witness relation validation
 │   └── stats.[ch]             # Proof-size and witness statistics collection
 ├── stark-rs/          # Rust STARK backend crate (sphincsplus-stark-rs)

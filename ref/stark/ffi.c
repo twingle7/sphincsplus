@@ -4,6 +4,7 @@
 
 #include "ffi.h"
 #include "pi_f_format_v2.h"
+#include "relation_migration.h"
 
 #ifdef SPX_P2_USE_RUST_STARK
 extern int spx_p2_rust_get_abi_version_full_air(uint32_t *out_version);
@@ -70,6 +71,12 @@ int spx_p2_ffi_generate_pi_f_full_air(spx_p2_ffi_blob *out_proof,
     if (out_proof == 0 || pub == 0 || wit == 0) return SPX_P2_FFI_STATUS_ERR_NULL;
     if (out_proof->data == 0 || pub->pk == 0 || pub->com == 0 || wit->sigma_com == 0)
         return SPX_P2_FFI_STATUS_ERR_INPUT;
+    /* Same prechecks as spx_p2_show_prove — ensures FFI path and full protocol path
+       reject the same tampered inputs (strict-core enforcement test) */
+    if (spx_p2_relation_validate_strict_prove_inputs(pub, wit) != SPX_P2_FFI_STATUS_OK)
+        return SPX_P2_FFI_STATUS_ERR_INPUT;
+    if (spx_p2_relation_precheck_strict_prove_witness(pub, wit) != SPX_P2_FFI_STATUS_OK)
+        return SPX_P2_FFI_STATUS_ERR_PROVE;
     return spx_p2_rust_generate_pi_f_full_air(out_proof, pub, wit);
 #else
     (void)out_proof; (void)pub; (void)wit;

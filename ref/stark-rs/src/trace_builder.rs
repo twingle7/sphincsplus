@@ -52,9 +52,9 @@ pub const PARAMS_C13: SpxParams = SpxParams { n: 16, h: 60, d: 6, k: 14, a: 12, 
 // Prove-fast variant (d=4, fewer layers → faster proving)
 pub const PARAMS_FAST: SpxParams = SpxParams { n: 16, h: 60, d: 4, k: 14, a: 12, w: 16 };
 
-// Default: 128-bit security params
-pub const N: usize = 16; pub const H: usize = 63; pub const D: usize = 7;
-pub const A: usize = 12; pub const K: usize = 10; pub const W: usize = 16; pub const LOGW: usize = 4;
+// Dev params (matches params-sphincs-poseidon2-128f-small.h for C ↔ Rust consistency)
+pub const N: usize = 16; pub const H: usize = 40; pub const D: usize = 4;
+pub const A: usize = 6; pub const K: usize = 8; pub const W: usize = 16; pub const LOGW: usize = 4;
 pub const TREE_HEIGHT: usize = H / D;
 pub const WOTS_LEN1: usize = 8 * N / LOGW; pub const WOTS_LEN2: usize = 3;
 pub const WOTS_LEN: usize = WOTS_LEN1 + WOTS_LEN2;
@@ -62,6 +62,12 @@ pub const PK_BYTES: usize = 2 * N; pub const FORS_BYTES: usize = (A + 1) * K * N
 pub const WOTS_BYTES: usize = WOTS_LEN * N;
 pub const SIG_BYTES: usize = N + FORS_BYTES + D * WOTS_BYTES + H * N;
 pub const FORS_MSG_BYTES: usize = (A * K + 7) / 8;
+// hash_message output layout (matches C hash_poseidon2.c:63-67)
+pub const TREE_BITS: usize = TREE_HEIGHT * (D - 1);
+pub const TREE_BYTES: usize = (TREE_BITS + 7) / 8;
+pub const LEAF_BITS: usize = TREE_HEIGHT;
+pub const LEAF_BYTES: usize = (LEAF_BITS + 7) / 8;
+pub const HASH_MESSAGE_BYTES: usize = FORS_MSG_BYTES + TREE_BYTES + LEAF_BYTES;
 pub const P2_T: usize = 12; pub const P2_RATE: usize = 6;
 pub const TOTAL_ROUNDS: usize = 30; pub const PERM_PERIOD: usize = 32;
 pub const TRACE_COLS: usize = 64;
@@ -98,7 +104,6 @@ impl SpxAddr {
     }
 }
 
-fn store_u32_be(bytes: &mut [u8], val: u32) { bytes[..4].copy_from_slice(&val.to_be_bytes()); }
 fn bytes_to_rate(bytes: &[u8; 48]) -> [BaseElement; P2_RATE] {
     let mut lanes = [BaseElement::ZERO; P2_RATE];
     for i in 0..P2_RATE { let mut val: u64 = 0; for j in 0..8 { val |= (bytes[i*8+j] as u64) << (8*j); } lanes[i] = BaseElement::new(val); }
@@ -232,21 +237,17 @@ fn poseidon2_hash(state: &mut [BaseElement; P2_T], input: &[u8], out_len: usize,
     let rate = P2_RATE * 8;
     // Each hash operation starts from ZERO (matches C poseidon2_inc_init)
     let mut sponge = [BaseElement::ZERO; P2_T];
-    let mut output = Vec::new();
     let mut offset = 0;
 
     // Process full 48-byte blocks (no padding — matches C absorb full blocks)
+    // NOTE: Do NOT squeeze intermediate states — C sponge only squeezes from FINAL state
     while offset + rate <= input.len() {
         let chunk: &[u8; 48] = input[offset..offset + rate].try_into().unwrap();
         let absorb = bytes_to_rate(chunk);
         let carries_from_prev = offset > 0;
         let carries_to_next = true; // always more blocks follow (data or final pad)
-        let out_st = trace.record_permutation(&sponge, &absorb, call_type, domain_tag, addr,
+        sponge = trace.record_permutation(&sponge, &absorb, call_type, domain_tag, addr,
                                                carries_from_prev, carries_to_next);
-        sponge = out_st;
-        let mut rate_lanes = [BaseElement::ZERO; P2_RATE];
-        rate_lanes.copy_from_slice(&sponge[0..P2_RATE]);
-        output.extend_from_slice(&lanes_to_bytes(&rate_lanes));
         offset += rate;
     }
 
@@ -261,11 +262,12 @@ fn poseidon2_hash(state: &mut [BaseElement; P2_T], input: &[u8], out_len: usize,
     let carries_to_next = false; // last permutation in this hash chain
     sponge = trace.record_permutation(&sponge, &absorb, call_type, domain_tag, addr,
                                        carries_from_prev, carries_to_next);
-    let mut rate_lanes = [BaseElement::ZERO; P2_RATE];
-    rate_lanes.copy_from_slice(&sponge[0..P2_RATE]);
-    output.extend_from_slice(&lanes_to_bytes(&rate_lanes));
 
     *state = sponge; // return final sponge state to caller
+    // Only squeeze from the FINAL state (matches C sponge semantics — no intermediate squeezes)
+    let mut rate_lanes = [BaseElement::ZERO; P2_RATE];
+    rate_lanes.copy_from_slice(&sponge[0..P2_RATE]);
+    let mut output = lanes_to_bytes(&rate_lanes).to_vec();
     output.truncate(out_len); output
 }
 
@@ -292,7 +294,11 @@ fn chain_lengths(msg: &[u8]) -> Vec<u32> {
     let mut lengths = base_w(msg, WOTS_LEN1); let mut csum: u32 = 0;
     for &d in &lengths { csum += W as u32 - 1 - d; }
     csum = csum << ((8 - ((WOTS_LEN2 * LOGW) % 8)) % 8);
-    let mut csum_bytes = [0u8; 4]; store_u32_be(&mut csum_bytes, csum);
+    // C uses (WOTS_LEN2*LOGW+7)/8 bytes for checksum buffer — must match exactly
+    let csum_bytes_len = (WOTS_LEN2 * LOGW + 7) / 8;
+    let mut csum_bytes = vec![0u8; csum_bytes_len];
+    let mut tmp = csum;
+    for i in (0..csum_bytes_len).rev() { csum_bytes[i] = (tmp & 0xFF) as u8; tmp >>= 8; }
     lengths.extend(&base_w(&csum_bytes, WOTS_LEN2)); lengths
 }
 fn wots_pk_from_sig(state: &mut [BaseElement; P2_T], pub_seed: &[u8], sig: &[u8], msg: &[u8],
@@ -310,33 +316,64 @@ fn compute_root(state: &mut [BaseElement; P2_T], pub_seed: &[u8], leaf: &[u8], l
                 trace: &mut TraceRecorder) -> Vec<u8> {
     let mut node = leaf.to_vec(); let mut auth = auth_path; let mut idx = leaf_idx; let mut off = idx_offset;
     for i in 0..tree_height { let mut level_addr = *addr; level_addr.set_tree_height(i+1);
-        level_addr.set_tree_index((idx>>1)+off); let mut buffer = [0u8; 2*N];
+        level_addr.set_tree_index((idx>>1)+(off>>1)); let mut buffer = [0u8; 2*N];
         if idx&1==1 { buffer[N..].copy_from_slice(&node); buffer[..N].copy_from_slice(&auth[..N]); }
         else { buffer[..N].copy_from_slice(&node); buffer[N..].copy_from_slice(&auth[..N]); }
         auth=&auth[N..]; idx>>=1; off>>=1;
         node = thash(state, DOMAIN_THASH_H, pub_seed, &level_addr, &[&buffer[..N],&buffer[N..]], N, trace, CallType::Merkle); }
     node
 }
+/// Extract FORS tree indices from message hash — bit-by-bit matching C `message_to_indices`.
+/// For K trees each of height A: extracts K*A bits, producing K values in [0, 2^A).
+fn message_to_indices(m: &[u8]) -> Vec<u32> {
+    let mut indices = vec![0u32; K];
+    let mut offset: usize = 0;
+    for i in 0..K {
+        indices[i] = 0;
+        for j in 0..A {
+            let bit = (m[offset >> 3] >> (offset & 0x7)) & 1u8;
+            indices[i] ^= (bit as u32) << j;
+            offset += 1;
+        }
+    }
+    indices
+}
+
 fn fors_pk_from_sig(state: &mut [BaseElement; P2_T], pub_seed: &[u8], sig: &[u8], m_hash: &[u8],
                     fors_addr: &SpxAddr, trace: &mut TraceRecorder) -> Vec<u8> {
-    let indices = base_w(m_hash, K); let mut roots = Vec::with_capacity(K*N);
+    let indices = message_to_indices(m_hash); let mut roots = Vec::with_capacity(K*N);
     for i in 0..K { let idx_offset = (i as u32)<<A; let mut tree_addr = *fors_addr;
         tree_addr.copy_keypair(fors_addr); tree_addr.set_type(ADDR_FORSTREE);
         tree_addr.set_tree_height(0); tree_addr.set_tree_index(indices[i]+idx_offset);
-        let sk = &sig[i*N..(i+1)*N];
-        let leaf = thash(state, DOMAIN_THASH_TL, pub_seed, &tree_addr, &[sk], N, trace, CallType::ForsLeaf);
-        let auth_path = &sig[K*N + i*A*N..K*N + (i+1)*A*N];
+        // C FORS signature layout is INTERLEAVED: [SK_0][auth_0][SK_1][auth_1]...[SK_7][auth_7]
+        let tree_bytes = N + A * N;
+        let tree_off = i * tree_bytes;
+        let sk = &sig[tree_off..tree_off + N];
+        let leaf = thash(state, DOMAIN_THASH_F, pub_seed, &tree_addr, &[sk], N, trace, CallType::ForsLeaf);
+        let auth_path = &sig[tree_off + N..tree_off + tree_bytes];
         let root = compute_root(state, pub_seed, &leaf, indices[i], idx_offset, auth_path, A as u32, &tree_addr, trace);
         roots.extend_from_slice(&root); }
     let mut pk_addr = *fors_addr; pk_addr.set_type(ADDR_FORSPK);
     let blocks: Vec<&[u8]> = (0..K).map(|i| &roots[i*N..(i+1)*N]).collect();
     thash(state, DOMAIN_THASH_TL, pub_seed, &pk_addr, &blocks, N, trace, CallType::ForsPk)
 }
+/// BE bytes→u64 helper (matches C `bytes_to_ull` which is big-endian: in[i] << 8*(inlen-1-i))
+fn bytes_to_u64_be(bytes: &[u8]) -> u64 {
+    let mut result: u64 = 0;
+    let n = bytes.len();
+    for (i, &b) in bytes.iter().enumerate() { result |= (b as u64) << (8 * (n - 1 - i)); }
+    result
+}
+
 fn hash_message(state: &mut [BaseElement; P2_T], r: &[u8], pk: &[u8], msg: &[u8],
                 trace: &mut TraceRecorder) -> (Vec<u8>, usize) {
     let mut input = Vec::new(); input.push(DOMAIN_HASH_MESSAGE); input.extend_from_slice(r);
     input.extend_from_slice(pk); input.extend_from_slice(msg);
-    let out_len = FORS_MSG_BYTES + 16;
+    // Output layout must match C hash_poseidon2.c:69-96:
+    //   [0..FORS_MSG_BYTES) = message digest
+    //   [FORS_MSG_BYTES..FORS_MSG_BYTES+TREE_BYTES) = tree index (LE)
+    //   [FORS_MSG_BYTES+TREE_BYTES..] = leaf index (LE)
+    let out_len = HASH_MESSAGE_BYTES;
     let addr = SpxAddr::new(); // H_msg uses zero address
     (poseidon2_hash(state, &input, out_len, trace, CallType::Hmsg, DOMAIN_HASH_MESSAGE, &addr), out_len)
 }
@@ -366,21 +403,19 @@ pub fn build_verification_trace(pk: &[u8], sigma_com: &[u8], _m_pub: &[u8],
     let addr = SpxAddr::new();
     let com_output = poseidon2_hash(&mut state, &com_input, N, &mut trace,
         CallType::Commit, DOMAIN_COMMIT, &addr);
-
     // H_msg signs com_output (the commitment), matching C's crypto_sign_verify(com, ...)
     let (hmsg_out, _hmsg_len) = hash_message(&mut state, sig_r, pk, &com_output, &mut trace);
     let mhash = &hmsg_out[..FORS_MSG_BYTES];
-    // tree and idx_leaf extracted from hash output (exact format from C's hash_message)
-    let tree = if hmsg_out.len() >= FORS_MSG_BYTES + 8 {
-        u64::from_be_bytes(hmsg_out[FORS_MSG_BYTES..FORS_MSG_BYTES+8].try_into().unwrap_or([0;8]))
+    // tree and idx_leaf: LE byte order, correct byte counts matching C hash_poseidon2.c
+    let tree_off = FORS_MSG_BYTES;
+    let tree = if hmsg_out.len() >= tree_off + TREE_BYTES {
+        bytes_to_u64_be(&hmsg_out[tree_off..tree_off + TREE_BYTES]) & ((1u64 << TREE_BITS) - 1)
     } else { 0 };
-    let idx_leaf = if hmsg_out.len() >= FORS_MSG_BYTES + 12 {
-        u32::from_be_bytes(hmsg_out[FORS_MSG_BYTES+8..FORS_MSG_BYTES+12].try_into().unwrap_or([0;4]))
+    let leaf_off = tree_off + TREE_BYTES;
+    let idx_leaf = if hmsg_out.len() >= leaf_off + LEAF_BYTES {
+        (bytes_to_u64_be(&hmsg_out[leaf_off..leaf_off + LEAF_BYTES]) as u32) & ((1u32 << LEAF_BITS) - 1)
     } else { 0 };
-    // Clamp to valid range
-    let tree = tree & ((1u64 << (H - H/D)) - 1);
-    let idx_leaf = idx_leaf & ((1u32 << TREE_HEIGHT) - 1);
-
+    let indices = message_to_indices(mhash);
     let mut fors_addr = SpxAddr::new(); fors_addr.set_type(ADDR_WOTS); fors_addr.set_tree(tree); fors_addr.set_keypair(idx_leaf);
     let mut wots_addr = SpxAddr::new(); wots_addr.set_type(ADDR_WOTS);
     let mut tree_addr = SpxAddr::new(); tree_addr.set_type(ADDR_HASHTREE);
@@ -401,10 +436,10 @@ pub fn build_verification_trace(pk: &[u8], sigma_com: &[u8], _m_pub: &[u8],
         root = compute_root(&mut state, pub_seed, &leaf, cur_idx, 0, auth_path, TREE_HEIGHT as u32, &tree_addr, &mut trace);
         cur_idx = cur_tree as u32 & ((1u32<<TREE_HEIGHT)-1); cur_tree >>= TREE_HEIGHT;
     }
-    // The final root is the output of the first perm in the last Merkle hash of the last HT layer.
-    // After record_permutation, perm_index points to the NEXT slot, so the first perm of
-    // the last thash is at perm_index - 2 (since each thash does 2 perms for Merkle).
-    let root_perm = (trace.perm_index - 2) as u64;
+    // Final root: output of the LAST permutation in the final Merkle thash of the last HT layer.
+    // Hash output comes from the final sponge state (after all absorptions), which is the output
+    // of the last permutation. perm_index points to the NEXT slot, so last perm = perm_index - 1.
+    let root_perm = (trace.perm_index - 1) as u64;
     // ── Sigma.C binding: sigma_C = Poseidon2(domain=0xFF, label || pk_e || com || sigma_com || omega2) ──
     let label = b"m20-pke-ct-v1";
     let mut enc_input = Vec::new();

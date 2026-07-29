@@ -74,42 +74,34 @@ make -B PARAMS=$PARAMS THASH=$THASH CC=$CC \
 
 ## 2. AIR / witness / 证明格式测试
 
-### 2.1 C 侧 witness 与 AIR 评估
+### 2.1 证明格式与 FFI 底层测试
 
 ```bash
 make -B PARAMS=$PARAMS THASH=$THASH CC=$CC \
-  test/poseidon2_witness_v1 \
-  test/poseidon2_perm_air_v1 \
-  test/poseidon2_sponge_air_v1 \
-  test/poseidon2_hashcall_air_v1 \
-  test/poseidon2_verify_minimal_air_v1 \
-  test/poseidon2_verify_full_air_v1 \
-  test/poseidon2_verify_full_guard
+  test/poseidon2_verify_full_guard \
+  test/poseidon2_pi_f_format
 
-./test/poseidon2_witness_v1
-./test/poseidon2_perm_air_v1
-./test/poseidon2_sponge_air_v1
-./test/poseidon2_hashcall_air_v1
-./test/poseidon2_verify_minimal_air_v1
-./test/poseidon2_verify_full_air_v1
 ./test/poseidon2_verify_full_guard
+./test/poseidon2_pi_f_format
 ```
 
-### 2.2 proof 格式与 FFI
+### 2.2 实例化与 API 测试
 
 ```bash
-make -B PARAMS=$PARAMS THASH=$THASH CC=$CC EXTRA_CFLAGS="$EXTRA_CFLAGS" \
-  test/poseidon2_show_proof_format \
-  test/poseidon2_stark_ffi_v1
+make -B PARAMS=$PARAMS THASH=$THASH CC=$CC \
+  test/poseidon2_api \
+  test/poseidon2_adapter \
+  test/poseidon2_instantiation_m1
 
-./test/poseidon2_show_proof_format
-./test/poseidon2_stark_ffi_v1
+./test/poseidon2_api
+./test/poseidon2_adapter
+./test/poseidon2_instantiation_m1
 ```
 
 这些测试支持的结论：
 
-- witness 构造、AIR 约束评估器和 proof 格式编码路径仍可工作。
-- `ffi` 层与 proof 序列化没有明显接口回归。
+- SPHINCS+ API 适配层、Poseidon2 实例化和 KAT 验证路径可工作。
+- `ffi` 层与 proof 格式编码没有明显接口回归。
 - 这些测试更偏**低层回归**，不能单独作为 final Fischlin strict 主链已经完整验证的证据。
 
 ## 3. Final Fischlin / show / protocol 主链
@@ -404,12 +396,10 @@ bash scripts/run_strict_regression.sh
 
 make -B PARAMS=$PARAMS THASH=$THASH CC=$CC EXTRA_CFLAGS="$EXTRA_CFLAGS" \
   test/poseidon2_stark_strict_core_enforcement \
-  test/poseidon2_show_proof_format \
-  test/poseidon2_stark_ffi_v1
+  test/poseidon2_pi_f_format
 
 ./test/poseidon2_stark_strict_core_enforcement
-./test/poseidon2_show_proof_format
-./test/poseidon2_stark_ffi_v1
+./test/poseidon2_pi_f_format
 ```
 
 这组测试最能支持以下结论：

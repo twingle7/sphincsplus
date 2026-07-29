@@ -67,7 +67,8 @@ Because the trace IS the SPHINCS+ verification, proving the trace is correct = p
 
 **Now proven** (since 2026-07-21):
 - ✅ All 12 Poseidon2 state lanes constrained (full + internal rounds)
-- ✅ pk_root bound to proof header and start/end state assertions
+- ✅ pk_root bound to actual public key pk[N..2*N] (not self-referential; cross-check ensures trace builder correctness)
+- ✅ Trace builder bugs resolved (2026-07-29): FORS interleaved layout, message_to_indices, bytes_to_u64 BE, chain_lengths checksum
 - ✅ Commit and Sigma.C computations are endogenous (in-trace, CallType::Commit + CallType::SigmaC)
 - ✅ Commit output bound to public input `com` via boundary assertions at row 30
 - ✅ OOM resolved: blowup_factor 32→16, num_queries 32→27 (~4x memory reduction)
